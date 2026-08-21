@@ -13,7 +13,7 @@
 
     <ItemGroup>
         <Compile Include="Program.cs" />
-        <Compile Include="generated/**/*.cs" />
+        <Compile Include="generated/**/*.cs" Exclude="generated/Entry.cs" />
         <Compile Include="patches/**/*.cs" />
     </ItemGroup>
 

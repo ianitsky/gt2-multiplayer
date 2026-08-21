@@ -323,7 +323,12 @@
     {
       "address": "0x8005DA7C",
       "name": "gt2_load_overlay",
-      "size": 276
+      "size": 92
+    },
+    {
+      "address": "0x8005DAD8",
+      "name": "func_8005DAD8",
+      "size": 184
     },
     {
       "address": "0x8005DB90",
@@ -2668,12 +2673,22 @@
     {
       "address": "0x8007ABF8",
       "name": "gt2_main_gtmode_task700",
-      "size": 292
+      "size": 4
+    },
+    {
+      "address": "0x8007ABFC",
+      "name": "func_8007ABFC",
+      "size": 288
     },
     {
       "address": "0x8007AD1C",
       "name": "gt2_main_gtmode_task70",
-      "size": 60
+      "size": 4
+    },
+    {
+      "address": "0x8007AD20",
+      "name": "func_8007AD20",
+      "size": 56
     },
     {
       "address": "0x8007AD58",
@@ -3733,7 +3748,12 @@
     {
       "address": "0x80081FF8",
       "name": "gt2_unknown_task1E",
-      "size": 28
+      "size": 8
+    },
+    {
+      "address": "0x80082000",
+      "name": "func_80082000",
+      "size": 20
     },
     {
       "address": "0x80082014",
@@ -4328,7 +4348,12 @@
     {
       "address": "0x800868F4",
       "name": "DecDCToutCallback",
-      "size": 248
+      "size": 36
+    },
+    {
+      "address": "0x80086918",
+      "name": "func_80086918",
+      "size": 212
     },
     {
       "address": "0x800869EC",
@@ -4338,12 +4363,22 @@
     {
       "address": "0x800869F8",
       "name": "LIBPRESS_OBJ_3A0",
-      "size": 160
+      "size": 16
+    },
+    {
+      "address": "0x80086A08",
+      "name": "func_80086A08",
+      "size": 144
     },
     {
       "address": "0x80086A98",
       "name": "LIBPRESS_OBJ_440",
-      "size": 272
+      "size": 140
+    },
+    {
+      "address": "0x80086B24",
+      "name": "func_80086B24",
+      "size": 132
     },
     {
       "address": "0x80086BA8",
@@ -4363,7 +4398,12 @@
     {
       "address": "0x80086C4C",
       "name": "LIBPRESS_OBJ_5F4",
-      "size": 52
+      "size": 24
+    },
+    {
+      "address": "0x80086C64",
+      "name": "func_80086C64",
+      "size": 28
     },
     {
       "address": "0x80086C80",
@@ -4863,7 +4903,12 @@
     {
       "address": "0x80089700",
       "name": "PDDIRRES_OBJ_228",
-      "size": 52
+      "size": 36
+    },
+    {
+      "address": "0x80089724",
+      "name": "func_80089724",
+      "size": 16
     },
     {
       "address": "0x80089734",
@@ -5293,7 +5338,12 @@
     {
       "address": "0x8008C304",
       "name": "INTR_OBJ_68C",
-      "size": 52
+      "size": 16
+    },
+    {
+      "address": "0x8008C314",
+      "name": "func_8008C314",
+      "size": 36
     },
     {
       "address": "0x8008C338",

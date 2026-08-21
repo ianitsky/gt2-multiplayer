@@ -2,3 +2,9 @@ disc/
 generated/
 bin/
 obj/
+settings.json
+carda.sav
+cardb.sav
+interface.ini
+run.log
+packs/
