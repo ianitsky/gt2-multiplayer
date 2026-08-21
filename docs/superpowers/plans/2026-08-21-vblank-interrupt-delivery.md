@@ -16,6 +16,15 @@
 - Pending VBlanks accumulate as a counter capped at 4, never a bool.
 - Safepoint emission is behind the recompiler config flag `"safepoints"`, defaulting to `true`.
 - Reference spec: `docs/superpowers/specs/2026-08-21-vblank-interrupt-delivery-design.md`.
+- **Revised after Task 1:** the runtime already delivers IRQs. `LegacyInterrupts.Deliver()`
+  (`RecompOne/RecompOne.Runtime/Hardware/Interrupts.cs`) resolves the handler from the BIOS
+  interrupt env (`BiosB.IntrEnvInInterruptAddr`, populated by `HookEntryInt`, which the GT2
+  trace shows the game calling), snapshots and restores the CPU context, and handles
+  reentrancy. It is reached through `Runtime.DispatchIrq(irq)` but only ever called from
+  `PresentFrame`, which GT2 never reaches. So delivery is reused, not rebuilt: the safepoint
+  calls `Runtime.DispatchIrq(0)`. The handler registry and separate handler context that the
+  spec described are therefore NOT built — `InterruptController` owns only pending count,
+  critical-section depth, and the reentrancy guard.
 - Commit after every task. Never use `--no-verify`.
 
 ---
@@ -69,6 +78,8 @@ git commit -m "Point RecompOne submodule at our fork"
 
 ---
 
+---
+
 ### Task 1: InterruptController
 
 The core state machine, with no dependency on the emitter, the host, or the game. Everything else in the plan builds on it, so it is written and proven first.
@@ -87,8 +98,7 @@ The core state machine, with no dependency on the emitter, the host, or the game
   - `static int CriticalDepth { get; }`
   - `static void EnterCritical()` / `static void ExitCritical()` — `ExitCritical` never drives depth below zero
   - `static bool Delivering { get; }`
-  - `static void SetHandler(uint address)` / `static uint Handler { get; }` — `0` means unregistered
-  - `static int Drain()` — returns how many deliveries are owed and clears pending; returns `0` when `CriticalDepth > 0`, when `Delivering` is true, or when `Handler == 0`
+  - `static int Drain()` — returns how many deliveries are owed and clears pending; returns `0` when `CriticalDepth > 0` or when `Delivering` is true
   - `static IDisposable BeginDelivery()` — sets `Delivering` for the scope
   - `static void Reset()` — test hook clearing all state
   - `const int MaxPending = 4`
@@ -339,11 +349,113 @@ git commit -m "Add InterruptController with pending, critical-section and reentr
 
 ---
 
+> **Superseded in part by Task 1b.** This task shipped; its handler registry
+> (`SetHandler`/`Handler`) and its `Raise()` are corrected there. The test code
+> below is the as-shipped version, not the current one.
+
+
+---
+
+### Task 1b: InterruptController revision (reuse decision)
+
+Task 1 shipped with a handler registry and a `Raise()` that silently drops
+interrupts. Both are wrong under the reuse decision recorded in Global
+Constraints, and the second is wrong regardless.
+
+**Files:**
+- Modify: `RecompOne/RecompOne.Runtime/Interrupts/InterruptController.cs`
+- Modify: `tests/GT2Port.Tests/InterruptControllerTests.cs`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: `InterruptController` as listed in Task 1's Interfaces block — with `SetHandler` and `Handler` **removed**.
+
+- [ ] **Step 1: Fix the reentrancy test to assert the correct count**
+
+In `tests/GT2Port.Tests/InterruptControllerTests.cs`, replace the body of
+`Drain_does_not_reenter_while_delivering` with:
+
+```csharp
+    [Fact]
+    public void Drain_does_not_reenter_while_delivering()
+    {
+        InterruptController.Raise();
+
+        using (InterruptController.BeginDelivery())
+        {
+            InterruptController.Raise();
+            Assert.Equal(0, InterruptController.Drain());
+        }
+
+        // Both survive: the one raised before delivery and the one raised during it.
+        Assert.Equal(2, InterruptController.Drain());
+    }
+```
+
+A VBlank raised while the handler runs must not be lost — that is the whole
+reason pending is a counter. The previous assertion of `1` was wrong.
+
+- [ ] **Step 2: Remove the handler registry and restore Raise**
+
+In `RecompOne/RecompOne.Runtime/Interrupts/InterruptController.cs`:
+
+Delete the `_handler` field, the `Handler` property, and the `SetHandler` method.
+Delete the `_handler` line from `Reset()`. Delete the `if (_handler == 0) return 0;`
+line from `Drain()`. Restore `Raise()` to accumulate unconditionally:
+
+```csharp
+    /// <summary>Called from the timer thread. Saturates rather than queueing without bound.</summary>
+    public static void Raise()
+    {
+        int seen = Volatile.Read(ref _pending);
+        while (seen < MaxPending)
+        {
+            int prior = Interlocked.CompareExchange(ref _pending, seen + 1, seen);
+            if (prior == seen) return;
+            seen = prior;
+        }
+    }
+```
+
+- [ ] **Step 3: Drop the handler test and the SetHandler calls**
+
+Delete the `Drain_returns_nothing_when_no_handler_is_registered` test entirely.
+Remove every remaining `InterruptController.SetHandler(0x80010928u);` line from
+the other tests — they no longer compile and the calls were never what those
+tests were about. Seven tests remain.
+
+- [ ] **Step 4: Run the tests**
+
+```bash
+dotnet test tests/GT2Port.Tests/GT2Port.Tests.csproj
+```
+
+Expected: PASS, 7 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git -C RecompOne add -A && git -C RecompOne commit -m "Drop handler registry from InterruptController; never lose a raised interrupt"
+git add tests/GT2Port.Tests RecompOne && git commit -m "Drop handler registry from InterruptController; never lose a raised interrupt"
+```
+
+---
+
 ### Task 2: Irq facade, host pump, and the VBlank source
 
-Wires the controller to the host: the facade the generated code will call, the window pump that unfreezes the screen, and the timer that raises VBlank.
+Wires the controller to the runtime's existing delivery path: the facade the
+generated code calls, the window pump that unfreezes the screen, and the timer
+that raises VBlank.
 
-`HostWindow.Pump()` already exists at `RecompOne/RecompOne.Runtime/Host/Window/HostWindow.cs:271` and does exactly what delivery needs (`DoEvents`, close check, `DoRender`) without presenting a game frame. It is `internal`, and `Runtime` is in the same assembly, so `Runtime.PumpHost()` can call it directly.
+Two pieces already exist and are reused rather than rebuilt:
+
+- `HostWindow.Pump()` (`RecompOne/RecompOne.Runtime/Host/Window/HostWindow.cs:271`)
+  does exactly what delivery needs — `DoEvents`, close check, `DoRender` —
+  without presenting a game frame. It is `internal`, and `Runtime` is in the same
+  assembly, so `Runtime.PumpHost()` can call it directly.
+- `Runtime.DispatchIrq(int irq)` (`RecompOne/RecompOne.Runtime/Runtime.cs:164`)
+  routes to `LegacyInterrupts.Deliver`, which resolves the handler from the BIOS
+  interrupt env and snapshots/restores the CPU context itself. IRQ 0 is VBlank.
 
 **Files:**
 - Create: `RecompOne/RecompOne.Runtime/Interrupts/IVBlankSource.cs`
@@ -353,14 +465,21 @@ Wires the controller to the host: the facade the generated code will call, the w
 - Create: `tests/GT2Port.Tests/IrqTests.cs`
 
 **Interfaces:**
-- Consumes: `InterruptController` from Task 1.
+- Consumes: `InterruptController` (Task 1, as revised by Task 1b).
 - Produces:
   - `RecompOne.Runtime.Interrupts.IVBlankSource` — `void Start(Action raise)`, `void Stop()`
   - `RecompOne.Runtime.Interrupts.WallClockVBlankSource` — `WallClockVBlankSource(double hz = 59.94)`
-  - `RecompOne.Runtime.Interrupts.Irq` — `static void Poll(CpuContext c, IMemory m)`, `static Action<CpuContext, IMemory, uint>? Invoke`, `static Action? PumpHost`, `static void Reset()`
+  - `RecompOne.Runtime.Interrupts.Irq` — `static void Poll(CpuContext c, IMemory m)`, `static Action<int>? Deliver`, `static Action? PumpHost`, `static void Reset()`
   - `RecompOne.Runtime.Runtime.PumpHost()`
 
-`Irq.Invoke` and `Irq.PumpHost` are settable hooks rather than direct calls to `Dispatcher` and `HostWindow` so the safepoint can be tested without a window or a loaded overlay. `Program.cs` wires them to the real implementations in Task 5.
+`Irq.Deliver` and `Irq.PumpHost` are settable hooks rather than direct calls to
+`Runtime` so the safepoint can be tested without a window, a loaded overlay, or a
+populated BIOS interrupt env. `Program.cs` wires them to the real implementations
+in Task 5.
+
+`Poll` takes `c` and `m` even though the reuse path does not need them: the
+generated call site passes them, and keeping the signature stable means the
+emitter does not change if delivery ever needs the context again.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -394,7 +513,7 @@ public class IrqTests
     {
         var (c, m) = Fixture();
         int calls = 0;
-        Irq.Invoke = (_, _, _) => calls++;
+        Irq.Deliver = _ => calls++;
 
         Irq.Poll(c, m);
 
@@ -402,57 +521,24 @@ public class IrqTests
     }
 
     [Fact]
-    public void Poll_runs_the_handler_on_a_separate_context_below_the_game_stack()
+    public void Poll_delivers_irq_zero_for_vblank()
     {
         var (c, m) = Fixture();
-        CpuContext? seen = null;
-        Irq.Invoke = (ctx, _, _) => seen = ctx;
-        InterruptController.SetHandler(0x80010928u);
+        var delivered = new List<int>();
+        Irq.Deliver = irq => delivered.Add(irq);
         InterruptController.Raise();
 
         Irq.Poll(c, m);
 
-        Assert.NotNull(seen);
-        Assert.NotSame(c, seen);
-        Assert.Equal(c.SP - 512u, seen!.SP);
-        Assert.Equal(c.GP, seen.GP);
+        Assert.Equal(new[] { 0 }, delivered);
     }
 
     [Fact]
-    public void Poll_passes_the_registered_handler_address()
-    {
-        var (c, m) = Fixture();
-        uint target = 0;
-        Irq.Invoke = (_, _, addr) => target = addr;
-        InterruptController.SetHandler(0x80010928u);
-        InterruptController.Raise();
-
-        Irq.Poll(c, m);
-
-        Assert.Equal(0x80010928u, target);
-    }
-
-    [Fact]
-    public void Poll_leaves_the_game_context_untouched()
-    {
-        var (c, m) = Fixture();
-        Irq.Invoke = (ctx, _, _) => { ctx.V0 = 0xDEADBEEFu; ctx.SP -= 64u; };
-        InterruptController.SetHandler(0x80010928u);
-        InterruptController.Raise();
-
-        Irq.Poll(c, m);
-
-        Assert.Equal(0u, c.V0);
-        Assert.Equal(0x801FFF00u, c.SP);
-    }
-
-    [Fact]
-    public void Poll_runs_the_handler_once_per_pending_interrupt()
+    public void Poll_delivers_once_per_pending_interrupt()
     {
         var (c, m) = Fixture();
         int calls = 0;
-        Irq.Invoke = (_, _, _) => calls++;
-        InterruptController.SetHandler(0x80010928u);
+        Irq.Deliver = _ => calls++;
         InterruptController.Raise();
         InterruptController.Raise();
         InterruptController.Raise();
@@ -463,17 +549,33 @@ public class IrqTests
     }
 
     [Fact]
+    public void Poll_is_inert_inside_a_critical_section()
+    {
+        var (c, m) = Fixture();
+        int calls = 0;
+        Irq.Deliver = _ => calls++;
+        InterruptController.EnterCritical();
+        InterruptController.Raise();
+
+        Irq.Poll(c, m);
+        Assert.Equal(0, calls);
+
+        InterruptController.ExitCritical();
+        Irq.Poll(c, m);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
     public void A_handler_that_polls_again_does_not_reenter()
     {
         var (c, m) = Fixture();
         int calls = 0;
-        Irq.Invoke = (_, _, _) =>
+        Irq.Deliver = _ =>
         {
             calls++;
             InterruptController.Raise();
             Irq.Poll(c, m);
         };
-        InterruptController.SetHandler(0x80010928u);
         InterruptController.Raise();
 
         Irq.Poll(c, m);
@@ -482,18 +584,30 @@ public class IrqTests
     }
 
     [Fact]
-    public void Poll_pumps_the_host_before_running_the_handler()
+    public void Poll_pumps_the_host_before_delivering()
     {
         var (c, m) = Fixture();
         var order = new List<string>();
         Irq.PumpHost = () => order.Add("pump");
-        Irq.Invoke = (_, _, _) => order.Add("handler");
-        InterruptController.SetHandler(0x80010928u);
+        Irq.Deliver = _ => order.Add("deliver");
         InterruptController.Raise();
 
         Irq.Poll(c, m);
 
-        Assert.Equal(new[] { "pump", "handler" }, order);
+        Assert.Equal(new[] { "pump", "deliver" }, order);
+    }
+
+    [Fact]
+    public void Poll_pumps_the_host_even_with_no_delivery_hook_wired()
+    {
+        var (c, m) = Fixture();
+        int pumps = 0;
+        Irq.PumpHost = () => pumps++;
+        InterruptController.Raise();
+
+        Irq.Poll(c, m);
+
+        Assert.Equal(1, pumps);
     }
 
     [Fact]
@@ -507,6 +621,21 @@ public class IrqTests
         source.Stop();
 
         Assert.True(raised > 0, $"expected the source to raise at least once, saw {raised}");
+    }
+
+    [Fact]
+    public void Wall_clock_source_stops_raising_after_stop()
+    {
+        int raised = 0;
+        var source = new WallClockVBlankSource(hz: 1000.0);
+        source.Start(() => Interlocked.Increment(ref raised));
+        Thread.Sleep(100);
+        source.Stop();
+
+        int afterStop = Volatile.Read(ref raised);
+        Thread.Sleep(100);
+
+        Assert.Equal(afterStop, Volatile.Read(ref raised));
     }
 }
 ```
@@ -570,6 +699,7 @@ public sealed class WallClockVBlankSource : IVBlankSource
             {
                 var wait = next - DateTime.UtcNow;
                 if (wait > TimeSpan.Zero) Thread.Sleep(wait);
+                if (cts.IsCancellationRequested) return;
                 raise();
                 next += period;
                 // A stalled host must not make this thread spin trying to catch up.
@@ -612,8 +742,11 @@ namespace RecompOne.Runtime.Interrupts;
 /// </summary>
 public static class Irq
 {
-    /// <summary>Dispatches the handler. Wired to Dispatcher.Call at startup.</summary>
-    public static Action<CpuContext, IMemory, uint>? Invoke;
+    /// <summary>VBlank is IRQ 0 on the PS1.</summary>
+    public const int VBlank = 0;
+
+    /// <summary>Delivers one IRQ. Wired to Runtime.DispatchIrq at startup.</summary>
+    public static Action<int>? Deliver;
 
     /// <summary>Pumps window events. Wired to Runtime.PumpHost at startup.</summary>
     public static Action? PumpHost;
@@ -621,38 +754,28 @@ public static class Irq
     public static void Poll(CpuContext c, IMemory m)
     {
         if (InterruptController.Pending == 0) return;
-        Service(c, m);
+        Service();
     }
 
-    static void Service(CpuContext c, IMemory m)
+    static void Service()
     {
         int owed = InterruptController.Drain();
         if (owed == 0) return;
 
-        uint handler = InterruptController.Handler;
         using (InterruptController.BeginDelivery())
         {
+            // The game is inside a busy-wait that never reaches libetc's VSync,
+            // so this is the only chance the window gets to stay responsive.
             PumpHost?.Invoke();
 
             for (int i = 0; i < owed; i++)
-            {
-                // A fresh context: the game is mid-function with live registers,
-                // and anything below its stack pointer is free space.
-                var handlerCtx = new CpuContext
-                {
-                    SP = c.SP - 512u,
-                    GP = c.GP,
-                    RA = 0u,
-                };
-                handlerCtx.FP = handlerCtx.SP;
-                Invoke?.Invoke(handlerCtx, m, handler);
-            }
+                Deliver?.Invoke(VBlank);
         }
     }
 
     public static void Reset()
     {
-        Invoke = null;
+        Deliver = null;
         PumpHost = null;
     }
 }
@@ -677,22 +800,28 @@ In `RecompOne/RecompOne.Runtime/Runtime.cs`, add this method directly above the 
 dotnet test tests/GT2Port.Tests/GT2Port.Tests.csproj
 ```
 
-Expected: PASS, 16 tests.
+Expected: PASS, 16 tests (7 from Task 1b, 9 here).
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add RecompOne/RecompOne.Runtime/Interrupts RecompOne/RecompOne.Runtime/Runtime.cs tests/GT2Port.Tests/IrqTests.cs
-git commit -m "Add Irq safepoint, wall-clock VBlank source and host pump"
+git -C RecompOne add -A && git -C RecompOne commit -m "Add Irq safepoint, wall-clock VBlank source and host pump"
+git add tests/GT2Port.Tests RecompOne && git commit -m "Add Irq safepoint, wall-clock VBlank source and host pump"
 ```
 
 ---
 
-### Task 3: LibApi reimplementations
+---
 
-The game registers its handler through `VSyncCallback` and guards regions with `EnterCriticalSection` / `ExitCriticalSection`. All three are currently game code the runtime ignores. Reimplementing them is what connects the game's handler to `InterruptController`.
+### Task 3: Critical sections
 
-`VSyncCallback` receives the handler address in `A0` (confirmed in the generated `gt2_sysinit_vsync_setup`, which loads `0x80010928` into `A0` before the call). Calling it with `A0 == 0` clears the handler, matching the second call the game makes to shut VSync callbacks off.
+Under the reuse decision the game's own `VSyncCallback` is left alone — the BIOS
+interrupt env it populates is what `LegacyInterrupts` reads. Critical sections
+are the exception: without them the safepoint can deliver an interrupt inside a
+region the game expects to be atomic.
+
+The GT2 trace shows the game calling `gt2_sdk_ExitCriticalSection`, so the
+symbol names are prefixed and Step 4 checks them rather than assuming.
 
 **Files:**
 - Create: `RecompOne/RecompOne.Runtime/sdk/LibApi.cs`
@@ -700,8 +829,8 @@ The game registers its handler through `VSyncCallback` and guards regions with `
 - Create: `tests/GT2Port.Tests/LibApiTests.cs`
 
 **Interfaces:**
-- Consumes: `InterruptController` from Task 1.
-- Produces: `RecompOne.Runtime.Sdk.LibApi` with `VSyncCallback`, `EnterCriticalSection`, `ExitCriticalSection`, each `static void (CpuContext c, IMemory m)`.
+- Consumes: `InterruptController` (Task 1b).
+- Produces: `RecompOne.Runtime.Sdk.LibApi` with `EnterCriticalSection` and `ExitCriticalSection`, each `static void (CpuContext c, IMemory m)`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -724,30 +853,6 @@ public class LibApiTests
     static (CpuContext, IMemory) Fixture() => (new CpuContext(), new PSMemory());
 
     [Fact]
-    public void VSyncCallback_registers_the_handler_from_a0()
-    {
-        var (c, m) = Fixture();
-        c.A0 = 0x80010928u;
-
-        LibApi.VSyncCallback(c, m);
-
-        Assert.Equal(0x80010928u, InterruptController.Handler);
-    }
-
-    [Fact]
-    public void VSyncCallback_with_zero_clears_the_handler()
-    {
-        var (c, m) = Fixture();
-        c.A0 = 0x80010928u;
-        LibApi.VSyncCallback(c, m);
-
-        c.A0 = 0u;
-        LibApi.VSyncCallback(c, m);
-
-        Assert.Equal(0u, InterruptController.Handler);
-    }
-
-    [Fact]
     public void Critical_section_calls_move_the_depth()
     {
         var (c, m) = Fixture();
@@ -757,6 +862,18 @@ public class LibApiTests
 
         LibApi.ExitCriticalSection(c, m);
         Assert.Equal(0, InterruptController.CriticalDepth);
+    }
+
+    [Fact]
+    public void Nested_critical_sections_nest()
+    {
+        var (c, m) = Fixture();
+
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.ExitCriticalSection(c, m);
+
+        Assert.Equal(1, InterruptController.CriticalDepth);
     }
 
     [Fact]
@@ -791,19 +908,11 @@ using RecompOne.Runtime.Memory;
 namespace RecompOne.Runtime.Sdk;
 
 /// <summary>
-/// libapi entry points that route the game's interrupt bookkeeping into the
-/// runtime's InterruptController instead of the game's own kernel tables.
+/// libapi critical sections, routed into InterruptController so a safepoint
+/// cannot deliver an interrupt inside a region the game expects to be atomic.
 /// </summary>
 public static class LibApi
 {
-    /// <summary>VSyncCallback(func) - A0 holds the handler address, 0 clears it.</summary>
-    public static void VSyncCallback(CpuContext c, IMemory m)
-    {
-        Log.Sdk($"VSyncCallback(0x{c.A0:X8})");
-        InterruptController.SetHandler(c.A0);
-        c.V0 = 0;
-    }
-
     public static void EnterCriticalSection(CpuContext c, IMemory m)
     {
         InterruptController.EnterCritical();
@@ -818,35 +927,43 @@ public static class LibApi
 }
 ```
 
-- [ ] **Step 4: Register the library with the recompiler**
+- [ ] **Step 4: Find the game's actual symbol names**
 
-In `RecompOne/RecompOne.Recompiler/CodeGen/SdkPatches.cs`, add this entry to the `Libraries` array immediately after the `LibPad` block (before the closing `};` around line 37):
+```bash
+grep -oE '"[A-Za-z0-9_]*[Cc]riticalSection"' config/funcmaps/main.json | sort -u
+```
+
+The patch table matches on exact function name. Record what this prints — the
+trace showed `gt2_sdk_ExitCriticalSection`, so at least one name is prefixed and
+the bare names would silently fail to match.
+
+- [ ] **Step 5: Register the library with the recompiler**
+
+In `RecompOne/RecompOne.Recompiler/CodeGen/SdkPatches.cs`, add this entry to the
+`Libraries` array immediately after the `LibPad` block (before the closing `};`
+around line 37), using the exact names Step 4 printed:
 
 ```csharp
         ("RecompOne.Runtime.Sdk.LibApi", new[]
         {
-            "VSyncCallback", "EnterCriticalSection", "ExitCriticalSection",
+            "EnterCriticalSection", "ExitCriticalSection",
         }),
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+If Step 4 showed prefixed names, the patch table needs the prefixed spelling.
+`SdkPatches` maps a game function name to a runtime method, so a game function
+called `gt2_sdk_ExitCriticalSection` must appear under that name — see how the
+existing entries are keyed and follow the same mechanism. If the mechanism
+cannot express a name mismatch between game symbol and runtime method, report
+that as a concern rather than renaming the runtime method to match.
+
+- [ ] **Step 6: Run the tests to verify they pass**
 
 ```bash
 dotnet test tests/GT2Port.Tests/GT2Port.Tests.csproj
 ```
 
-Expected: PASS, 20 tests.
-
-- [ ] **Step 6: Check the names actually match the game's symbols**
-
-```bash
-grep -oE '"(VSyncCallback|EnterCriticalSection|ExitCriticalSection|gt2_sdk_[A-Za-z]*Critical[A-Za-z]*)"' config/funcmaps/main.json | sort -u
-```
-
-The patch table matches on exact function name. The trace showed the game's exit
-routine named `gt2_sdk_ExitCriticalSection`, not the bare `ExitCriticalSection`,
-so at least one entry very likely needs the prefixed name. Use whatever this
-command prints as the authority and correct the Step 4 entry to match.
+Expected: PASS, 19 tests.
 
 - [ ] **Step 7: Verify the recompiler applies the new patches**
 
@@ -855,15 +972,14 @@ dotnet build RecompOne/RecompOne.Recompiler -c Release
 dotnet run --project RecompOne/RecompOne.Recompiler -c Release --no-build -- config/gt2.json 2>&1 | grep reimplementations
 ```
 
-Expected: a count higher than the current 13. If it is still 13, the names from
-Step 6 were not applied — fix them before continuing, because every later task
-depends on `VSyncCallback` being intercepted.
+The baseline is 13. Expected: higher. If it is still 13, the names from Step 4
+were not applied correctly — report it rather than proceeding.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add RecompOne/RecompOne.Runtime/sdk/LibApi.cs RecompOne/RecompOne.Recompiler/CodeGen/SdkPatches.cs tests/GT2Port.Tests/LibApiTests.cs
-git commit -m "Reimplement VSyncCallback and critical sections against InterruptController"
+git -C RecompOne add -A && git -C RecompOne commit -m "Route libapi critical sections into InterruptController"
+git add tests/GT2Port.Tests RecompOne && git commit -m "Route libapi critical sections into InterruptController"
 ```
 
 ---
@@ -990,9 +1106,12 @@ git commit -m "Emit Irq.Poll safepoints before backward branches"
 
 ---
 
+---
+
 ### Task 5: Wire it together and prove the boot advances
 
-The pieces exist but nothing starts the VBlank source or connects `Irq`'s hooks to the real dispatcher. This task closes that and proves the original defect is fixed.
+The pieces exist but nothing starts the VBlank source or connects `Irq`'s hooks
+to the runtime. This task closes that and proves the original defect is fixed.
 
 **Files:**
 - Modify: `Program.cs`
@@ -1000,8 +1119,17 @@ The pieces exist but nothing starts the VBlank source or connects `Irq`'s hooks 
 - Create: `tests/GT2Port.Tests/BootIntegrationTests.cs`
 
 **Interfaces:**
-- Consumes: everything from Tasks 1-4.
+- Consumes: everything from Tasks 1b-4.
 - Produces: a port whose boot passes `gt2_sysinit`.
+
+**What the automated test can and cannot prove.** The integration test drives the
+real recompiled `gt2_sysinit_vsync_setup` and proves the safepoint lets its
+busy-wait observe the counter advancing — the exact defect. It substitutes a
+delivery hook that increments the counter the way the game's handler does,
+because the real chain (`HookEntryInt` populating the BIOS interrupt env, then
+`LegacyInterrupts` resolving the handler) only exists after a full boot with a
+disc, a GPU and a window. That chain is validated by Step 6's manual run, not by
+the test. Do not claim the test proves the chain.
 
 - [ ] **Step 1: Reference the port from the test project**
 
@@ -1028,8 +1156,9 @@ namespace GT2Port.Tests;
 
 /// <summary>
 /// Drives the real recompiled gt2_sysinit_vsync_setup, whose busy-wait on the
-/// vblank counter at 0x80011DF4 is what hung the port. Nothing here is mocked
-/// except the passage of time.
+/// vblank counter at 0x80011DF4 is what hung the port. The game code, the
+/// safepoint and the interrupt bookkeeping are all real; only the handler and
+/// the passage of time stand in.
 /// </summary>
 [Collection("interrupts")]
 public class BootIntegrationTests
@@ -1052,7 +1181,8 @@ public class BootIntegrationTests
         Dispatcher.Register("main", new Recompiled.MainDispatchTable());
         Dispatcher.Load("main");
 
-        Irq.Invoke = (ctx, mem, addr) => Dispatcher.Call(ctx, mem, addr);
+        // Stands in for gt2_vsync_handler, which does exactly this increment.
+        Irq.Deliver = _ => m.WriteU32(VBlankCounter, m.ReadU32(VBlankCounter) + 1u);
         Irq.PumpHost = () => { };
 
         var source = new TestVBlankSource();
@@ -1091,13 +1221,16 @@ public class BootIntegrationTests
 }
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [ ] **Step 3: Run the test**
 
 ```bash
 dotnet test tests/GT2Port.Tests/GT2Port.Tests.csproj --filter Vsync_setup_completes
 ```
 
-Expected: FAIL — the test times out after 10 seconds. `VSyncCallback` registers the handler, but the safepoint's `Invoke` hook is set here while the game's own `gt2_vsync_handler` needs the dispatcher, and until Step 4 nothing in the running port wires it. If it passes already, Tasks 1-4 covered it; note that and continue.
+This test exercises Tasks 1b-4 and sets its own hooks, so it may already pass
+here — Step 4 wires the *running port*, which no test covers. Record which
+happened. If it FAILS, the safepoint is not reaching the busy-wait: re-check
+Task 4 Step 8 before continuing.
 
 - [ ] **Step 4: Wire the hooks and start the source in Program.cs**
 
@@ -1110,33 +1243,27 @@ using RecompOne.Runtime.Interrupts;
 Then, directly after the `Dispatcher.Load("main");` line and before the `CpuContext` is created, add:
 
 ```csharp
-// Interrupt delivery: the dispatcher runs the handler, the host pump keeps the
-// window alive while the game sits in a busy-wait, and the wall clock decides
-// when a VBlank happens.
-Irq.Invoke = (ctx, mem, addr) => Dispatcher.Call(ctx, mem, addr);
+// Interrupt delivery: the runtime's existing IRQ path runs the handler the game
+// registered through the BIOS, the host pump keeps the window alive while the
+// game sits in a busy-wait, and the wall clock decides when a VBlank happens.
+Irq.Deliver = RecompOne.Runtime.Runtime.DispatchIrq;
 Irq.PumpHost = RecompOne.Runtime.Runtime.PumpHost;
 
 var vblank = new WallClockVBlankSource();
 vblank.Start(InterruptController.Raise);
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
-
-```bash
-dotnet test tests/GT2Port.Tests/GT2Port.Tests.csproj --filter Vsync_setup_completes
-```
-
-Expected: PASS.
-
-- [ ] **Step 6: Run the whole suite**
+- [ ] **Step 5: Run the whole suite**
 
 ```bash
 dotnet test tests/GT2Port.Tests/GT2Port.Tests.csproj
 ```
 
-Expected: PASS, 21 tests.
+Expected: PASS, 20 tests.
 
-- [ ] **Step 7: Run the real port with tracing and confirm the boot advances**
+- [ ] **Step 6: Run the real port with tracing and confirm the boot advances**
+
+This is the step that validates the reused BIOS chain end to end.
 
 ```bash
 python -c "import json;p='config/gt2.json';c=json.load(open(p));c['debug']=True;json.dump(c,open(p,'w'),indent=2)"
@@ -1150,14 +1277,19 @@ dotnet build GT2Port.csproj 2>&1 | grep -E "error|êxito"
 
 ```bash
 grep -c "gt2_vsync_handler" trace.log
-tail -20 trace.log
+tail -30 trace.log
 ```
 
-Expected: `gt2_vsync_handler` appears many times, and the trace continues past `gt2_sysinit_vsync_setup` into functions that never previously ran. The previous run ended at `INTR_VB_OBJ_C4` and emitted nothing further.
+Expected: `gt2_vsync_handler` appears many times, and the trace continues past
+`gt2_sysinit_vsync_setup` into functions that never previously ran. The previous
+run ended at `INTR_VB_OBJ_C4` and emitted nothing further.
 
-Report what the window shows. A different failure past this point is progress, not regression — record it for the next plan.
+Report both numbers and the tail verbatim in your report. If `gt2_vsync_handler`
+count is 0, the BIOS chain is not delivering — report that as the finding; it
+means the reuse approach did not hold and the handler registry from the original
+spec is needed after all. Do not try to build that yourself.
 
-- [ ] **Step 8: Turn tracing back off**
+- [ ] **Step 7: Turn tracing back off**
 
 ```bash
 python -c "import json;p='config/gt2.json';c=json.load(open(p));c['debug']=False;json.dump(c,open(p,'w'),indent=2)"
@@ -1165,24 +1297,9 @@ dotnet run --project RecompOne/RecompOne.Recompiler -c Release --no-build -- con
 dotnet build GT2Port.csproj 2>&1 | grep -E "error|êxito"
 ```
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add Program.cs tests/GT2Port.Tests config/gt2.json
 git commit -m "Start VBlank delivery at boot and cover it with an integration test"
 ```
-
----
-
-## Notes for the implementer
-
-**The submodule is a fork.** Commits touching files under `RecompOne/` go to our fork's `vblank-interrupts` branch and must be committed there separately from the parent repo. After each task that changes runtime or recompiler files:
-
-```bash
-git -C RecompOne add -A
-git -C RecompOne commit -m "<same message>"
-```
-
-The parent repo records the submodule's commit hash, so the submodule commit must exist before the parent commit that points at it.
-
-**A passing integration test is not a running game.** It proves the busy-wait clears. The boot will very likely stop somewhere new — probably the overlays, which are still absent from `config/gt2.json`. That is the next plan, not this one.
