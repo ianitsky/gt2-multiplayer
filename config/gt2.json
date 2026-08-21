@@ -1,9 +1,14 @@
 {
-  "game": { "id": "SCUS-94488", "name": "GranTurismo2", "output": "../generated" },
+  "game": {
+    "id": "SCUS-94488",
+    "name": "GranTurismo2",
+    "output": "../generated"
+  },
   "cue": "../disc/Gran Turismo 2 (USA) (Simulation Mode) (v1.2).cue",
   "funcMap": "funcmaps/main.json",
   "linearSweep": false,
   "addressComments": true,
   "overlays": [],
-  "patches": []
+  "patches": [],
+  "debug": true
 }

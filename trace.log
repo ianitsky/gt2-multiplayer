@@ -1,0 +1,35 @@
+[Gpu] context: 4.5 (4.5.0 NVIDIA 596.21) on NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+[Gpu] backend: Gl45
+[Host] display scale: 1x
+[Host] gl context 4.5 Core
+[assets] game=SCUS-94488 packs=0 xa=0 tex=0 cluts=0 rules=0 root=C:\Users\inmor\Documents\Projects\gt2-recompone\packs
+[Dispatcher] loaded overlay: main
+start @ main @ 0x8005D600
+gt2_init @ main @ 0x8008CE08
+gt2_init_task0 @ main @ 0x8008DDB4
+gt2_init_task00 @ main @ 0x8008DD74
+gt2_sysinit @ main @ 0x80010998
+gt2_sysinit_task0 @ main @ 0x8005D9BC
+gt2_memset @ main @ 0x8008CE30
+ResetCallback @ main @ 0x8008BC78
+INTR_OBJ_194 @ main @ 0x8008BE0C
+func_8008C314 @ main @ 0x8008C314
+gt2_main_saveregisters @ main @ 0x8007AD58
+HookEntryInt @ main @ 0x8008CC78
+startIntrVSync @ main @ 0x8008C548
+INTR_VB_OBJ_F0 @ main @ 0x8008C638
+InterruptCallback @ main @ 0x8008BCA8
+INTR_OBJ_43C @ main @ 0x8008C0B4
+INTR_OBJ_4EC @ main @ 0x8008C164
+ChangeClearPAD @ main @ 0x8008C998
+ChangeClearRCnt @ main @ 0x8008CC58
+startIntrDMA @ main @ 0x8008C668
+INTR_DMA_OBJ_278 @ main @ 0x8008C8E0
+InterruptCallback @ main @ 0x8008BCA8
+INTR_OBJ_43C @ main @ 0x8008C0B4
+INTR_OBJ_4EC @ main @ 0x8008C164
+_96_remove @ main @ 0x8008CC90
+gt2_sdk_ExitCriticalSection @ main @ 0x8008C948
+gt2_sysinit_vsync_setup @ main @ 0x80010954
+VSyncCallback @ main @ 0x8008BD08
+INTR_VB_OBJ_C4 @ main @ 0x8008C60C
