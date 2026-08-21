@@ -9,3 +9,4 @@ interface.ini
 run.log
 packs/
 ovl_bin/
+trace.log
