@@ -1,3 +1,6 @@
 [submodule "RecompOne"]
 	path = RecompOne
 	url = https://github.com/BlackLabelHQ/RecompOne.git
+[submodule "externals/gt2-reversing"]
+	path = externals/gt2-reversing
+	url = https://github.com/ginryuoku/gt2-reversing.git
