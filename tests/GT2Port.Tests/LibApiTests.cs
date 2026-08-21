@@ -46,4 +46,50 @@ public class LibApiTests
 
         Assert.Equal(1u, c.V0);
     }
+
+    [Fact]
+    public void Nested_EnterCriticalSection_returns_zero_in_v0()
+    {
+        var (c, m) = Fixture();
+
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.EnterCriticalSection(c, m);
+
+        Assert.Equal(0u, c.V0);
+    }
+
+    [Fact]
+    public void Nested_EnterCriticalSection_still_increments_depth()
+    {
+        var (c, m) = Fixture();
+
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.ExitCriticalSection(c, m);
+
+        Assert.Equal(1, InterruptController.CriticalDepth);
+    }
+
+    [Fact]
+    public void EnterCriticalSection_returns_one_again_after_matched_pair()
+    {
+        var (c, m) = Fixture();
+
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.ExitCriticalSection(c, m);
+        LibApi.EnterCriticalSection(c, m);
+
+        Assert.Equal(1u, c.V0);
+    }
+
+    [Fact]
+    public void ExitCriticalSection_sets_v0_to_zero()
+    {
+        var (c, m) = Fixture();
+
+        LibApi.EnterCriticalSection(c, m);
+        LibApi.ExitCriticalSection(c, m);
+
+        Assert.Equal(0u, c.V0);
+    }
 }
