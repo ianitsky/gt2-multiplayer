@@ -11,5 +11,5 @@
   "addressComments": true,
   "overlays": [],
   "patches": [],
-  "debug": true
+  "debug": false
 }

@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../RecompOne/RecompOne.Runtime/RecompOne.Runtime.csproj" />
+        <ProjectReference Include="../../GT2Port.csproj" />
     </ItemGroup>
 
 </Project>

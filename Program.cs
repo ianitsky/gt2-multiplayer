@@ -1,6 +1,7 @@
 using RecompOne.Runtime.Cdrom;
 using RecompOne.Runtime.Context;
 using RecompOne.Runtime.Dispatch;
+using RecompOne.Runtime.Interrupts;
 using RecompOne.Runtime.Memory;
 using BiosKernel = RecompOne.Runtime.Bios.Bios;
 
@@ -30,6 +31,15 @@ RecompOne.Runtime.Modding.ModLoader.LoadAll();
 
 cd.LoadToMemory(BootExe, LoadAddr, ExeOffset, ExeSize);
 Dispatcher.Load("main");
+
+// Interrupt delivery: the runtime's existing IRQ path runs the handler the game
+// registered through the BIOS, the host pump keeps the window alive while the
+// game sits in a busy-wait, and the wall clock decides when a VBlank happens.
+Irq.Deliver = RecompOne.Runtime.Runtime.DispatchIrq;
+Irq.PumpHost = RecompOne.Runtime.Runtime.PumpHost;
+
+var vblank = new WallClockVBlankSource();
+vblank.Start(InterruptController.Raise);
 
 var c = new CpuContext();
 c.GP = 0u;
