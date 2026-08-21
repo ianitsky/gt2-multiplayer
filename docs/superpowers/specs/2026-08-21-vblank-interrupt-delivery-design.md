@@ -65,6 +65,8 @@ neither `CpuContext` nor memory — it sets a counter.
 | `Interrupts.IVBlankSource` | pluggable source; `WallClockVBlankSource` is the initial implementation |
 | `Sdk.LibApi` | reimplements `VSyncCallback`, `EnterCriticalSection`, `ExitCriticalSection`; registered in `SdkPatches` |
 | `FunctionEmmiter` / `InstructionEmitter` | emits the safepoint call before backward branches |
+| `Interrupts.Irq` | static facade the generated code calls; `Irq.Poll(c, m)` is the safepoint, kept tiny so it inlines |
+| `Runtime.PumpHost()` | new entry point that pumps window events and renders without presenting a game frame, so `Deliver` can unfreeze the window independently of libetc's `VSync` |
 
 Pumping the host from `Deliver` is what unfreezes the window, so the white
 screen is fixed by the same change.
