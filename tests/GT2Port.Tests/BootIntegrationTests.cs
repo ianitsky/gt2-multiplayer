@@ -71,21 +71,35 @@ public class BootIntegrationTests
     sealed class TestVBlankSource : IVBlankSource
     {
         CancellationTokenSource? _cts;
+        Thread? _thread;
 
         public void Start(Action raise)
         {
             var cts = new CancellationTokenSource();
             _cts = cts;
-            new Thread(() =>
+            var thread = new Thread(() =>
             {
                 while (!cts.IsCancellationRequested)
                 {
                     raise();
                     Thread.Sleep(1);
                 }
-            }) { IsBackground = true }.Start();
+            }) { IsBackground = true };
+            _thread = thread;
+            thread.Start();
         }
 
-        public void Stop() => _cts?.Cancel();
+        public void Stop()
+        {
+            var cts = _cts;
+            var thread = _thread;
+            _cts = null;
+            _thread = null;
+
+            if (cts is null) return;
+
+            cts.Cancel();
+            thread?.Join();
+        }
     }
 }
