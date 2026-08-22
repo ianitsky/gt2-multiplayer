@@ -9,7 +9,17 @@
   "linearSweep": false,
   "safepoints": true,
   "addressComments": true,
-  "overlays": [],
+  "overlays": [
+    {
+      "name": "gt2_01",
+      "file": "GT2.OVL",
+      "offset": 48,
+      "size": 144709,
+      "gzip": true,
+      "base": "0x80010000",
+      "linearSweep": true
+    }
+  ],
   "patches": [],
   "debug": false
 }
