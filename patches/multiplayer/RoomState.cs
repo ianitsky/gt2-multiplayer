@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Text;
 
 namespace GT2Port.Multiplayer;
@@ -20,11 +19,31 @@ public record Room(Guid Id, string Name, string Track, int MaxPlayers, IReadOnly
 public static class RoomState
 {
     const byte Version = 1;
-    const int MaxPlayers = 6;
+    public const int MaxPlayers = 6;
     const int MaxStringBytes = 64;
 
+    /// <summary>
+    /// Serialises a room that is already known to be valid. This is a programming
+    /// error surface, not a hostile-input one: a room that breaks the wire format's
+    /// own invariants (too many players, or a cap set above what the format allows)
+    /// throws rather than silently emitting a packet whose count byte lies about its
+    /// contents.
+    /// </summary>
     public static byte[] Serialise(Room room)
     {
+        if (room.Players.Count > MaxPlayers)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(room), room.Players.Count,
+                $"Room has {room.Players.Count} players, which exceeds the {MaxPlayers}-player cap.");
+        }
+        if (room.MaxPlayers > MaxPlayers)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(room), room.MaxPlayers,
+                $"Room.MaxPlayers is {room.MaxPlayers}, which exceeds the {MaxPlayers}-player cap.");
+        }
+
         var buffer = new List<byte> { Version };
         buffer.AddRange(room.Id.ToByteArray());
         WriteString(buffer, room.Name);
@@ -70,10 +89,30 @@ public static class RoomState
 
     static void WriteString(List<byte> buffer, string value)
     {
-        var bytes = Encoding.UTF8.GetBytes(value);
-        if (bytes.Length > MaxStringBytes) bytes = bytes[..MaxStringBytes];
+        var bytes = Encoding.UTF8.GetBytes(TruncateToUtf8ByteLimit(value, MaxStringBytes));
         buffer.Add((byte)bytes.Length);
         buffer.AddRange(bytes);
+    }
+
+    /// <summary>
+    /// Truncates to at most <paramref name="maxBytes"/> UTF-8 bytes, cutting only on a
+    /// codepoint boundary. Walks the string one <see cref="Rune"/> (not char - a
+    /// surrogate pair is one codepoint) at a time and stops before a rune's encoded
+    /// bytes would push the total past the limit, so the result is always a valid
+    /// UTF-8 prefix of the input rather than a byte sequence split mid-codepoint.
+    /// </summary>
+    static string TruncateToUtf8ByteLimit(string value, int maxBytes)
+    {
+        int byteCount = 0;
+        int charsToKeep = 0;
+        foreach (var rune in value.EnumerateRunes())
+        {
+            int runeBytes = rune.Utf8SequenceLength;
+            if (byteCount + runeBytes > maxBytes) break;
+            byteCount += runeBytes;
+            charsToKeep += rune.Utf16SequenceLength;
+        }
+        return charsToKeep == value.Length ? value : value[..charsToKeep];
     }
 
     static bool TryByte(ReadOnlySpan<byte> data, ref int offset, out byte value)
