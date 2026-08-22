@@ -20,7 +20,7 @@ public static class RoomState
 {
     const byte Version = 1;
     public const int MaxPlayers = 6;
-    const int MaxStringBytes = 64;
+    public const int MaxStringBytes = 64;
 
     /// <summary>
     /// Serialises a room that is already known to be valid. This is a programming
@@ -37,11 +37,11 @@ public static class RoomState
                 nameof(room), room.Players.Count,
                 $"Room has {room.Players.Count} players, which exceeds the {MaxPlayers}-player cap.");
         }
-        if (room.MaxPlayers > MaxPlayers)
+        if (room.MaxPlayers < 0 || room.MaxPlayers > MaxPlayers)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(room), room.MaxPlayers,
-                $"Room.MaxPlayers is {room.MaxPlayers}, which exceeds the {MaxPlayers}-player cap.");
+                $"Room.MaxPlayers is {room.MaxPlayers}, which must be between 0 and {MaxPlayers}.");
         }
 
         var buffer = new List<byte> { Version };

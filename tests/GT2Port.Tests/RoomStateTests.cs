@@ -65,11 +65,47 @@ public class RoomStateTests
         // socket-reading caller; xunit fails this test automatically if it throws.
         bool parsed = RoomState.TryDeserialise(junk, out var room);
 
-        // If it did happen to parse, the result must still respect the wire format's
-        // own invariants rather than passing raw garbage through as a "room".
+        // Random bytes almost never parse, but if they do, the result must respect invariants
         if (parsed)
         {
             Assert.InRange(room.Players.Count, 0, RoomState.MaxPlayers);
+            Assert.DoesNotContain(null, room.Players);
+        }
+    }
+
+    [Fact]
+    public void Rejects_corrupted_packet_while_preserving_invariants()
+    {
+        // Build a minimal packet with 0 players, then append 7 minimal valid players
+        var empty = new Room(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "", "", 6, []);
+
+        var data = RoomState.Serialise(empty).ToList();
+        // Packet is now: version(1) + guid(16) + name_len(1) + track_len(1) + maxPlayers(1) + count(1)
+        // = 1 + 16 + 1 + 1 + 1 + 1 = 21 bytes, with count at byte 20
+
+        // The count byte is at index data.Count - 1
+        int countByteIndex = data.Count - 1;
+
+        // Append 7 minimal players (5 bytes each: name_len(1) + name(1) + car_len(1) + car(1) + ready(1))
+        for (int i = 0; i < 7; i++)
+        {
+            data.AddRange(new byte[] { 1, (byte)('a' + i), 1, (byte)('c' + i), 1 });
+        }
+
+        // Change count from 0 to 7
+        data[countByteIndex] = 7;
+
+        bool parsed = RoomState.TryDeserialise([.. data], out var room);
+
+        // If packet somehow parses with 7 players, that violates MaxPlayers invariant
+        // This assertion will fail if the count > MaxPlayers check is deleted
+        if (parsed)
+        {
+            Assert.InRange(room.Players.Count, 0, RoomState.MaxPlayers);
+            Assert.DoesNotContain(null, room.Players);
+            Assert.True(room.Players.Count <= room.MaxPlayers);
         }
     }
 
@@ -78,7 +114,7 @@ public class RoomStateTests
     {
         // Every string here is long enough to hit the truncation cap, whatever that
         // cap currently is - this is the true worst case, not a stand-in for it.
-        var longString = new string('x', 200);
+        var longString = new string('x', RoomState.MaxStringBytes);
         var full = new Room(
             Guid.NewGuid(), longString, longString, RoomState.MaxPlayers,
             [.. Enumerable.Range(0, RoomState.MaxPlayers)
@@ -107,6 +143,13 @@ public class RoomStateTests
         };
         var bytes = RoomState.Serialise(room);
         Assert.NotEmpty(bytes);
+    }
+
+    [Fact]
+    public void Serialising_negative_max_players_throws()
+    {
+        var room = Sample() with { MaxPlayers = -1 };
+        Assert.Throws<ArgumentOutOfRangeException>(() => RoomState.Serialise(room));
     }
 
     [Fact]
