@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using RecompOne.Runtime.Context;
 using RecompOne.Runtime.Interrupts;
 using RecompOne.Runtime.Memory;
@@ -222,5 +224,47 @@ public class IrqTests
         var ex = Record.Exception(() => source.Stop());
 
         Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Poll_delivers_every_pending_channel()
+    {
+        var (c, m) = Fixture();
+        var delivered = new List<int>();
+        Irq.Deliver = irq => delivered.Add(irq);
+        InterruptController.Raise(0);
+        InterruptController.Raise(2);
+
+        Irq.Poll(c, m);
+
+        Assert.Equal(new[] { 0, 2 }, delivered.OrderBy(x => x).ToArray());
+    }
+
+    [Fact]
+    public void Poll_delivers_a_channel_once_per_raise()
+    {
+        var (c, m) = Fixture();
+        int cdDeliveries = 0;
+        Irq.Deliver = irq => { if (irq == 2) cdDeliveries++; };
+        InterruptController.Raise(2);
+        InterruptController.Raise(2);
+        InterruptController.Raise(2);
+
+        Irq.Poll(c, m);
+
+        Assert.Equal(3, cdDeliveries);
+    }
+
+    [Fact]
+    public void Poll_with_only_a_cd_interrupt_does_not_deliver_vblank()
+    {
+        var (c, m) = Fixture();
+        var delivered = new List<int>();
+        Irq.Deliver = irq => delivered.Add(irq);
+        InterruptController.Raise(2);
+
+        Irq.Poll(c, m);
+
+        Assert.Equal(new[] { 2 }, delivered.ToArray());
     }
 }

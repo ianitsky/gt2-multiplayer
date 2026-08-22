@@ -103,4 +103,59 @@ public class InterruptControllerTests
 
         Assert.Equal(InterruptController.MaxPending, InterruptController.Drain());
     }
+
+    [Fact]
+    public void Channels_are_tracked_independently()
+    {
+        InterruptController.Raise(0);
+        InterruptController.Raise(2);
+        InterruptController.Raise(2);
+
+        Assert.Equal(1, InterruptController.Drain(0));
+        Assert.Equal(2, InterruptController.Drain(2));
+        Assert.Equal(0, InterruptController.Drain(3));
+    }
+
+    [Fact]
+    public void Draining_one_channel_leaves_the_others()
+    {
+        InterruptController.Raise(0);
+        InterruptController.Raise(2);
+
+        InterruptController.Drain(0);
+
+        Assert.Equal(1, InterruptController.Drain(2));
+    }
+
+    [Fact]
+    public void Pending_counts_every_channel()
+    {
+        InterruptController.Raise(0);
+        InterruptController.Raise(2);
+        InterruptController.Raise(3);
+
+        Assert.Equal(3, InterruptController.Pending);
+    }
+
+    [Fact]
+    public void Each_channel_saturates_independently()
+    {
+        for (int i = 0; i < 20; i++) InterruptController.Raise(2);
+        InterruptController.Raise(0);
+
+        Assert.Equal(InterruptController.MaxPending, InterruptController.Drain(2));
+        Assert.Equal(1, InterruptController.Drain(0));
+    }
+
+    [Fact]
+    public void A_masked_section_defers_every_channel()
+    {
+        InterruptController.EnterCritical();
+        InterruptController.Raise(2);
+
+        Assert.Equal(0, InterruptController.Drain(2));
+
+        InterruptController.ExitCritical();
+        Assert.Equal(1, InterruptController.Drain(2));
+    }
 }

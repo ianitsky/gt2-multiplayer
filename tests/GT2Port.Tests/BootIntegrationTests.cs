@@ -56,7 +56,7 @@ public class BootIntegrationTests
         Irq.PumpHost = () => { };
 
         var source = new TestVBlankSource();
-        source.Start(InterruptController.Raise);
+        source.Start(() => InterruptController.Raise());
 
         var done = Task.Run(() => Recompiled.GranTurismo2.gt2_sysinit_vsync_setup(c, m));
 

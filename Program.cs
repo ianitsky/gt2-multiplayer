@@ -39,7 +39,7 @@ Irq.Deliver = RecompOne.Runtime.Runtime.DispatchIrq;
 Irq.PumpHost = RecompOne.Runtime.Runtime.PumpHost;
 
 var vblank = new WallClockVBlankSource();
-vblank.Start(InterruptController.Raise);
+vblank.Start(() => InterruptController.Raise());
 
 var c = new CpuContext();
 c.GP = 0u;
