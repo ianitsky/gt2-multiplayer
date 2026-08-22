@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Sockets;
+using System.Reflection;
 using GT2Port.Multiplayer;
 using Xunit;
 
@@ -5,8 +8,10 @@ namespace GT2Port.Tests;
 
 public class LanDiscoveryTests
 {
-    // A port unlikely to collide with anything else on the machine.
-    const int Port = 34719;
+    // Every test gets its own port off this base so a stray in-flight
+    // broadcast from one test's host can never land in another test's
+    // listener (Finding 4). Offsets below are unique per test and obvious.
+    const int BasePort = 34719;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
     void Advance(double seconds) => _now = _now.AddSeconds(seconds);
@@ -24,11 +29,26 @@ public class LanDiscoveryTests
         }
     }
 
+    /// <summary>
+    /// Forces the next send on a LanDiscovery's underlying socket to fail with
+    /// a real SocketException, without disposing the socket or mocking anything:
+    /// shutting down the send direction of a live UDP socket makes the OS itself
+    /// refuse the next send.
+    /// </summary>
+    static void BreakSending(LanDiscovery discovery)
+    {
+        var field = typeof(LanDiscovery).GetField("_socket", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("LanDiscovery no longer has a _socket field.");
+        var socket = (UdpClient)field.GetValue(discovery)!;
+        socket.Client.Shutdown(SocketShutdown.Send);
+    }
+
     [Fact]
     public void Finds_an_announced_room()
     {
-        using var listener = new LanDiscovery(Port, () => _now);
-        using var host = new LanDiscovery(Port, () => _now);
+        const int port = BasePort + 0;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
 
         var room = Sample();
         host.Announce(room);
@@ -40,8 +60,9 @@ public class LanDiscoveryTests
     [Fact]
     public void Carries_the_room_details()
     {
-        using var listener = new LanDiscovery(Port, () => _now);
-        using var host = new LanDiscovery(Port, () => _now);
+        const int port = BasePort + 1;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
 
         host.Announce(Sample("Trial Mountain Cup"));
         Settle(listener);
@@ -55,21 +76,33 @@ public class LanDiscoveryTests
     [Fact]
     public void Ignores_its_own_announcements()
     {
-        using var host = new LanDiscovery(Port, () => _now);
-        var room = Sample();
-        host.LocalRoomId = room.Id;
+        const int port = BasePort + 2;
+        using var host = new LanDiscovery(port, () => _now);
+        using var other = new LanDiscovery(port, () => _now);
 
-        host.Announce(room);
+        // Positive precondition: prove the transport actually works on this
+        // machine before trusting a negative assertion about it (Finding 1).
+        // A room announced from a *different* id must be received.
+        var foreign = Sample("Someone else's room");
+        other.Announce(foreign);
+        Settle(host);
+        Assert.Contains(host.Rooms, r => r.Id == foreign.Id);
+
+        var own = Sample();
+        host.LocalRoomId = own.Id;
+        host.Announce(own);
         for (int i = 0; i < 20; i++) { host.Tick(); Thread.Sleep(10); }
 
-        Assert.Empty(host.Rooms);
+        Assert.DoesNotContain(host.Rooms, r => r.Id == own.Id);
+        Assert.Single(host.Rooms); // only the foreign room, self stayed filtered out
     }
 
     [Fact]
     public void Forgets_a_room_that_stops_announcing()
     {
-        using var listener = new LanDiscovery(Port, () => _now);
-        using var host = new LanDiscovery(Port, () => _now);
+        const int port = BasePort + 3;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
 
         host.Announce(Sample());
         Settle(listener);
@@ -84,8 +117,9 @@ public class LanDiscoveryTests
     [Fact]
     public void Keeps_a_room_that_keeps_announcing()
     {
-        using var listener = new LanDiscovery(Port, () => _now);
-        using var host = new LanDiscovery(Port, () => _now);
+        const int port = BasePort + 4;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
 
         var room = Sample();
         host.Announce(room);
@@ -104,17 +138,97 @@ public class LanDiscoveryTests
     [Fact]
     public void Survives_a_garbage_datagram()
     {
-        using var listener = new LanDiscovery(Port, () => _now);
-        using var sender = new System.Net.Sockets.UdpClient();
+        const int port = BasePort + 5;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
+        using var sender = new UdpClient();
         sender.EnableBroadcast = true;
+
+        // Positive precondition: prove the transport actually works before
+        // trusting the negative assertion below (Finding 1).
+        var room = Sample();
+        host.Announce(room);
+        Settle(listener);
+        Assert.Contains(listener.Rooms, r => r.Id == room.Id);
 
         var junk = new byte[32];
         Random.Shared.NextBytes(junk);
-        sender.Send(junk, junk.Length,
-            new System.Net.IPEndPoint(System.Net.IPAddress.Broadcast, Port));
+        sender.Send(junk, junk.Length, new IPEndPoint(IPAddress.Broadcast, port));
 
         for (int i = 0; i < 20; i++) { listener.Tick(); Thread.Sleep(5); }
 
-        Assert.Empty(listener.Rooms);
+        Assert.Single(listener.Rooms); // the garbage didn't add anything
+    }
+
+    [Fact]
+    public void Reports_a_persistent_send_failure()
+    {
+        const int port = BasePort + 6;
+        using var discovery = new LanDiscovery(port, () => _now);
+
+        Assert.Null(discovery.LastSendFailure);
+
+        BreakSending(discovery);
+        discovery.Announce(Sample());
+
+        Assert.NotNull(discovery.LastSendFailure);
+    }
+
+    [Fact]
+    public void Caps_datagrams_processed_per_tick()
+    {
+        const int port = BasePort + 7;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var sender = new UdpClient { EnableBroadcast = true };
+
+        int flood = LanDiscovery.MaxDatagramsPerTick + 20;
+        for (int i = 0; i < flood; i++)
+        {
+            var data = RoomState.Serialise(Sample($"room-{i}"));
+            sender.Send(data, data.Length, new IPEndPoint(IPAddress.Broadcast, port));
+        }
+
+        // Give the OS time to queue all of them before the single Tick() below.
+        Thread.Sleep(300);
+
+        listener.Tick();
+
+        Assert.True(listener.Rooms.Count <= LanDiscovery.MaxDatagramsPerTick,
+            $"expected at most {LanDiscovery.MaxDatagramsPerTick} rooms processed in a single Tick, got {listener.Rooms.Count}");
+    }
+
+    [Fact]
+    public void Safe_to_use_after_dispose()
+    {
+        const int port = BasePort + 8;
+        var discovery = new LanDiscovery(port, () => _now);
+        discovery.Dispose();
+
+        var ex = Record.Exception(() =>
+        {
+            discovery.Tick();
+            discovery.Announce(Sample());
+            _ = discovery.Rooms;
+            discovery.Dispose(); // disposing twice must also not throw
+        });
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public void Distinguishes_no_local_room_from_a_zero_id_room()
+    {
+        const int port = BasePort + 9;
+        using var listener = new LanDiscovery(port, () => _now); // LocalRoomId left unset
+        using var sender = new UdpClient();
+        sender.EnableBroadcast = true;
+
+        var zeroIdRoom = new Room(Guid.Empty, "Zero id room", "Trial Mountain", 6, [new Player("ian", "", false)]);
+        var data = RoomState.Serialise(zeroIdRoom);
+        sender.Send(data, data.Length, new IPEndPoint(IPAddress.Broadcast, port));
+
+        Settle(listener);
+
+        Assert.Contains(listener.Rooms, r => r.Id == Guid.Empty);
     }
 }

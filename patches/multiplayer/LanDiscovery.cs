@@ -16,10 +16,19 @@ public sealed class LanDiscovery : IDisposable
 {
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
 
+    /// <summary>
+    /// Upper bound on datagrams drained in a single <see cref="Tick"/>. Without
+    /// this, a flood (or a buggy peer re-broadcasting rapidly) could keep one
+    /// Tick draining the socket indefinitely and stall the frame loop. Anything
+    /// left over simply waits for the next Tick.
+    /// </summary>
+    public const int MaxDatagramsPerTick = 32;
+
     readonly UdpClient _socket;
     readonly int _port;
     readonly Func<DateTime> _clock;
     readonly Dictionary<Guid, (Room Room, DateTime Heard)> _seen = [];
+    bool _disposed;
 
     public LanDiscovery(int port, Func<DateTime> clock)
     {
@@ -34,34 +43,55 @@ public sealed class LanDiscovery : IDisposable
         _socket.Client.Bind(new IPEndPoint(IPAddress.Any, port));
     }
 
-    /// <summary>Announcements carrying this id are our own and are ignored.</summary>
-    public Guid LocalRoomId { get; set; }
+    /// <summary>
+    /// Announcements carrying this id are our own and are ignored. Null (the
+    /// default) means "no local room" - distinct from <see cref="Guid.Empty"/>,
+    /// which is itself a valid wire value a crafted or buggy datagram could carry.
+    /// </summary>
+    public Guid? LocalRoomId { get; set; }
 
-    public IReadOnlyList<Room> Rooms => [.. _seen.Values.Select(v => v.Room)];
+    /// <summary>
+    /// The exception from the most recent failed <see cref="Announce"/> send, or
+    /// null if the last send (if any) succeeded. Occasional loss is expected and
+    /// not surfaced as a persistent problem; this exists so a caller can notice
+    /// when broadcast is blocked for the whole session and tell the user, rather
+    /// than announcing into the void forever with no way to find out.
+    /// </summary>
+    public SocketException? LastSendFailure { get; private set; }
+
+    public IReadOnlyList<Room> Rooms => _disposed ? [] : [.. _seen.Values.Select(v => v.Room)];
 
     public void Announce(Room room)
     {
+        if (_disposed) return;
+
         var data = RoomState.Serialise(room);
         try
         {
             _socket.Send(data, data.Length, new IPEndPoint(IPAddress.Broadcast, _port));
+            LastSendFailure = null;
         }
-        catch (SocketException)
+        catch (SocketException ex)
         {
             // A broadcast that cannot go out is not worth interrupting the
-            // lobby for; the next announcement is a second away.
+            // lobby for; the next announcement is a second away. But remember
+            // it, so a persistent failure (as opposed to occasional loss) can
+            // eventually be surfaced to the user.
+            LastSendFailure = ex;
         }
     }
 
     public void Tick()
     {
+        if (_disposed) return;
+
         Receive();
         Expire();
     }
 
     void Receive()
     {
-        while (_socket.Available > 0)
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
@@ -75,7 +105,7 @@ public sealed class LanDiscovery : IDisposable
             }
 
             if (!RoomState.TryDeserialise(data, out var room)) continue;
-            if (room.Id == LocalRoomId) continue;
+            if (LocalRoomId is Guid localId && room.Id == localId) continue;
             _seen[room.Id] = (room, _clock());
         }
     }
@@ -88,5 +118,10 @@ public sealed class LanDiscovery : IDisposable
             _seen.Remove(id);
     }
 
-    public void Dispose() => _socket.Dispose();
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _socket.Dispose();
+    }
 }
