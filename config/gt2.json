@@ -31,8 +31,35 @@
     {
       "name": "gt2_03",
       "file": "GT2.OVL",
-      "offset": 189608,
+      "offset": 189096,
       "size": 53389,
+      "gzip": true,
+      "base": "0x80010000",
+      "linearSweep": true
+    },
+    {
+      "name": "gt2_04",
+      "file": "GT2.OVL",
+      "offset": 242488,
+      "size": 5195,
+      "gzip": true,
+      "base": "0x80010000",
+      "linearSweep": true
+    },
+    {
+      "name": "gt2_05",
+      "file": "GT2.OVL",
+      "offset": 247684,
+      "size": 38461,
+      "gzip": true,
+      "base": "0x80010000",
+      "linearSweep": true
+    },
+    {
+      "name": "gt2_06",
+      "file": "GT2.OVL",
+      "offset": 286148,
+      "size": 3602,
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": true

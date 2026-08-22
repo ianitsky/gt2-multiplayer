@@ -19,11 +19,16 @@ namespace GT2Port;
 /// </summary>
 public static class OverlayHook
 {
+    // The loader table at 0x80091174 holds each overlay's own entry point, and
+    // the overlays' symbol files claim these addresses in order, ovr1 to ovr6.
     static readonly Dictionary<uint, string> ByEntryPoint = new()
     {
         [0x80012254u] = "gt2_01", // gt2_ovr1_load_global_menu_overlay
         [0x80011384u] = "gt2_02", // gt2_ovr2_entrypoint0
         [0x80011750u] = "gt2_03", // gt2_ovr3_entrypoint0
+        [0x80012C00u] = "gt2_04", // gt2_ovr4_entrypoint
+        [0x80013628u] = "gt2_05", // gt2_ovr5_entrypoint0
+        [0x800114B8u] = "gt2_06", // gt2_ovr6_entrypoint0
     };
 
     static readonly HashSet<uint> Unknown = new();
