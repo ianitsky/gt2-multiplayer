@@ -41,7 +41,7 @@ public sealed class Session
 
     public void Host(string roomName, string track)
     {
-        Current = new Room(Guid.NewGuid(), roomName, track, 6,
+        Current = new Room(Guid.NewGuid(), roomName, track, RoomState.MaxPlayers,
             [new Player(_playerName, "", false)]);
         Phase = SessionPhase.Hosting;
         StatusMessage = null;
@@ -51,8 +51,13 @@ public sealed class Session
     public bool Join(Room room)
     {
         if (room.Players.Count >= room.MaxPlayers) return false;
+        if (room.Players.Any(p => p.Name == _playerName)) return false;
 
-        Current = room with { Players = [.. room.Players, new Player(_playerName, "", false)] };
+        Current = room with
+        {
+            MaxPlayers = Math.Min(room.MaxPlayers, RoomState.MaxPlayers),
+            Players = [.. room.Players, new Player(_playerName, "", false)],
+        };
         Phase = SessionPhase.Joined;
         StatusMessage = null;
         _hostLastHeard = _clock();
@@ -76,10 +81,15 @@ public sealed class Session
     /// <summary>The host's view of the room, adopted wholesale.</summary>
     public void OnRemoteState(Room room)
     {
+        var seenNames = new HashSet<string>();
+        var deduped = room.Players.Where(p => seenNames.Add(p.Name)).ToList();
+        if (deduped.Count != room.Players.Count)
+            room = room with { Players = deduped };
+
         Current = room;
         _hostLastHeard = _clock();
         foreach (var player in room.Players)
-            if (player.Name != _playerName && !_lastHeard.ContainsKey(player.Name))
+            if (player.Name != _playerName)
                 _lastHeard[player.Name] = _clock();
     }
 
@@ -107,6 +117,13 @@ public sealed class Session
 
         if (live.Count != room.Players.Count)
             Current = room with { Players = live };
+
+        // Names no longer in the room can't be pruned any other way: OnRemoteState
+        // only ever adds/refreshes entries, so a dropped player's stale timestamp
+        // would otherwise sit here forever and instantly re-kick them on reconnect.
+        var currentNames = live.Select(p => p.Name).ToHashSet();
+        foreach (var stale in _lastHeard.Keys.Where(name => !currentNames.Contains(name)).ToList())
+            _lastHeard.Remove(stale);
     }
 
     void UpdatePlayer(string playerName, Func<Player, Player> change)

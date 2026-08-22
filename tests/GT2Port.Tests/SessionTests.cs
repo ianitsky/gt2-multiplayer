@@ -184,4 +184,225 @@ public class SessionTests
 
         Assert.Equal("Skyline GT-R", session.Current!.Players[0].Car);
     }
+
+    // ---- Finding 1: a reconnecting player is kicked instantly ----
+
+    [Fact]
+    public void A_reconnecting_player_survives_the_next_tick()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "", false), new Player("guest", "", false)));
+        session.OnHeard("guest");
+
+        Advance(3.5);
+        session.Tick();
+        Assert.DoesNotContain(session.Current!.Players, p => p.Name == "guest");
+
+        // guest reconnects under the same name, with no time elapsed since.
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "", false), new Player("guest", "", false)));
+        session.Tick();
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+    }
+
+    [Fact]
+    public void OnRemoteState_refreshes_liveness_for_players_it_keeps_seeing()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "", false), new Player("guest", "", false)));
+
+        // guest is reported by every remote state, but never calls OnHeard directly.
+        for (int i = 0; i < 4; i++)
+        {
+            Advance(1.0);
+            session.OnRemoteState(RoomWith(
+                new Player("ian", "", false), new Player("guest", "", false)));
+            session.Tick();
+        }
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+    }
+
+    // ---- Finding 2: duplicate names corrupt the room ----
+
+    [Fact]
+    public void Joining_a_room_that_already_has_your_name_is_refused()
+    {
+        var session = NewSession("ian");
+        Assert.False(session.Join(RoomWith(new Player("ian", "", false))));
+        Assert.Equal(SessionPhase.Browsing, session.Phase);
+    }
+
+    [Fact]
+    public void Remote_state_with_duplicate_names_keeps_only_the_first()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "first", false),
+            new Player("guest", "", false),
+            new Player("ian", "second", true)));
+
+        var ians = session.Current!.Players.Where(p => p.Name == "ian").ToList();
+        Assert.Single(ians);
+        Assert.Equal("first", ians[0].Car);
+    }
+
+    [Fact]
+    public void SetReady_toggles_exactly_one_row()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "first", false),
+            new Player("guest", "", false),
+            new Player("ian", "second", false)));
+
+        session.SetReady("ian", true);
+
+        Assert.True(session.Current!.Players.Single(p => p.Name == "ian").Ready);
+        Assert.False(session.Current.Players.Single(p => p.Name == "guest").Ready);
+    }
+
+    // ---- Finding 3: recovery from Disconnected ----
+
+    [Fact]
+    public void Leaving_a_disconnected_session_returns_to_browsing()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+        session.OnRemoteState(RoomWith(new Player("ian", "", false)));
+
+        Advance(3.5);
+        session.Tick();
+        Assert.Equal(SessionPhase.Disconnected, session.Phase);
+
+        session.Leave();
+
+        Assert.Equal(SessionPhase.Browsing, session.Phase);
+        Assert.Null(session.Current);
+    }
+
+    [Fact]
+    public void Hosting_from_a_disconnected_session_starts_a_room()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+        session.OnRemoteState(RoomWith(new Player("ian", "", false)));
+
+        Advance(3.5);
+        session.Tick();
+        Assert.Equal(SessionPhase.Disconnected, session.Phase);
+
+        session.Host("guest's room", "track");
+
+        Assert.Equal(SessionPhase.Hosting, session.Phase);
+        Assert.Equal("guest's room", session.Current!.Name);
+    }
+
+    // ---- Finding 4: StatusMessage clearing is untested ----
+
+    [Fact]
+    public void Leaving_clears_the_status_message_left_by_a_host_timeout()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+        session.OnRemoteState(RoomWith(new Player("ian", "", false)));
+
+        Advance(3.5);
+        session.Tick();
+        Assert.NotNull(session.StatusMessage);
+
+        session.Leave();
+
+        Assert.Null(session.StatusMessage);
+    }
+
+    // ---- Finding 5: timeout boundary ----
+
+    [Fact]
+    public void Host_keeps_a_player_at_exactly_the_timeout()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "", false), new Player("guest", "", false)));
+        session.OnHeard("guest");
+
+        Advance(Session.Timeout.TotalSeconds);
+        session.Tick();
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+    }
+
+    [Fact]
+    public void Host_drops_a_player_just_past_the_timeout()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "", false), new Player("guest", "", false)));
+        session.OnHeard("guest");
+
+        Advance(Session.Timeout.TotalSeconds + 0.001);
+        session.Tick();
+
+        Assert.DoesNotContain(session.Current!.Players, p => p.Name == "guest");
+    }
+
+    [Fact]
+    public void Client_stays_connected_at_exactly_the_host_timeout()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+        session.OnRemoteState(RoomWith(new Player("ian", "", false)));
+
+        Advance(Session.Timeout.TotalSeconds);
+        session.Tick();
+
+        Assert.Equal(SessionPhase.Joined, session.Phase);
+    }
+
+    [Fact]
+    public void Client_disconnects_just_past_the_host_timeout()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+        session.OnRemoteState(RoomWith(new Player("ian", "", false)));
+
+        Advance(Session.Timeout.TotalSeconds + 0.001);
+        session.Tick();
+
+        Assert.Equal(SessionPhase.Disconnected, session.Phase);
+    }
+
+    // ---- Finding 6: Host() should use the RoomState constant, not a literal ----
+
+    [Fact]
+    public void Hosting_uses_the_global_max_players_constant()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+
+        Assert.Equal(RoomState.MaxPlayers, session.Current!.MaxPlayers);
+    }
+
+    // ---- Finding 8: Join clamps an untrusted room.MaxPlayers ----
+
+    [Fact]
+    public void Join_clamps_max_players_to_the_global_cap()
+    {
+        var oversized = new Room(Guid.NewGuid(), "room", "track", 999,
+            [new Player("ian", "", false)]);
+
+        var session = NewSession("guest");
+        Assert.True(session.Join(oversized));
+
+        Assert.Equal(RoomState.MaxPlayers, session.Current!.MaxPlayers);
+    }
 }
