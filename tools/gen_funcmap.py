@@ -96,6 +96,7 @@ def control_flow_targets(text, base, ranges):
         for pc in range(lo, hi, 4):
             word = struct.unpack_from("<I", text, pc - base)[0]
             op = word >> 26
+            is_call = op == 3  # JAL
             if op in (2, 3):  # J, JAL
                 target = ((pc + 4) & 0xF0000000) | ((word & 0x03FFFFFF) << 2)
             elif op in (4, 5, 6, 7) or (op == 1 and ((word >> 16) & 0x1F) in (0, 1, 0x10, 0x11)):
@@ -106,7 +107,11 @@ def control_flow_targets(text, base, ranges):
             else:
                 continue
             if any(lo2 <= target < hi2 for lo2, hi2 in ranges):
-                targets.setdefault(target, pc)
+                # A call is an entry point wherever it lands, including inside
+                # the function that issues it; a jump or branch to its own
+                # function is just an internal label. Recording the source pc
+                # only for the latter lets the caller tell them apart.
+                targets.setdefault(target, None if is_call else pc)
     return targets
 
 

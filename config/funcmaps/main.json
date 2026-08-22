@@ -351,6 +351,11 @@
       "size": 276
     },
     {
+      "address": "0x8005DAD8",
+      "name": "entry_8005DAD8",
+      "size": 184
+    },
+    {
       "address": "0x8005DB90",
       "name": "gt2_main_shared_gt_race_get_completion_flag",
       "size": 48
