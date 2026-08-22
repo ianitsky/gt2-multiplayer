@@ -10,3 +10,5 @@ run.log
 packs/
 ovl_bin/
 trace.log
+__pycache__/
+*.pyc
