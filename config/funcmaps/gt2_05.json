@@ -1,0 +1,2214 @@
+{
+  "functions": [
+    {
+      "address": "0x80010000",
+      "name": "gt2_ovr5_load_license_task0",
+      "size": 120
+    },
+    {
+      "address": "0x80010078",
+      "name": "gt2_ovr5_load_license",
+      "size": 1240
+    },
+    {
+      "address": "0x80010368",
+      "name": "entry_80010368",
+      "size": 488
+    },
+    {
+      "address": "0x8001050C",
+      "name": "entry_8001050C",
+      "size": 68
+    },
+    {
+      "address": "0x80010550",
+      "name": "gt2_ovr5_max3",
+      "size": 60
+    },
+    {
+      "address": "0x8001058C",
+      "name": "gt2_ovr5_min3",
+      "size": 60
+    },
+    {
+      "address": "0x800105C8",
+      "name": "gt2_ovr5_load_replay_mode_04_task00",
+      "size": 332
+    },
+    {
+      "address": "0x80010714",
+      "name": "gt2_ovr5_load_replay_mode_04_task0",
+      "size": 624
+    },
+    {
+      "address": "0x80010984",
+      "name": "gt2_ovr5_load_replay_mode_04_task1",
+      "size": 172
+    },
+    {
+      "address": "0x80010A30",
+      "name": "gt2_ovr5_load_replay_mode_04",
+      "size": 1488
+    },
+    {
+      "address": "0x80011000",
+      "name": "gt2_ovr5_load_event_task2",
+      "size": 352
+    },
+    {
+      "address": "0x80011160",
+      "name": "gt2_ovr5_load_event_task4",
+      "size": 36
+    },
+    {
+      "address": "0x80011184",
+      "name": "gt2_ovr5_load_event_task5",
+      "size": 6196
+    },
+    {
+      "address": "0x800129B8",
+      "name": "gt2_ovr5_load_event_task6",
+      "size": 692
+    },
+    {
+      "address": "0x80012C6C",
+      "name": "gt2_ovr5_load_event",
+      "size": 2492
+    },
+    {
+      "address": "0x80012F7C",
+      "name": "entry_80012F7C",
+      "size": 1708
+    },
+    {
+      "address": "0x80013108",
+      "name": "entry_80013108",
+      "size": 1312
+    },
+    {
+      "address": "0x80013628",
+      "name": "gt2_ovr5_entrypoint0",
+      "size": 3360
+    },
+    {
+      "address": "0x80013A28",
+      "name": "entry_80013A28",
+      "size": 2336
+    },
+    {
+      "address": "0x80013B28",
+      "name": "entry_80013B28",
+      "size": 2080
+    },
+    {
+      "address": "0x80013B60",
+      "name": "entry_80013B60",
+      "size": 2024
+    },
+    {
+      "address": "0x80013BD4",
+      "name": "entry_80013BD4",
+      "size": 1908
+    },
+    {
+      "address": "0x80013CD0",
+      "name": "entry_80013CD0",
+      "size": 1656
+    },
+    {
+      "address": "0x80013CF8",
+      "name": "entry_80013CF8",
+      "size": 1616
+    },
+    {
+      "address": "0x80013EEC",
+      "name": "entry_80013EEC",
+      "size": 1116
+    },
+    {
+      "address": "0x800141FC",
+      "name": "entry_800141FC",
+      "size": 332
+    },
+    {
+      "address": "0x80014290",
+      "name": "entry_80014290",
+      "size": 184
+    },
+    {
+      "address": "0x800142CC",
+      "name": "entry_800142CC",
+      "size": 124
+    },
+    {
+      "address": "0x80014348",
+      "name": "gt2_ovr5_load_car_model_display_info",
+      "size": 4284
+    },
+    {
+      "address": "0x80014380",
+      "name": "entry_80014380",
+      "size": 4228
+    },
+    {
+      "address": "0x80014A2C",
+      "name": "entry_80014A2C",
+      "size": 2520
+    },
+    {
+      "address": "0x80014A68",
+      "name": "entry_80014A68",
+      "size": 2460
+    },
+    {
+      "address": "0x80014AC8",
+      "name": "entry_80014AC8",
+      "size": 2364
+    },
+    {
+      "address": "0x80014B2C",
+      "name": "entry_80014B2C",
+      "size": 2264
+    },
+    {
+      "address": "0x80014B58",
+      "name": "entry_80014B58",
+      "size": 2220
+    },
+    {
+      "address": "0x80014BA0",
+      "name": "entry_80014BA0",
+      "size": 2148
+    },
+    {
+      "address": "0x80014BF0",
+      "name": "entry_80014BF0",
+      "size": 2068
+    },
+    {
+      "address": "0x80014C34",
+      "name": "entry_80014C34",
+      "size": 2000
+    },
+    {
+      "address": "0x80014C78",
+      "name": "entry_80014C78",
+      "size": 1932
+    },
+    {
+      "address": "0x80014CDC",
+      "name": "entry_80014CDC",
+      "size": 1832
+    },
+    {
+      "address": "0x80014D0C",
+      "name": "entry_80014D0C",
+      "size": 1784
+    },
+    {
+      "address": "0x80014D40",
+      "name": "entry_80014D40",
+      "size": 1732
+    },
+    {
+      "address": "0x80014D78",
+      "name": "entry_80014D78",
+      "size": 1676
+    },
+    {
+      "address": "0x80014DA0",
+      "name": "entry_80014DA0",
+      "size": 1636
+    },
+    {
+      "address": "0x80014E60",
+      "name": "entry_80014E60",
+      "size": 1444
+    },
+    {
+      "address": "0x80014E9C",
+      "name": "entry_80014E9C",
+      "size": 1384
+    },
+    {
+      "address": "0x80014EC4",
+      "name": "entry_80014EC4",
+      "size": 1344
+    },
+    {
+      "address": "0x80014F50",
+      "name": "entry_80014F50",
+      "size": 1204
+    },
+    {
+      "address": "0x80014F94",
+      "name": "entry_80014F94",
+      "size": 1136
+    },
+    {
+      "address": "0x80014FEC",
+      "name": "entry_80014FEC",
+      "size": 1048
+    },
+    {
+      "address": "0x8001503C",
+      "name": "entry_8001503C",
+      "size": 968
+    },
+    {
+      "address": "0x8001508C",
+      "name": "entry_8001508C",
+      "size": 888
+    },
+    {
+      "address": "0x80015098",
+      "name": "entry_80015098",
+      "size": 876
+    },
+    {
+      "address": "0x80015108",
+      "name": "entry_80015108",
+      "size": 764
+    },
+    {
+      "address": "0x80015144",
+      "name": "entry_80015144",
+      "size": 704
+    },
+    {
+      "address": "0x8001516C",
+      "name": "entry_8001516C",
+      "size": 664
+    },
+    {
+      "address": "0x80015228",
+      "name": "entry_80015228",
+      "size": 476
+    },
+    {
+      "address": "0x80015358",
+      "name": "entry_80015358",
+      "size": 172
+    },
+    {
+      "address": "0x800153B4",
+      "name": "entry_800153B4",
+      "size": 80
+    },
+    {
+      "address": "0x80015404",
+      "name": "gt2_ovr5_memset_caller0",
+      "size": 6232
+    },
+    {
+      "address": "0x80015428",
+      "name": "entry_80015428",
+      "size": 6196
+    },
+    {
+      "address": "0x80016C5C",
+      "name": "gt2_ovr5_get_part_upgrade_stages",
+      "size": 1724
+    },
+    {
+      "address": "0x80016F10",
+      "name": "entry_80016F10",
+      "size": 1032
+    },
+    {
+      "address": "0x80016FEC",
+      "name": "entry_80016FEC",
+      "size": 812
+    },
+    {
+      "address": "0x8001706C",
+      "name": "entry_8001706C",
+      "size": 684
+    },
+    {
+      "address": "0x8001709C",
+      "name": "entry_8001709C",
+      "size": 636
+    },
+    {
+      "address": "0x800170A8",
+      "name": "entry_800170A8",
+      "size": 624
+    },
+    {
+      "address": "0x800170B4",
+      "name": "entry_800170B4",
+      "size": 612
+    },
+    {
+      "address": "0x800170C0",
+      "name": "entry_800170C0",
+      "size": 600
+    },
+    {
+      "address": "0x800170CC",
+      "name": "entry_800170CC",
+      "size": 588
+    },
+    {
+      "address": "0x800170D8",
+      "name": "entry_800170D8",
+      "size": 576
+    },
+    {
+      "address": "0x800170E4",
+      "name": "entry_800170E4",
+      "size": 564
+    },
+    {
+      "address": "0x800170F0",
+      "name": "entry_800170F0",
+      "size": 552
+    },
+    {
+      "address": "0x800170FC",
+      "name": "entry_800170FC",
+      "size": 540
+    },
+    {
+      "address": "0x80017108",
+      "name": "entry_80017108",
+      "size": 528
+    },
+    {
+      "address": "0x80017114",
+      "name": "entry_80017114",
+      "size": 516
+    },
+    {
+      "address": "0x80017120",
+      "name": "entry_80017120",
+      "size": 504
+    },
+    {
+      "address": "0x8001712C",
+      "name": "entry_8001712C",
+      "size": 492
+    },
+    {
+      "address": "0x80017138",
+      "name": "entry_80017138",
+      "size": 480
+    },
+    {
+      "address": "0x80017144",
+      "name": "entry_80017144",
+      "size": 468
+    },
+    {
+      "address": "0x80017150",
+      "name": "entry_80017150",
+      "size": 456
+    },
+    {
+      "address": "0x8001715C",
+      "name": "entry_8001715C",
+      "size": 444
+    },
+    {
+      "address": "0x80017168",
+      "name": "entry_80017168",
+      "size": 432
+    },
+    {
+      "address": "0x80017174",
+      "name": "entry_80017174",
+      "size": 420
+    },
+    {
+      "address": "0x80017180",
+      "name": "entry_80017180",
+      "size": 408
+    },
+    {
+      "address": "0x800171C0",
+      "name": "entry_800171C0",
+      "size": 344
+    },
+    {
+      "address": "0x80017288",
+      "name": "entry_80017288",
+      "size": 144
+    },
+    {
+      "address": "0x80017318",
+      "name": "gt2_ovr5_display_equipped_parts",
+      "size": 1212
+    },
+    {
+      "address": "0x800173E8",
+      "name": "entry_800173E8",
+      "size": 1004
+    },
+    {
+      "address": "0x80017480",
+      "name": "entry_80017480",
+      "size": 852
+    },
+    {
+      "address": "0x800174A0",
+      "name": "entry_800174A0",
+      "size": 820
+    },
+    {
+      "address": "0x800174AC",
+      "name": "entry_800174AC",
+      "size": 808
+    },
+    {
+      "address": "0x800174D0",
+      "name": "entry_800174D0",
+      "size": 772
+    },
+    {
+      "address": "0x800174F4",
+      "name": "entry_800174F4",
+      "size": 736
+    },
+    {
+      "address": "0x80017530",
+      "name": "entry_80017530",
+      "size": 676
+    },
+    {
+      "address": "0x800175A0",
+      "name": "entry_800175A0",
+      "size": 564
+    },
+    {
+      "address": "0x800175B0",
+      "name": "entry_800175B0",
+      "size": 548
+    },
+    {
+      "address": "0x800175C0",
+      "name": "entry_800175C0",
+      "size": 532
+    },
+    {
+      "address": "0x80017750",
+      "name": "entry_80017750",
+      "size": 132
+    },
+    {
+      "address": "0x800177D4",
+      "name": "gt2_ovr5_get_car_price",
+      "size": 72
+    },
+    {
+      "address": "0x8001781C",
+      "name": "gt2_ovr5_mark_tires_as_bought",
+      "size": 248
+    },
+    {
+      "address": "0x800178E4",
+      "name": "entry_800178E4",
+      "size": 48
+    },
+    {
+      "address": "0x80017914",
+      "name": "gt2_ovr5_can_buy_car",
+      "size": 88
+    },
+    {
+      "address": "0x8001796C",
+      "name": "gt2_ovr5_buy_car",
+      "size": 408
+    },
+    {
+      "address": "0x80017A68",
+      "name": "entry_80017A68",
+      "size": 156
+    },
+    {
+      "address": "0x80017A70",
+      "name": "entry_80017A70",
+      "size": 148
+    },
+    {
+      "address": "0x80017B04",
+      "name": "gt2_ovr5_get_part_price",
+      "size": 60
+    },
+    {
+      "address": "0x80017B40",
+      "name": "gt2_ovr5_can_buy_part",
+      "size": 344
+    },
+    {
+      "address": "0x80017C98",
+      "name": "gt2_ovr5_buy_part",
+      "size": 876
+    },
+    {
+      "address": "0x80017D6C",
+      "name": "entry_80017D6C",
+      "size": 664
+    },
+    {
+      "address": "0x80017F18",
+      "name": "entry_80017F18",
+      "size": 236
+    },
+    {
+      "address": "0x80018004",
+      "name": "gt2_ovr5_load_event_task1",
+      "size": 460
+    },
+    {
+      "address": "0x80018100",
+      "name": "entry_80018100",
+      "size": 208
+    },
+    {
+      "address": "0x800181D0",
+      "name": "gt2_ovr5_can_afford",
+      "size": 64
+    },
+    {
+      "address": "0x80018210",
+      "name": "gt2_ovr5_is_wheel_shop_allowed",
+      "size": 100
+    },
+    {
+      "address": "0x80018274",
+      "name": "gt2_ovr5_can_afford_car_wash",
+      "size": 24
+    },
+    {
+      "address": "0x8001828C",
+      "name": "gt2_ovr5_get_car_name_prefix",
+      "size": 28
+    },
+    {
+      "address": "0x800182A8",
+      "name": "gt2_ovr5_get_car_first_name",
+      "size": 84
+    },
+    {
+      "address": "0x800182FC",
+      "name": "gt2_ovr5_get_car_second_name",
+      "size": 188
+    },
+    {
+      "address": "0x80018350",
+      "name": "entry_80018350",
+      "size": 104
+    },
+    {
+      "address": "0x800183B8",
+      "name": "gt2_ovr5_get_part_display_name",
+      "size": 52
+    },
+    {
+      "address": "0x800183EC",
+      "name": "gt2_ovr5_is_international_league",
+      "size": 144
+    },
+    {
+      "address": "0x8001847C",
+      "name": "gt2_ovr5_national_leagues_completed",
+      "size": 144
+    },
+    {
+      "address": "0x8001850C",
+      "name": "gt2_ovr5_international_leagues_completed",
+      "size": 144
+    },
+    {
+      "address": "0x8001859C",
+      "name": "gt2_ovr5_is_gt_world_cup",
+      "size": 108
+    },
+    {
+      "address": "0x80018608",
+      "name": "gt2_ovr5_is_license",
+      "size": 20
+    },
+    {
+      "address": "0x8001861C",
+      "name": "gt2_ovr5_get_machine_test_game_mode",
+      "size": 116
+    },
+    {
+      "address": "0x80018690",
+      "name": "gt2_ovr5_is_event_synthesizer",
+      "size": 544
+    },
+    {
+      "address": "0x80018768",
+      "name": "entry_80018768",
+      "size": 328
+    },
+    {
+      "address": "0x800187DC",
+      "name": "entry_800187DC",
+      "size": 212
+    },
+    {
+      "address": "0x800188B0",
+      "name": "gt2_ovr5_get_event_number",
+      "size": 288
+    },
+    {
+      "address": "0x80018954",
+      "name": "entry_80018954",
+      "size": 124
+    },
+    {
+      "address": "0x80018970",
+      "name": "entry_80018970",
+      "size": 96
+    },
+    {
+      "address": "0x800189D0",
+      "name": "gt2_ovr5_sprintf_caller0",
+      "size": 580
+    },
+    {
+      "address": "0x80018A00",
+      "name": "entry_80018A00",
+      "size": 532
+    },
+    {
+      "address": "0x80018A84",
+      "name": "entry_80018A84",
+      "size": 400
+    },
+    {
+      "address": "0x80018BF4",
+      "name": "entry_80018BF4",
+      "size": 32
+    },
+    {
+      "address": "0x80018C14",
+      "name": "gt2_ovr5_get_license_number_for_event_id",
+      "size": 120
+    },
+    {
+      "address": "0x80018C8C",
+      "name": "gt2_ovr5_load_event_data",
+      "size": 1008
+    },
+    {
+      "address": "0x80018F6C",
+      "name": "entry_80018F6C",
+      "size": 272
+    },
+    {
+      "address": "0x80018FA4",
+      "name": "entry_80018FA4",
+      "size": 216
+    },
+    {
+      "address": "0x80018FF0",
+      "name": "entry_80018FF0",
+      "size": 140
+    },
+    {
+      "address": "0x80019028",
+      "name": "entry_80019028",
+      "size": 84
+    },
+    {
+      "address": "0x8001907C",
+      "name": "gt2_ovr5_get_random_course",
+      "size": 1212
+    },
+    {
+      "address": "0x800190E4",
+      "name": "entry_800190E4",
+      "size": 1108
+    },
+    {
+      "address": "0x8001915C",
+      "name": "entry_8001915C",
+      "size": 988
+    },
+    {
+      "address": "0x800191C4",
+      "name": "entry_800191C4",
+      "size": 884
+    },
+    {
+      "address": "0x8001924C",
+      "name": "entry_8001924C",
+      "size": 748
+    },
+    {
+      "address": "0x8001928C",
+      "name": "entry_8001928C",
+      "size": 684
+    },
+    {
+      "address": "0x80019474",
+      "name": "entry_80019474",
+      "size": 196
+    },
+    {
+      "address": "0x800194FC",
+      "name": "entry_800194FC",
+      "size": 60
+    },
+    {
+      "address": "0x80019538",
+      "name": "gt2_ovr5_load_event_task0",
+      "size": 1720
+    },
+    {
+      "address": "0x80019578",
+      "name": "entry_80019578",
+      "size": 1656
+    },
+    {
+      "address": "0x800195BC",
+      "name": "entry_800195BC",
+      "size": 1588
+    },
+    {
+      "address": "0x80019634",
+      "name": "entry_80019634",
+      "size": 1468
+    },
+    {
+      "address": "0x80019690",
+      "name": "entry_80019690",
+      "size": 1376
+    },
+    {
+      "address": "0x80019698",
+      "name": "entry_80019698",
+      "size": 1368
+    },
+    {
+      "address": "0x800196A0",
+      "name": "entry_800196A0",
+      "size": 1360
+    },
+    {
+      "address": "0x800196A8",
+      "name": "entry_800196A8",
+      "size": 1352
+    },
+    {
+      "address": "0x800196B0",
+      "name": "entry_800196B0",
+      "size": 1344
+    },
+    {
+      "address": "0x800196B8",
+      "name": "entry_800196B8",
+      "size": 1336
+    },
+    {
+      "address": "0x800196C8",
+      "name": "entry_800196C8",
+      "size": 1320
+    },
+    {
+      "address": "0x800196EC",
+      "name": "entry_800196EC",
+      "size": 1284
+    },
+    {
+      "address": "0x80019718",
+      "name": "entry_80019718",
+      "size": 1240
+    },
+    {
+      "address": "0x8001973C",
+      "name": "entry_8001973C",
+      "size": 1204
+    },
+    {
+      "address": "0x800198D8",
+      "name": "entry_800198D8",
+      "size": 792
+    },
+    {
+      "address": "0x800198E8",
+      "name": "entry_800198E8",
+      "size": 776
+    },
+    {
+      "address": "0x800198FC",
+      "name": "entry_800198FC",
+      "size": 756
+    },
+    {
+      "address": "0x80019910",
+      "name": "entry_80019910",
+      "size": 736
+    },
+    {
+      "address": "0x80019924",
+      "name": "entry_80019924",
+      "size": 716
+    },
+    {
+      "address": "0x80019938",
+      "name": "entry_80019938",
+      "size": 696
+    },
+    {
+      "address": "0x8001999C",
+      "name": "entry_8001999C",
+      "size": 596
+    },
+    {
+      "address": "0x800199A4",
+      "name": "entry_800199A4",
+      "size": 588
+    },
+    {
+      "address": "0x800199B4",
+      "name": "entry_800199B4",
+      "size": 572
+    },
+    {
+      "address": "0x800199BC",
+      "name": "entry_800199BC",
+      "size": 564
+    },
+    {
+      "address": "0x800199C4",
+      "name": "entry_800199C4",
+      "size": 556
+    },
+    {
+      "address": "0x80019B88",
+      "name": "entry_80019B88",
+      "size": 104
+    },
+    {
+      "address": "0x80019BF0",
+      "name": "gt2_ovr5_is_dirt_event",
+      "size": 260
+    },
+    {
+      "address": "0x80019C60",
+      "name": "entry_80019C60",
+      "size": 148
+    },
+    {
+      "address": "0x80019C70",
+      "name": "entry_80019C70",
+      "size": 132
+    },
+    {
+      "address": "0x80019C80",
+      "name": "entry_80019C80",
+      "size": 116
+    },
+    {
+      "address": "0x80019CF4",
+      "name": "gt2_ovr5_get_win_rate",
+      "size": 68
+    },
+    {
+      "address": "0x80019D38",
+      "name": "gt2_ovr5_get_completion_percentage",
+      "size": 4720
+    },
+    {
+      "address": "0x80019DF8",
+      "name": "entry_80019DF8",
+      "size": 4528
+    },
+    {
+      "address": "0x80019E1C",
+      "name": "entry_80019E1C",
+      "size": 4492
+    },
+    {
+      "address": "0x80019E2C",
+      "name": "entry_80019E2C",
+      "size": 4476
+    },
+    {
+      "address": "0x80019E98",
+      "name": "entry_80019E98",
+      "size": 4368
+    },
+    {
+      "address": "0x80019EF8",
+      "name": "entry_80019EF8",
+      "size": 4272
+    },
+    {
+      "address": "0x80019F5C",
+      "name": "entry_80019F5C",
+      "size": 4172
+    },
+    {
+      "address": "0x80019FA0",
+      "name": "entry_80019FA0",
+      "size": 4104
+    },
+    {
+      "address": "0x80019FBC",
+      "name": "entry_80019FBC",
+      "size": 4076
+    },
+    {
+      "address": "0x80019FE8",
+      "name": "entry_80019FE8",
+      "size": 4032
+    },
+    {
+      "address": "0x8001A000",
+      "name": "entry_8001A000",
+      "size": 4008
+    },
+    {
+      "address": "0x8001A0FC",
+      "name": "entry_8001A0FC",
+      "size": 3756
+    },
+    {
+      "address": "0x8001A1B4",
+      "name": "entry_8001A1B4",
+      "size": 3572
+    },
+    {
+      "address": "0x8001A24C",
+      "name": "entry_8001A24C",
+      "size": 3420
+    },
+    {
+      "address": "0x8001A454",
+      "name": "entry_8001A454",
+      "size": 2900
+    },
+    {
+      "address": "0x8001A4AC",
+      "name": "entry_8001A4AC",
+      "size": 2812
+    },
+    {
+      "address": "0x8001A504",
+      "name": "entry_8001A504",
+      "size": 2724
+    },
+    {
+      "address": "0x8001A530",
+      "name": "entry_8001A530",
+      "size": 2680
+    },
+    {
+      "address": "0x8001A5B8",
+      "name": "entry_8001A5B8",
+      "size": 2544
+    },
+    {
+      "address": "0x8001A624",
+      "name": "entry_8001A624",
+      "size": 2436
+    },
+    {
+      "address": "0x8001A654",
+      "name": "entry_8001A654",
+      "size": 2388
+    },
+    {
+      "address": "0x8001A708",
+      "name": "entry_8001A708",
+      "size": 2208
+    },
+    {
+      "address": "0x8001A8A4",
+      "name": "entry_8001A8A4",
+      "size": 1796
+    },
+    {
+      "address": "0x8001AAF4",
+      "name": "entry_8001AAF4",
+      "size": 1204
+    },
+    {
+      "address": "0x8001AB64",
+      "name": "entry_8001AB64",
+      "size": 1092
+    },
+    {
+      "address": "0x8001AB6C",
+      "name": "entry_8001AB6C",
+      "size": 1084
+    },
+    {
+      "address": "0x8001AC20",
+      "name": "entry_8001AC20",
+      "size": 904
+    },
+    {
+      "address": "0x8001AEF8",
+      "name": "entry_8001AEF8",
+      "size": 176
+    },
+    {
+      "address": "0x8001AFA8",
+      "name": "gt2_ovr5_get_car_display_stats",
+      "size": 356
+    },
+    {
+      "address": "0x8001B10C",
+      "name": "gt2_ovr5_format_car_display_stats",
+      "size": 428
+    },
+    {
+      "address": "0x8001B2B8",
+      "name": "gt2_ovr5_get_engine_layout",
+      "size": 64
+    },
+    {
+      "address": "0x8001B2F8",
+      "name": "gt2_ovr5_get_aspiration",
+      "size": 64
+    },
+    {
+      "address": "0x8001B338",
+      "name": "gt2_ovr5_get_valvetrain",
+      "size": 1248
+    },
+    {
+      "address": "0x8001B378",
+      "name": "entry_8001B378",
+      "size": 1184
+    },
+    {
+      "address": "0x8001B3AC",
+      "name": "entry_8001B3AC",
+      "size": 1132
+    },
+    {
+      "address": "0x8001B680",
+      "name": "entry_8001B680",
+      "size": 408
+    },
+    {
+      "address": "0x8001B6F0",
+      "name": "entry_8001B6F0",
+      "size": 296
+    },
+    {
+      "address": "0x8001B790",
+      "name": "entry_8001B790",
+      "size": 136
+    },
+    {
+      "address": "0x8001B7AC",
+      "name": "entry_8001B7AC",
+      "size": 108
+    },
+    {
+      "address": "0x8001B800",
+      "name": "entry_8001B800",
+      "size": 24
+    },
+    {
+      "address": "0x8001B818",
+      "name": "gt2_ovr5_get_display_name_for_current_car",
+      "size": 404
+    },
+    {
+      "address": "0x8001B9AC",
+      "name": "gt2_ovr5_get_stat_widget_display_value",
+      "size": 9792
+    },
+    {
+      "address": "0x8001BEB4",
+      "name": "entry_8001BEB4",
+      "size": 8504
+    },
+    {
+      "address": "0x8001BF78",
+      "name": "entry_8001BF78",
+      "size": 8308
+    },
+    {
+      "address": "0x8001BFCC",
+      "name": "entry_8001BFCC",
+      "size": 8224
+    },
+    {
+      "address": "0x8001BFF0",
+      "name": "entry_8001BFF0",
+      "size": 8188
+    },
+    {
+      "address": "0x8001C000",
+      "name": "entry_8001C000",
+      "size": 8172
+    },
+    {
+      "address": "0x8001C010",
+      "name": "entry_8001C010",
+      "size": 8156
+    },
+    {
+      "address": "0x8001C064",
+      "name": "entry_8001C064",
+      "size": 8072
+    },
+    {
+      "address": "0x8001C0B8",
+      "name": "entry_8001C0B8",
+      "size": 7988
+    },
+    {
+      "address": "0x8001C0C8",
+      "name": "entry_8001C0C8",
+      "size": 7972
+    },
+    {
+      "address": "0x8001C0EC",
+      "name": "entry_8001C0EC",
+      "size": 7936
+    },
+    {
+      "address": "0x8001C13C",
+      "name": "entry_8001C13C",
+      "size": 7856
+    },
+    {
+      "address": "0x8001C210",
+      "name": "entry_8001C210",
+      "size": 7644
+    },
+    {
+      "address": "0x8001C290",
+      "name": "entry_8001C290",
+      "size": 7516
+    },
+    {
+      "address": "0x8001C32C",
+      "name": "entry_8001C32C",
+      "size": 7360
+    },
+    {
+      "address": "0x8001C35C",
+      "name": "entry_8001C35C",
+      "size": 7312
+    },
+    {
+      "address": "0x8001C3BC",
+      "name": "entry_8001C3BC",
+      "size": 7216
+    },
+    {
+      "address": "0x8001C3E8",
+      "name": "entry_8001C3E8",
+      "size": 7172
+    },
+    {
+      "address": "0x8001C414",
+      "name": "entry_8001C414",
+      "size": 7128
+    },
+    {
+      "address": "0x8001C430",
+      "name": "entry_8001C430",
+      "size": 7100
+    },
+    {
+      "address": "0x8001C44C",
+      "name": "entry_8001C44C",
+      "size": 7072
+    },
+    {
+      "address": "0x8001C46C",
+      "name": "entry_8001C46C",
+      "size": 7040
+    },
+    {
+      "address": "0x8001C484",
+      "name": "entry_8001C484",
+      "size": 7016
+    },
+    {
+      "address": "0x8001C4B4",
+      "name": "entry_8001C4B4",
+      "size": 6968
+    },
+    {
+      "address": "0x8001C4E4",
+      "name": "entry_8001C4E4",
+      "size": 6920
+    },
+    {
+      "address": "0x8001C514",
+      "name": "entry_8001C514",
+      "size": 6872
+    },
+    {
+      "address": "0x8001C58C",
+      "name": "entry_8001C58C",
+      "size": 6752
+    },
+    {
+      "address": "0x8001C610",
+      "name": "entry_8001C610",
+      "size": 6620
+    },
+    {
+      "address": "0x8001C64C",
+      "name": "entry_8001C64C",
+      "size": 6560
+    },
+    {
+      "address": "0x8001C6AC",
+      "name": "entry_8001C6AC",
+      "size": 6464
+    },
+    {
+      "address": "0x8001C780",
+      "name": "entry_8001C780",
+      "size": 6252
+    },
+    {
+      "address": "0x8001C890",
+      "name": "entry_8001C890",
+      "size": 5980
+    },
+    {
+      "address": "0x8001C8E8",
+      "name": "entry_8001C8E8",
+      "size": 5892
+    },
+    {
+      "address": "0x8001C918",
+      "name": "entry_8001C918",
+      "size": 5844
+    },
+    {
+      "address": "0x8001C990",
+      "name": "entry_8001C990",
+      "size": 5724
+    },
+    {
+      "address": "0x8001C9F0",
+      "name": "entry_8001C9F0",
+      "size": 5628
+    },
+    {
+      "address": "0x8001CA5C",
+      "name": "entry_8001CA5C",
+      "size": 5520
+    },
+    {
+      "address": "0x8001CAEC",
+      "name": "entry_8001CAEC",
+      "size": 5376
+    },
+    {
+      "address": "0x8001CB50",
+      "name": "entry_8001CB50",
+      "size": 5276
+    },
+    {
+      "address": "0x8001CBC4",
+      "name": "entry_8001CBC4",
+      "size": 5160
+    },
+    {
+      "address": "0x8001CC2C",
+      "name": "entry_8001CC2C",
+      "size": 5056
+    },
+    {
+      "address": "0x8001CD0C",
+      "name": "entry_8001CD0C",
+      "size": 4832
+    },
+    {
+      "address": "0x8001CD44",
+      "name": "entry_8001CD44",
+      "size": 4776
+    },
+    {
+      "address": "0x8001CD64",
+      "name": "entry_8001CD64",
+      "size": 4744
+    },
+    {
+      "address": "0x8001CD98",
+      "name": "entry_8001CD98",
+      "size": 4692
+    },
+    {
+      "address": "0x8001CE74",
+      "name": "entry_8001CE74",
+      "size": 4472
+    },
+    {
+      "address": "0x8001CE98",
+      "name": "entry_8001CE98",
+      "size": 4436
+    },
+    {
+      "address": "0x8001CEBC",
+      "name": "entry_8001CEBC",
+      "size": 4400
+    },
+    {
+      "address": "0x8001CEE0",
+      "name": "entry_8001CEE0",
+      "size": 4364
+    },
+    {
+      "address": "0x8001CF04",
+      "name": "entry_8001CF04",
+      "size": 4328
+    },
+    {
+      "address": "0x8001CF28",
+      "name": "entry_8001CF28",
+      "size": 4292
+    },
+    {
+      "address": "0x8001D090",
+      "name": "entry_8001D090",
+      "size": 3932
+    },
+    {
+      "address": "0x8001D0E8",
+      "name": "entry_8001D0E8",
+      "size": 3844
+    },
+    {
+      "address": "0x8001D104",
+      "name": "entry_8001D104",
+      "size": 3816
+    },
+    {
+      "address": "0x8001D118",
+      "name": "entry_8001D118",
+      "size": 3796
+    },
+    {
+      "address": "0x8001D208",
+      "name": "entry_8001D208",
+      "size": 3556
+    },
+    {
+      "address": "0x8001D258",
+      "name": "entry_8001D258",
+      "size": 3476
+    },
+    {
+      "address": "0x8001D2CC",
+      "name": "entry_8001D2CC",
+      "size": 3360
+    },
+    {
+      "address": "0x8001D4E8",
+      "name": "entry_8001D4E8",
+      "size": 2820
+    },
+    {
+      "address": "0x8001D554",
+      "name": "entry_8001D554",
+      "size": 2712
+    },
+    {
+      "address": "0x8001D5C8",
+      "name": "entry_8001D5C8",
+      "size": 2596
+    },
+    {
+      "address": "0x8001D680",
+      "name": "entry_8001D680",
+      "size": 2412
+    },
+    {
+      "address": "0x8001D68C",
+      "name": "entry_8001D68C",
+      "size": 2400
+    },
+    {
+      "address": "0x8001D698",
+      "name": "entry_8001D698",
+      "size": 2388
+    },
+    {
+      "address": "0x8001D6CC",
+      "name": "entry_8001D6CC",
+      "size": 2336
+    },
+    {
+      "address": "0x8001D754",
+      "name": "entry_8001D754",
+      "size": 2200
+    },
+    {
+      "address": "0x8001D954",
+      "name": "entry_8001D954",
+      "size": 1688
+    },
+    {
+      "address": "0x8001DA24",
+      "name": "entry_8001DA24",
+      "size": 1480
+    },
+    {
+      "address": "0x8001DA30",
+      "name": "entry_8001DA30",
+      "size": 1468
+    },
+    {
+      "address": "0x8001DA38",
+      "name": "entry_8001DA38",
+      "size": 1460
+    },
+    {
+      "address": "0x8001DA98",
+      "name": "entry_8001DA98",
+      "size": 1364
+    },
+    {
+      "address": "0x8001DAA8",
+      "name": "entry_8001DAA8",
+      "size": 1348
+    },
+    {
+      "address": "0x8001DAF0",
+      "name": "entry_8001DAF0",
+      "size": 1276
+    },
+    {
+      "address": "0x8001DB0C",
+      "name": "entry_8001DB0C",
+      "size": 1248
+    },
+    {
+      "address": "0x8001DB24",
+      "name": "entry_8001DB24",
+      "size": 1224
+    },
+    {
+      "address": "0x8001DB90",
+      "name": "entry_8001DB90",
+      "size": 1116
+    },
+    {
+      "address": "0x8001DCD0",
+      "name": "entry_8001DCD0",
+      "size": 796
+    },
+    {
+      "address": "0x8001DD04",
+      "name": "entry_8001DD04",
+      "size": 744
+    },
+    {
+      "address": "0x8001DD14",
+      "name": "entry_8001DD14",
+      "size": 728
+    },
+    {
+      "address": "0x8001DD1C",
+      "name": "entry_8001DD1C",
+      "size": 720
+    },
+    {
+      "address": "0x8001DD24",
+      "name": "entry_8001DD24",
+      "size": 712
+    },
+    {
+      "address": "0x8001DD2C",
+      "name": "entry_8001DD2C",
+      "size": 704
+    },
+    {
+      "address": "0x8001DD3C",
+      "name": "entry_8001DD3C",
+      "size": 688
+    },
+    {
+      "address": "0x8001DD78",
+      "name": "entry_8001DD78",
+      "size": 628
+    },
+    {
+      "address": "0x8001DD84",
+      "name": "entry_8001DD84",
+      "size": 616
+    },
+    {
+      "address": "0x8001DD90",
+      "name": "entry_8001DD90",
+      "size": 604
+    },
+    {
+      "address": "0x8001DD9C",
+      "name": "entry_8001DD9C",
+      "size": 592
+    },
+    {
+      "address": "0x8001DDAC",
+      "name": "entry_8001DDAC",
+      "size": 576
+    },
+    {
+      "address": "0x8001DE14",
+      "name": "entry_8001DE14",
+      "size": 472
+    },
+    {
+      "address": "0x8001DE34",
+      "name": "entry_8001DE34",
+      "size": 440
+    },
+    {
+      "address": "0x8001DE7C",
+      "name": "entry_8001DE7C",
+      "size": 368
+    },
+    {
+      "address": "0x8001DEA4",
+      "name": "entry_8001DEA4",
+      "size": 328
+    },
+    {
+      "address": "0x8001DEE8",
+      "name": "entry_8001DEE8",
+      "size": 260
+    },
+    {
+      "address": "0x8001DF10",
+      "name": "entry_8001DF10",
+      "size": 220
+    },
+    {
+      "address": "0x8001DF48",
+      "name": "entry_8001DF48",
+      "size": 164
+    },
+    {
+      "address": "0x8001DF94",
+      "name": "entry_8001DF94",
+      "size": 88
+    },
+    {
+      "address": "0x8001DFA8",
+      "name": "entry_8001DFA8",
+      "size": 68
+    },
+    {
+      "address": "0x8001DFEC",
+      "name": "gt2_ovr5_ui_can_buy_caller0",
+      "size": 4408
+    },
+    {
+      "address": "0x8001E048",
+      "name": "entry_8001E048",
+      "size": 4316
+    },
+    {
+      "address": "0x8001E090",
+      "name": "entry_8001E090",
+      "size": 4244
+    },
+    {
+      "address": "0x8001E0AC",
+      "name": "entry_8001E0AC",
+      "size": 4216
+    },
+    {
+      "address": "0x8001E0D0",
+      "name": "entry_8001E0D0",
+      "size": 4180
+    },
+    {
+      "address": "0x8001E130",
+      "name": "entry_8001E130",
+      "size": 4084
+    },
+    {
+      "address": "0x8001E184",
+      "name": "entry_8001E184",
+      "size": 4000
+    },
+    {
+      "address": "0x8001E190",
+      "name": "entry_8001E190",
+      "size": 3988
+    },
+    {
+      "address": "0x8001E19C",
+      "name": "entry_8001E19C",
+      "size": 3976
+    },
+    {
+      "address": "0x8001E1A8",
+      "name": "entry_8001E1A8",
+      "size": 3964
+    },
+    {
+      "address": "0x8001E1B4",
+      "name": "entry_8001E1B4",
+      "size": 3952
+    },
+    {
+      "address": "0x8001E1CC",
+      "name": "entry_8001E1CC",
+      "size": 3928
+    },
+    {
+      "address": "0x8001E200",
+      "name": "entry_8001E200",
+      "size": 3876
+    },
+    {
+      "address": "0x8001E22C",
+      "name": "entry_8001E22C",
+      "size": 3832
+    },
+    {
+      "address": "0x8001E26C",
+      "name": "entry_8001E26C",
+      "size": 3768
+    },
+    {
+      "address": "0x8001E2C8",
+      "name": "entry_8001E2C8",
+      "size": 3676
+    },
+    {
+      "address": "0x8001E2D4",
+      "name": "entry_8001E2D4",
+      "size": 3664
+    },
+    {
+      "address": "0x8001E2E0",
+      "name": "entry_8001E2E0",
+      "size": 3652
+    },
+    {
+      "address": "0x8001E2F4",
+      "name": "entry_8001E2F4",
+      "size": 3632
+    },
+    {
+      "address": "0x8001E300",
+      "name": "entry_8001E300",
+      "size": 3620
+    },
+    {
+      "address": "0x8001E30C",
+      "name": "entry_8001E30C",
+      "size": 3608
+    },
+    {
+      "address": "0x8001E328",
+      "name": "entry_8001E328",
+      "size": 3580
+    },
+    {
+      "address": "0x8001E924",
+      "name": "entry_8001E924",
+      "size": 2048
+    },
+    {
+      "address": "0x8001E9D0",
+      "name": "entry_8001E9D0",
+      "size": 1876
+    },
+    {
+      "address": "0x8001EA24",
+      "name": "entry_8001EA24",
+      "size": 1792
+    },
+    {
+      "address": "0x8001EC0C",
+      "name": "entry_8001EC0C",
+      "size": 1304
+    },
+    {
+      "address": "0x8001EDAC",
+      "name": "entry_8001EDAC",
+      "size": 888
+    },
+    {
+      "address": "0x8001EE78",
+      "name": "entry_8001EE78",
+      "size": 684
+    },
+    {
+      "address": "0x8001EF10",
+      "name": "entry_8001EF10",
+      "size": 532
+    },
+    {
+      "address": "0x8001F124",
+      "name": "gt2_ovr5_load_event_task3",
+      "size": 2760
+    },
+    {
+      "address": "0x8001F210",
+      "name": "entry_8001F210",
+      "size": 2524
+    },
+    {
+      "address": "0x8001F2C8",
+      "name": "entry_8001F2C8",
+      "size": 2340
+    },
+    {
+      "address": "0x8001F38C",
+      "name": "entry_8001F38C",
+      "size": 2144
+    },
+    {
+      "address": "0x8001F4B0",
+      "name": "entry_8001F4B0",
+      "size": 1852
+    },
+    {
+      "address": "0x8001F520",
+      "name": "entry_8001F520",
+      "size": 1740
+    },
+    {
+      "address": "0x8001F65C",
+      "name": "entry_8001F65C",
+      "size": 1424
+    },
+    {
+      "address": "0x8001F6CC",
+      "name": "entry_8001F6CC",
+      "size": 1312
+    },
+    {
+      "address": "0x8001F740",
+      "name": "entry_8001F740",
+      "size": 1196
+    },
+    {
+      "address": "0x8001F7CC",
+      "name": "entry_8001F7CC",
+      "size": 1056
+    },
+    {
+      "address": "0x8001F8FC",
+      "name": "entry_8001F8FC",
+      "size": 752
+    },
+    {
+      "address": "0x8001F96C",
+      "name": "entry_8001F96C",
+      "size": 640
+    },
+    {
+      "address": "0x8001FAB4",
+      "name": "entry_8001FAB4",
+      "size": 312
+    },
+    {
+      "address": "0x8001FB24",
+      "name": "entry_8001FB24",
+      "size": 200
+    },
+    {
+      "address": "0x8001FB7C",
+      "name": "entry_8001FB7C",
+      "size": 112
+    },
+    {
+      "address": "0x8001FBEC",
+      "name": "gt2_ovr5_display_text_on_screen",
+      "size": 992
+    },
+    {
+      "address": "0x8001FC28",
+      "name": "entry_8001FC28",
+      "size": 932
+    },
+    {
+      "address": "0x8001FC64",
+      "name": "entry_8001FC64",
+      "size": 872
+    },
+    {
+      "address": "0x8001FCA0",
+      "name": "entry_8001FCA0",
+      "size": 812
+    },
+    {
+      "address": "0x8001FCDC",
+      "name": "entry_8001FCDC",
+      "size": 752
+    },
+    {
+      "address": "0x8001FE0C",
+      "name": "entry_8001FE0C",
+      "size": 448
+    },
+    {
+      "address": "0x8001FFCC",
+      "name": "gt2_ovr5_format_power",
+      "size": 136
+    },
+    {
+      "address": "0x80020054",
+      "name": "gt2_ovr5_format_speed",
+      "size": 188
+    },
+    {
+      "address": "0x80020110",
+      "name": "gt2_ovr5_format_number",
+      "size": 136
+    },
+    {
+      "address": "0x80020198",
+      "name": "gt2_ovr5_get_garage_car_list_details",
+      "size": 1376
+    },
+    {
+      "address": "0x80020490",
+      "name": "entry_80020490",
+      "size": 616
+    },
+    {
+      "address": "0x800204D8",
+      "name": "entry_800204D8",
+      "size": 544
+    },
+    {
+      "address": "0x800204EC",
+      "name": "entry_800204EC",
+      "size": 524
+    },
+    {
+      "address": "0x8002055C",
+      "name": "entry_8002055C",
+      "size": 412
+    },
+    {
+      "address": "0x8002068C",
+      "name": "entry_8002068C",
+      "size": 108
+    },
+    {
+      "address": "0x800206F8",
+      "name": "gt2_ovr5_get_used_car_list_details",
+      "size": 1368
+    },
+    {
+      "address": "0x800209B0",
+      "name": "entry_800209B0",
+      "size": 672
+    },
+    {
+      "address": "0x800209F8",
+      "name": "entry_800209F8",
+      "size": 600
+    },
+    {
+      "address": "0x80020A0C",
+      "name": "entry_80020A0C",
+      "size": 580
+    },
+    {
+      "address": "0x80020A94",
+      "name": "entry_80020A94",
+      "size": 444
+    },
+    {
+      "address": "0x80020B70",
+      "name": "entry_80020B70",
+      "size": 224
+    },
+    {
+      "address": "0x80020BDC",
+      "name": "entry_80020BDC",
+      "size": 116
+    },
+    {
+      "address": "0x80020C00",
+      "name": "entry_80020C00",
+      "size": 80
+    },
+    {
+      "address": "0x80020C24",
+      "name": "entry_80020C24",
+      "size": 44
+    },
+    {
+      "address": "0x80020C50",
+      "name": "gt2_ovr5_decompress_data_gt_txd",
+      "size": 3612
+    },
+    {
+      "address": "0x80020D58",
+      "name": "entry_80020D58",
+      "size": 3348
+    },
+    {
+      "address": "0x80020D90",
+      "name": "entry_80020D90",
+      "size": 3292
+    },
+    {
+      "address": "0x80020E4C",
+      "name": "entry_80020E4C",
+      "size": 3104
+    },
+    {
+      "address": "0x80020ECC",
+      "name": "entry_80020ECC",
+      "size": 2976
+    },
+    {
+      "address": "0x80020F54",
+      "name": "entry_80020F54",
+      "size": 2840
+    },
+    {
+      "address": "0x80020FBC",
+      "name": "entry_80020FBC",
+      "size": 2736
+    },
+    {
+      "address": "0x80020FF0",
+      "name": "entry_80020FF0",
+      "size": 2684
+    },
+    {
+      "address": "0x80021078",
+      "name": "entry_80021078",
+      "size": 2548
+    },
+    {
+      "address": "0x800210F8",
+      "name": "entry_800210F8",
+      "size": 2420
+    },
+    {
+      "address": "0x8002117C",
+      "name": "entry_8002117C",
+      "size": 2288
+    },
+    {
+      "address": "0x800211FC",
+      "name": "entry_800211FC",
+      "size": 2160
+    },
+    {
+      "address": "0x80021284",
+      "name": "entry_80021284",
+      "size": 2024
+    },
+    {
+      "address": "0x8002136C",
+      "name": "entry_8002136C",
+      "size": 1792
+    },
+    {
+      "address": "0x800213C4",
+      "name": "entry_800213C4",
+      "size": 1704
+    },
+    {
+      "address": "0x8002150C",
+      "name": "entry_8002150C",
+      "size": 1376
+    },
+    {
+      "address": "0x800215B0",
+      "name": "entry_800215B0",
+      "size": 1212
+    },
+    {
+      "address": "0x800215C8",
+      "name": "entry_800215C8",
+      "size": 1188
+    },
+    {
+      "address": "0x80021608",
+      "name": "entry_80021608",
+      "size": 1124
+    },
+    {
+      "address": "0x80021968",
+      "name": "entry_80021968",
+      "size": 260
+    },
+    {
+      "address": "0x80021A40",
+      "name": "entry_80021A40",
+      "size": 44
+    },
+    {
+      "address": "0x80021A6C",
+      "name": "gt2_ovr5_get_event_data",
+      "size": 160
+    },
+    {
+      "address": "0x80021B0C",
+      "name": "gt2_ovr5_get_main_car_part_number_by_car_id",
+      "size": 3672
+    },
+    {
+      "address": "0x80021B38",
+      "name": "entry_80021B38",
+      "size": 3628
+    },
+    {
+      "address": "0x80021BEC",
+      "name": "entry_80021BEC",
+      "size": 3448
+    },
+    {
+      "address": "0x80021C38",
+      "name": "entry_80021C38",
+      "size": 3372
+    },
+    {
+      "address": "0x80021C5C",
+      "name": "entry_80021C5C",
+      "size": 3336
+    },
+    {
+      "address": "0x80021CB4",
+      "name": "entry_80021CB4",
+      "size": 3248
+    },
+    {
+      "address": "0x80021D00",
+      "name": "entry_80021D00",
+      "size": 3172
+    },
+    {
+      "address": "0x80021D30",
+      "name": "entry_80021D30",
+      "size": 3124
+    },
+    {
+      "address": "0x80021DE8",
+      "name": "entry_80021DE8",
+      "size": 2940
+    },
+    {
+      "address": "0x80021EB0",
+      "name": "entry_80021EB0",
+      "size": 2740
+    },
+    {
+      "address": "0x80021F88",
+      "name": "entry_80021F88",
+      "size": 2524
+    },
+    {
+      "address": "0x8002202C",
+      "name": "entry_8002202C",
+      "size": 2360
+    },
+    {
+      "address": "0x800220C8",
+      "name": "entry_800220C8",
+      "size": 2204
+    },
+    {
+      "address": "0x80022278",
+      "name": "entry_80022278",
+      "size": 1772
+    },
+    {
+      "address": "0x800222E4",
+      "name": "entry_800222E4",
+      "size": 1664
+    },
+    {
+      "address": "0x80022368",
+      "name": "entry_80022368",
+      "size": 1532
+    },
+    {
+      "address": "0x8002237C",
+      "name": "entry_8002237C",
+      "size": 1512
+    },
+    {
+      "address": "0x800223B0",
+      "name": "entry_800223B0",
+      "size": 1460
+    },
+    {
+      "address": "0x800223C4",
+      "name": "entry_800223C4",
+      "size": 1440
+    },
+    {
+      "address": "0x800224B0",
+      "name": "entry_800224B0",
+      "size": 1204
+    },
+    {
+      "address": "0x800224C4",
+      "name": "entry_800224C4",
+      "size": 1184
+    },
+    {
+      "address": "0x800224D4",
+      "name": "entry_800224D4",
+      "size": 1168
+    },
+    {
+      "address": "0x800224E0",
+      "name": "entry_800224E0",
+      "size": 1156
+    },
+    {
+      "address": "0x80022634",
+      "name": "entry_80022634",
+      "size": 816
+    },
+    {
+      "address": "0x800226A0",
+      "name": "entry_800226A0",
+      "size": 708
+    },
+    {
+      "address": "0x80022714",
+      "name": "entry_80022714",
+      "size": 592
+    },
+    {
+      "address": "0x80022758",
+      "name": "entry_80022758",
+      "size": 524
+    },
+    {
+      "address": "0x80022794",
+      "name": "entry_80022794",
+      "size": 464
+    },
+    {
+      "address": "0x80022838",
+      "name": "entry_80022838",
+      "size": 300
+    },
+    {
+      "address": "0x80022874",
+      "name": "entry_80022874",
+      "size": 240
+    },
+    {
+      "address": "0x800228D4",
+      "name": "entry_800228D4",
+      "size": 144
+    },
+    {
+      "address": "0x80022934",
+      "name": "entry_80022934",
+      "size": 48
+    }
+  ]
+}

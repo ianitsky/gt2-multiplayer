@@ -198,6 +198,8 @@ def main():
     ap.add_argument("symbols", nargs="+", help="splat symbol_addrs files")
     ap.add_argument("-o", "--out", required=True)
     ap.add_argument("--disc", help="disc image; enables entry-point discovery")
+    ap.add_argument("--image", help="raw code image instead of a disc, e.g. an overlay already "
+                                    "extracted from GT2.OVL; enables the same discovery")
     ap.add_argument("--text-base", default="0x80010000")
     ap.add_argument("--text-size", default="0x99000")
     args = ap.parse_args()
@@ -211,9 +213,14 @@ def main():
 
     gap_entries = 0
     interior = set()
-    if args.disc:
+    if args.disc or args.image:
         base = int(args.text_base, 16)
-        image = read_exe_text(args.disc, base, int(args.text_size, 16))
+        if args.image:
+            # An overlay arrives already extracted and inflated, so it is the
+            # code image directly rather than something to carve out of a disc.
+            image = open(args.image, "rb").read()
+        else:
+            image = read_exe_text(args.disc, base, int(args.text_size, 16))
 
         candidates = dict(control_flow_targets(image, base, ranges))
         for pointer in data_pointers(image, base, ranges):
@@ -249,7 +256,7 @@ def main():
     covered = sum(f["size"] for f in functions)
     print(f"{args.out}: {len(functions)} functions in {len(ranges)} code range(s), "
           f"{covered}/{text_bytes} bytes ({covered/text_bytes:.1%})")
-    if args.disc:
+    if args.disc or args.image:
         print(f"  {len(interior)} interior entry point(s) recovered "
               f"(alternate ways into an existing function)")
         if gap_entries:

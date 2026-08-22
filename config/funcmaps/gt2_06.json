@@ -1,0 +1,279 @@
+{
+  "functions": [
+    {
+      "address": "0x80010000",
+      "name": "gt2_ovr6_fill_memory",
+      "size": 104
+    },
+    {
+      "address": "0x80010068",
+      "name": "gt2_ovr6_task00",
+      "size": 16
+    },
+    {
+      "address": "0x80010078",
+      "name": "gt2_ovr6_large_task00",
+      "size": 16
+    },
+    {
+      "address": "0x80010088",
+      "name": "gt2_ovr6_large_task01",
+      "size": 12
+    },
+    {
+      "address": "0x80010094",
+      "name": "gt2_ovr6_large_task02",
+      "size": 16
+    },
+    {
+      "address": "0x800100A4",
+      "name": "gt2_ovr6_main_task200110_caller0",
+      "size": 84
+    },
+    {
+      "address": "0x800100F8",
+      "name": "gt2_ovr6_main_task200110_caller00",
+      "size": 124
+    },
+    {
+      "address": "0x80010174",
+      "name": "gt2_ovr6_large_task03",
+      "size": 64
+    },
+    {
+      "address": "0x800101B4",
+      "name": "gt2_ovr6_callback_task0",
+      "size": 156
+    },
+    {
+      "address": "0x80010250",
+      "name": "gt2_ovr6_dctout_callback_task0",
+      "size": 56
+    },
+    {
+      "address": "0x80010288",
+      "name": "gt2_ovr6_task2001110_caller0",
+      "size": 32
+    },
+    {
+      "address": "0x800102A8",
+      "name": "gt2_ovr6_DecDCT_inout_caller0",
+      "size": 112
+    },
+    {
+      "address": "0x80010318",
+      "name": "gt2_ovr6_DecDCT_inout_caller020",
+      "size": 144
+    },
+    {
+      "address": "0x800103A8",
+      "name": "gt2_ovr6_DecDCT_inout_caller01",
+      "size": 76
+    },
+    {
+      "address": "0x800103F4",
+      "name": "gt2_ovr6_DecDCT_inout_caller02",
+      "size": 44
+    },
+    {
+      "address": "0x80010420",
+      "name": "gt2_ovr6_main_task200110_caller000",
+      "size": 48
+    },
+    {
+      "address": "0x80010450",
+      "name": "gt2_ovr6_main_task200110_caller0000",
+      "size": 76
+    },
+    {
+      "address": "0x8001049C",
+      "name": "gt2_ovr6_decdctout_caller0",
+      "size": 40
+    },
+    {
+      "address": "0x800104C4",
+      "name": "gt2_ovr6_decdctout_user0",
+      "size": 232
+    },
+    {
+      "address": "0x800105AC",
+      "name": "gt2_ovr6_fill_memory_task0",
+      "size": 40
+    },
+    {
+      "address": "0x800105D4",
+      "name": "gt2_ovr6_fill_memory_task00",
+      "size": 60
+    },
+    {
+      "address": "0x80010610",
+      "name": "gt2_ovr6_memset_caller0",
+      "size": 36
+    },
+    {
+      "address": "0x80010634",
+      "name": "gt2_ovr6_callback_task1",
+      "size": 112
+    },
+    {
+      "address": "0x800106A4",
+      "name": "gt2_ovr6_dctout_callback_task00",
+      "size": 72
+    },
+    {
+      "address": "0x800106EC",
+      "name": "gt2_ovr6_cdgetsector_task0",
+      "size": 424
+    },
+    {
+      "address": "0x80010894",
+      "name": "gt2_ovr6_DecDCT_inout_caller0200",
+      "size": 120
+    },
+    {
+      "address": "0x8001090C",
+      "name": "gt2_ovr6_DecDCT_inout_caller0201",
+      "size": 68
+    },
+    {
+      "address": "0x80010950",
+      "name": "gt2_ovr6_memset_caller1",
+      "size": 68
+    },
+    {
+      "address": "0x80010994",
+      "name": "gt2_ovr6_DecDCT_inout_caller00",
+      "size": 80
+    },
+    {
+      "address": "0x800109E4",
+      "name": "gt2_ovr6_DecDCT_inout",
+      "size": 172
+    },
+    {
+      "address": "0x80010A90",
+      "name": "gt2_ovr6_dct_reset_handler",
+      "size": 48
+    },
+    {
+      "address": "0x80010AC0",
+      "name": "gt2_ovr6_arcadevideo_func0_gte",
+      "size": 632
+    },
+    {
+      "address": "0x80010D38",
+      "name": "gt2_ovr6_vol_buffer_user0",
+      "size": 64
+    },
+    {
+      "address": "0x80010D78",
+      "name": "gt2_ovr6_gpu_task0",
+      "size": 48
+    },
+    {
+      "address": "0x80010DA8",
+      "name": "gt2_ovr6_gpu_task0_caller0",
+      "size": 132
+    },
+    {
+      "address": "0x80010E2C",
+      "name": "gt2_ovr6_large_task04",
+      "size": 56
+    },
+    {
+      "address": "0x80010E64",
+      "name": "gt2_ovr6_task07100_caller0",
+      "size": 200
+    },
+    {
+      "address": "0x80010F2C",
+      "name": "gt2_ovr6_sharedovr_funcE_caller0",
+      "size": 76
+    },
+    {
+      "address": "0x80010F78",
+      "name": "gt2_ovr6_large_task0",
+      "size": 180
+    },
+    {
+      "address": "0x8001102C",
+      "name": "gt2_ovr6_task7",
+      "size": 416
+    },
+    {
+      "address": "0x800111CC",
+      "name": "gt2_ovr6_nop4",
+      "size": 8
+    },
+    {
+      "address": "0x800111D4",
+      "name": "gt2_ovr6_task5",
+      "size": 188
+    },
+    {
+      "address": "0x80011290",
+      "name": "gt2_ovr6_task0",
+      "size": 68
+    },
+    {
+      "address": "0x800112D4",
+      "name": "gt2_ovr6_nop0",
+      "size": 8
+    },
+    {
+      "address": "0x800112DC",
+      "name": "gt2_ovr6_nop1",
+      "size": 8
+    },
+    {
+      "address": "0x800112E4",
+      "name": "gt2_ovr6_nop2",
+      "size": 8
+    },
+    {
+      "address": "0x800112EC",
+      "name": "gt2_ovr6_nop3",
+      "size": 8
+    },
+    {
+      "address": "0x800112F4",
+      "name": "gt2_ovr6_task2",
+      "size": 32
+    },
+    {
+      "address": "0x80011314",
+      "name": "gt2_ovr6_task6",
+      "size": 20
+    },
+    {
+      "address": "0x80011328",
+      "name": "gt2_ovr6_task10",
+      "size": 128
+    },
+    {
+      "address": "0x800113A8",
+      "name": "gt2_ovr6_task30",
+      "size": 136
+    },
+    {
+      "address": "0x80011430",
+      "name": "gt2_ovr6_task31",
+      "size": 136
+    },
+    {
+      "address": "0x800114B8",
+      "name": "gt2_ovr6_entrypoint0",
+      "size": 40
+    },
+    {
+      "address": "0x800114E0",
+      "name": "gt2_ovr6_exit_to_menu",
+      "size": 60
+    },
+    {
+      "address": "0x8001151C",
+      "name": "gt2_ovr6_task4",
+      "size": 80
+    }
+  ]
+}

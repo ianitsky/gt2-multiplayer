@@ -53,7 +53,8 @@
       "size": 38461,
       "gzip": true,
       "base": "0x80010000",
-      "linearSweep": true
+      "linearSweep": false,
+      "funcMap": "funcmaps/gt2_05.json"
     },
     {
       "name": "gt2_06",
@@ -62,7 +63,8 @@
       "size": 3602,
       "gzip": true,
       "base": "0x80010000",
-      "linearSweep": true
+      "linearSweep": false,
+      "funcMap": "funcmaps/gt2_06.json"
     }
   ],
   "patches": [
