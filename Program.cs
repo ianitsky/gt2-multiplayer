@@ -51,4 +51,18 @@ c.RA = 0u;
 
 RecompOne.Runtime.Runtime.SetContext(c, m);
 BiosKernel.Init(m);
-Dispatcher.Call(c, m, EntryPC);
+// longjmp discards the frames between it and its setjmp, so it unwinds to
+// here and execution resumes at the RA the jmp_buf restored.
+uint resumeAt = EntryPC;
+while (true)
+{
+    try
+    {
+        Dispatcher.Call(c, m, resumeAt);
+        break;
+    }
+    catch (GT2Port.LongJmpSignal)
+    {
+        resumeAt = c.RA;
+    }
+}

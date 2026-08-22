@@ -43,7 +43,38 @@
       "function": "gt2_load_overlay",
       "target": "GT2Port.OverlayHook.ActivateFromEntry",
       "mode": "pre"
+    },
+    {
+      "function": "gt2_main_task201_reload_regs",
+      "target": "GT2Port.SetJmp.LongJmp",
+      "mode": "replace"
     }
   ],
-  "debug": false
+  "debug": false,
+  "functions": [
+    {
+      "address": "0x8005DA04",
+      "name": "setjmp_resume_8005DA04"
+    },
+    {
+      "address": "0x80083B54",
+      "name": "setjmp_resume_80083B54"
+    },
+    {
+      "address": "0x80083B94",
+      "name": "setjmp_resume_80083B94"
+    },
+    {
+      "address": "0x80083C60",
+      "name": "setjmp_resume_80083C60"
+    },
+    {
+      "address": "0x80083CCC",
+      "name": "setjmp_resume_80083CCC"
+    },
+    {
+      "address": "0x8008BE74",
+      "name": "setjmp_resume_8008BE74"
+    }
+  ]
 }
