@@ -2452,6 +2452,10 @@
     {
       "address": "0x8008BE74",
       "name": "setjmp_resume_8008BE74"
+    },
+    {
+      "address": "0x8005D810",
+      "name": "entry_8005D810"
     }
   ]
 }

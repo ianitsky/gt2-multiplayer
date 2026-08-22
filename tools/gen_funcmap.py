@@ -259,10 +259,15 @@ def main():
             image = read_exe_text(args.disc, base, int(args.text_size, 16))
 
         candidates = dict(control_flow_targets(image, base, ranges))
+        # An address also taken as a pointer is an entry point whatever else
+        # reaches it. Recording it with no source overrides a branch that would
+        # otherwise have it dismissed as an internal label: 0x80016258 and
+        # 0x800218DC are each reached both ways, and letting the branch win kept
+        # them out of the map entirely.
         for pointer in data_pointers(image, base, ranges):
-            candidates.setdefault(pointer, None)
+            candidates[pointer] = None
         for computed in computed_addresses(image, base, ranges):
-            candidates.setdefault(computed, None)
+            candidates[computed] = None
 
         for spec in args.also_scan:
             path, _, other_base = spec.partition("@")
@@ -278,9 +283,9 @@ def main():
                     candidates.setdefault(addr, None)
             for pointer in data_pointers(other, ob, []):
                 if any(lo <= pointer < hi for lo, hi in ranges):
-                    candidates.setdefault(pointer, None)
+                    candidates[pointer] = None
             for computed in computed_addresses(other, ob, ranges):
-                candidates.setdefault(computed, None)
+                candidates[computed] = None
 
         named = sorted(syms)
         for addr, source_pc in sorted(candidates.items()):
