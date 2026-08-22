@@ -30,28 +30,45 @@ public class InterruptControllerTests
     }
 
     [Fact]
-    public void Nested_critical_sections_need_matching_exits()
+    public void A_single_exit_reopens_delivery_regardless_of_enter_count()
     {
+        // Not a nesting primitive: any Exit unmasks, no matter how many Enters
+        // preceded it. Covered more thoroughly by
+        // Unmatched_nested_enters_still_deliver_after_one_exit below.
         InterruptController.EnterCritical();
         InterruptController.EnterCritical();
         InterruptController.Raise();
         InterruptController.ExitCritical();
 
-        Assert.Equal(0, InterruptController.Drain());
-
-        InterruptController.ExitCritical();
         Assert.Equal(1, InterruptController.Drain());
     }
 
     [Fact]
-    public void Unbalanced_exit_does_not_drive_depth_negative()
+    public void Unbalanced_exit_is_a_harmless_no_op()
     {
         InterruptController.ExitCritical();
-        Assert.Equal(0, InterruptController.CriticalDepth);
+        Assert.False(InterruptController.Masked);
 
         InterruptController.EnterCritical();
         InterruptController.Raise();
         Assert.Equal(0, InterruptController.Drain());
+    }
+
+    [Fact]
+    public void Unmatched_nested_enters_still_deliver_after_one_exit()
+    {
+        // Reproduces the _patch_card/_patch_card2 shape: an outer EnterCritical,
+        // two inner EnterCritical calls that never get a matching ExitCritical,
+        // then a single ExitCritical from the outer caller. On real hardware
+        // (and under the correct mask model) that one Exit reopens delivery.
+        InterruptController.EnterCritical();
+        InterruptController.EnterCritical();
+        InterruptController.EnterCritical();
+        InterruptController.Raise();
+
+        InterruptController.ExitCritical();
+
+        Assert.Equal(1, InterruptController.Drain());
     }
 
     [Fact]

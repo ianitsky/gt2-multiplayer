@@ -48,7 +48,7 @@ neither `CpuContext` nor memory — it sets a counter.
                                        |
 [game thread]   ...game loop...
                 safepoint (before each backward goto):
-                  if (pending != 0 && criticalDepth == 0)
+                  if (pending != 0 && !masked)
                       Deliver()
                           |- Runtime.PumpHost()        // window pumps events
                           '- Dispatcher.Call(handlerCtx, m, vsyncHandler)
@@ -61,7 +61,7 @@ neither `CpuContext` nor memory — it sets a counter.
 
 | Component | Responsibility |
 |---|---|
-| `Interrupts.InterruptController` | pending count, `CriticalDepth`, handler registration, `Deliver()` |
+| `Interrupts.InterruptController` | pending count, `Masked` (interrupt mask state), handler registration, `Deliver()` |
 | `Interrupts.IVBlankSource` | pluggable source; `WallClockVBlankSource` is the initial implementation |
 | `Sdk.LibApi` | reimplements `VSyncCallback`, `EnterCriticalSection`, `ExitCriticalSection`; registered in `SdkPatches` |
 | `FunctionEmmiter` / `InstructionEmitter` | emits the safepoint call before backward branches |
@@ -89,15 +89,31 @@ visible in tight physics loops, so it goes behind a recompiler config flag
 
 ### Handler context
 
-A fresh `CpuContext`: registers zeroed, `GP` copied from the game, and
-`SP = game SP - 512`. Nothing below the current stack pointer belongs to the
-game, so the handler gets guaranteed space without reserving a fixed RAM
-region — any fixed address would be a guess against GT2's own layout, which
-already occupies `0x801F0C70`.
+Implemented differently than originally planned here. `LegacyInterrupts.Dispatch`
+(`RecompOne.Runtime/Hardware/Interrupts.cs`) runs the handler on the game's own
+live `CpuContext`, not a fresh isolated one:
 
-The context must be separate rather than the game's: the busy-wait sits inside a
-function with live registers, and a handler writing to them would corrupt the
-game silently. This is the same reason `gt2_main_saveregisters` exists.
+```csharp
+var snap = cpu.Snapshot();
+mem.WriteU16(intrEnv, 1);
+Dispatcher.Call(cpu, mem, handler);
+mem.WriteU16(intrEnv, 0);
+cpu.Restore(snap);
+```
+
+`Snapshot()`/`Restore()` capture and reinstate the general-purpose registers
+plus `HI`/`LO` around the call. This is equivalent to a fresh context for the
+purpose that mattered — the busy-wait's live registers come back exactly as
+they were, so the handler cannot corrupt them — without the complexity of
+constructing and threading a second `CpuContext`, guessing a safe `SP`, or
+deciding what `GP` a synthetic context should carry. The handler still runs
+with the game's real stack and globals in scope, which is also closer to what
+the actual PS1 interrupt path does: a real MIPS exception handler runs on the
+interrupted task's own stack, it does not switch to a separate one.
+
+The stack-scratch-space idea (`SP = game SP - 512`, registers zeroed) was the
+original design and is no longer what the code does; it's recorded here only
+so this section doesn't silently drift from the implementation again.
 
 ### Failure modes handled
 
@@ -117,7 +133,11 @@ No tests exist in the project today; this adds `GT2Port.Tests` (xunit).
 
 Unit, against `InterruptController` alone:
 - a raised interrupt is delivered on `Poll`, exactly once
-- `CriticalDepth > 0` defers delivery; dropping to zero delivers
+- masked interrupts defer delivery; unmasking delivers. `EnterCriticalSection`
+  masks and `ExitCriticalSection` unmasks unconditionally — there is no depth,
+  so a single Exit reopens delivery no matter how many Enters preceded it
+  (matches the hardware and the game's own `_patch_card`/`_patch_pad` init
+  routines, which call Enter repeatedly with no matching Exit)
 - `Poll` inside the handler does not reenter
 - three pending VBlanks run three times; beyond the cap it saturates
 
