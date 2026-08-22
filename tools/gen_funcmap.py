@@ -115,6 +115,38 @@ def control_flow_targets(text, base, ranges):
     return targets
 
 
+def computed_addresses(image, base, ranges):
+    """Text addresses built in a register by a lui/addiu pair.
+
+    A function pointer does not have to be a call site or a word in a table:
+    GT2 also materialises one into a register and calls it indirectly, which
+    is how 0x80068310 is reached. Only pairs resolving into the code ranges
+    are kept, so ordinary constants are ignored.
+    """
+    found = set()
+    limit = len(image) - 4
+    for off in range(0, limit, 4):
+        word = struct.unpack_from("<I", image, off)[0]
+        if word >> 26 != 0x0F:  # LUI
+            continue
+        reg = (word >> 16) & 0x1F
+        hi = word & 0xFFFF
+        for step in range(4, 4 * 24, 4):
+            if off + step + 4 > len(image):
+                break
+            nxt = struct.unpack_from("<I", image, off + step)[0]
+            op = nxt >> 26
+            if op == 0x09 and ((nxt >> 21) & 0x1F) == reg:  # ADDIU from that reg
+                lo = nxt & 0xFFFF
+                addr = ((hi << 16) + (lo - 0x10000 if lo & 0x8000 else lo)) & 0xFFFFFFFF
+                if addr % 4 == 0 and any(l <= addr < h for l, h in ranges):
+                    found.add(addr)
+                break
+            if op == 0x0F and ((nxt >> 16) & 0x1F) == reg:  # register reloaded
+                break
+    return found
+
+
 def data_pointers(image, base, ranges):
     """Function pointers parked in the executable's data sections.
 
@@ -200,6 +232,10 @@ def main():
     ap.add_argument("--disc", help="disc image; enables entry-point discovery")
     ap.add_argument("--image", help="raw code image instead of a disc, e.g. an overlay already "
                                     "extracted from GT2.OVL; enables the same discovery")
+    ap.add_argument("--also-scan", action="append", default=[], metavar="IMAGE@BASE",
+                    help="additional code image to scan for calls INTO this map's ranges. "
+                         "Overlays call the main executable, and those call sites are "
+                         "invisible when only the main image is scanned.")
     ap.add_argument("--text-base", default="0x80010000")
     ap.add_argument("--text-size", default="0x99000")
     args = ap.parse_args()
@@ -225,6 +261,26 @@ def main():
         candidates = dict(control_flow_targets(image, base, ranges))
         for pointer in data_pointers(image, base, ranges):
             candidates.setdefault(pointer, None)
+        for computed in computed_addresses(image, base, ranges):
+            candidates.setdefault(computed, None)
+
+        for spec in args.also_scan:
+            path, _, other_base = spec.partition("@")
+            other = open(path, "rb").read()
+            ob = int(other_base or "0x80010000", 16)
+            # Only targets landing in THIS map's ranges matter, and they are
+            # always calls from outside, never internal labels - the source pc
+            # belongs to a different image - so record them with no source.
+            # Scan the whole of the other image, keeping only what lands here.
+            own = [(ob, ob + (len(other) & ~3))]
+            for addr in control_flow_targets(other, ob, own):
+                if any(lo <= addr < hi for lo, hi in ranges):
+                    candidates.setdefault(addr, None)
+            for pointer in data_pointers(other, ob, []):
+                if any(lo <= pointer < hi for lo, hi in ranges):
+                    candidates.setdefault(pointer, None)
+            for computed in computed_addresses(other, ob, ranges):
+                candidates.setdefault(computed, None)
 
         named = sorted(syms)
         for addr, source_pc in sorted(candidates.items()):
