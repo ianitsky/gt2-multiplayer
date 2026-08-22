@@ -1,0 +1,32 @@
+  Determinando os projetos a serem restaurados...
+  Todos os projetos estão atualizados para restauração.
+C:\Program Files\dotnet\sdk\10.0.400-preview.0.26322.102\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: Você está usando uma versão de visualização do .NET. Veja: https://aka.ms/dotnet-support-policy [C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\GT2Port.Tests.csproj]
+C:\Program Files\dotnet\sdk\10.0.400-preview.0.26322.102\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(383,5): message NETSDK1057: Você está usando uma versão de visualização do .NET. Veja: https://aka.ms/dotnet-support-policy [C:\Users\inmor\Documents\Projects\gt2-recompone\GT2Port.csproj]
+  RecompOne.Runtime -> C:\Users\inmor\Documents\Projects\gt2-recompone\RecompOne\RecompOne.Runtime\bin\Debug\net10.0\RecompOne.Runtime.dll
+  GT2Port -> C:\Users\inmor\Documents\Projects\gt2-recompone\bin\Debug\net10.0\GT2Port.dll
+C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\BootIntegrationTests.cs(63,26): warning xUnit1031: Test methods should not use blocking task operations, as they can cause deadlocks. Use an async test method and await instead. (https://xunit.net/xunit.analyzers/rules/xUnit1031) [C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\GT2Port.Tests.csproj]
+  GT2Port.Tests -> C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\bin\Debug\net10.0\GT2Port.Tests.dll
+Execução de teste para C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\bin\Debug\net10.0\GT2Port.Tests.dll (.NETCoreApp,Version=v10.0)
+1 arquivos de teste no total corresponderam ao padrão especificado.
+[xUnit.net 00:00:00.25]     GT2Port.Tests.SessionTests.OnRemoteState_preserves_local_player_state_when_duplicates_exist [FAIL]
+  Com falha GT2Port.Tests.SessionTests.OnRemoteState_preserves_local_player_state_when_duplicates_exist [1 ms]
+  Mensagem de erro:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Rastreamento de pilha:
+     at GT2Port.Tests.SessionTests.OnRemoteState_preserves_local_player_state_when_duplicates_exist() in C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\SessionTests.cs:line 246
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.25]     GT2Port.Tests.SessionTests.Join_allows_entry_to_room_with_duplicates_but_fewer_distinct_players_than_cap [FAIL]
+  Com falha GT2Port.Tests.SessionTests.Join_allows_entry_to_room_with_duplicates_but_fewer_distinct_players_than_cap [< 1 ms]
+  Mensagem de erro:
+   Assert.True() Failure
+Expected: True
+Actual:   False
+  Rastreamento de pilha:
+     at GT2Port.Tests.SessionTests.Join_allows_entry_to_room_with_duplicates_but_fewer_distinct_players_than_cap() in C:\Users\inmor\Documents\Projects\gt2-recompone\tests\GT2Port.Tests\SessionTests.cs:line 432
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Com falha! – Com falha:     2, Aprovado:    78, Ignorado:     0, Total:    80, Duração: 1 s - GT2Port.Tests.dll (net10.0)

@@ -231,6 +231,22 @@ public class SessionTests
     // ---- Finding 2: duplicate names corrupt the room ----
 
     [Fact]
+    public void OnRemoteState_preserves_local_player_state_when_duplicates_exist()
+    {
+        var session = NewSession("ian");
+        session.Host("room", "track");
+        session.SetReady("ian", true);            // local player is ready
+
+        session.OnRemoteState(RoomWith(
+            new Player("ian", "", false),          // stale duplicate, listed first
+            new Player("guest", "", false),
+            new Player("ian", "", true)));         // the real entry, listed second
+
+        // the local player's Ready must remain true (local knowledge preserved)
+        Assert.True(session.Current!.Players.Single(p => p.Name == "ian").Ready);
+    }
+
+    [Fact]
     public void Joining_a_room_that_already_has_your_name_is_refused()
     {
         var session = NewSession("ian");
@@ -239,10 +255,11 @@ public class SessionTests
     }
 
     [Fact]
-    public void Remote_state_with_duplicate_names_keeps_only_the_first()
+    public void Remote_state_with_duplicate_names_preserves_local_player_car()
     {
         var session = NewSession();
         session.Host("room", "track");
+        session.SetCar("ian", "local_car");
         session.OnRemoteState(RoomWith(
             new Player("ian", "first", false),
             new Player("guest", "", false),
@@ -250,7 +267,22 @@ public class SessionTests
 
         var ians = session.Current!.Players.Where(p => p.Name == "ian").ToList();
         Assert.Single(ians);
-        Assert.Equal("first", ians[0].Car);
+        Assert.Equal("local_car", ians[0].Car);
+    }
+
+    [Fact]
+    public void Remote_state_with_duplicate_names_keeps_first_for_other_players()
+    {
+        var session = NewSession("host");
+        session.Host("room", "track");
+        session.OnRemoteState(RoomWith(
+            new Player("host", "", false),
+            new Player("guest", "first_car", false),
+            new Player("guest", "second_car", true)));
+
+        var guests = session.Current!.Players.Where(p => p.Name == "guest").ToList();
+        Assert.Single(guests);
+        Assert.Equal("first_car", guests[0].Car);
     }
 
     [Fact]
@@ -404,5 +436,16 @@ public class SessionTests
         Assert.True(session.Join(oversized));
 
         Assert.Equal(RoomState.MaxPlayers, session.Current!.MaxPlayers);
+    }
+
+    [Fact]
+    public void Join_allows_entry_to_room_with_duplicates_but_fewer_distinct_players_than_cap()
+    {
+        var roomWithDupes = new Room(Guid.NewGuid(), "room", "track", 3,
+            [new Player("ian", "", false), new Player("guest", "", false), new Player("ian", "", false)]);
+
+        var session = NewSession("alice");
+        Assert.True(session.Join(roomWithDupes));
+        Assert.Equal(SessionPhase.Joined, session.Phase);
     }
 }

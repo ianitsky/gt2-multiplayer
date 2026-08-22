@@ -50,8 +50,9 @@ public sealed class Session
 
     public bool Join(Room room)
     {
-        if (room.Players.Count >= room.MaxPlayers) return false;
-        if (room.Players.Any(p => p.Name == _playerName)) return false;
+        var distinctNames = room.Players.DistinctBy(p => p.Name).ToList();
+        if (distinctNames.Count >= room.MaxPlayers) return false;
+        if (distinctNames.Any(p => p.Name == _playerName)) return false;
 
         Current = room with
         {
@@ -82,7 +83,33 @@ public sealed class Session
     public void OnRemoteState(Room room)
     {
         var seenNames = new HashSet<string>();
-        var deduped = room.Players.Where(p => seenNames.Add(p.Name)).ToList();
+        var deduped = new List<Player>();
+
+        foreach (var player in room.Players)
+        {
+            if (seenNames.Add(player.Name))
+            {
+                // First occurrence: check if this is the local player with existing state
+                if (player.Name == _playerName && Current is { } currentRoom)
+                {
+                    var existingLocal = currentRoom.Players.SingleOrDefault(p => p.Name == _playerName);
+                    if (existingLocal is not null)
+                    {
+                        // Use the local player's existing state, not the incoming copy
+                        deduped.Add(existingLocal);
+                    }
+                    else
+                    {
+                        deduped.Add(player);
+                    }
+                }
+                else
+                {
+                    deduped.Add(player);
+                }
+            }
+        }
+
         if (deduped.Count != room.Players.Count)
             room = room with { Players = deduped };
 
