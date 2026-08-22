@@ -2355,7 +2355,8 @@
           "address": "0x80016258",
           "name": "ptr_80016258"
         }
-      ]
+      ],
+      "image": "ovl_patched/gt2_01.bin"
     },
     {
       "name": "gt2_02",
@@ -2374,7 +2375,8 @@
           "address": "0x800186D0",
           "name": "ptr_800186D0"
         }
-      ]
+      ],
+      "image": "ovl_patched/gt2_02.bin"
     },
     {
       "name": "gt2_03",
@@ -2383,7 +2385,8 @@
       "size": 53389,
       "gzip": true,
       "base": "0x80010000",
-      "linearSweep": true
+      "linearSweep": true,
+      "image": "ovl_patched/gt2_03.bin"
     },
     {
       "name": "gt2_04",
@@ -2392,7 +2395,8 @@
       "size": 5195,
       "gzip": true,
       "base": "0x80010000",
-      "linearSweep": true
+      "linearSweep": true,
+      "image": "ovl_patched/gt2_04.bin"
     },
     {
       "name": "gt2_05",
@@ -2402,7 +2406,8 @@
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": false,
-      "funcMap": "funcmaps/gt2_05.json"
+      "funcMap": "funcmaps/gt2_05.json",
+      "image": "ovl_patched/gt2_05.bin"
     },
     {
       "name": "gt2_06",
@@ -2412,7 +2417,8 @@
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": false,
-      "funcMap": "funcmaps/gt2_06.json"
+      "funcMap": "funcmaps/gt2_06.json",
+      "image": "ovl_patched/gt2_06.bin"
     }
   ],
   "patches": [

@@ -1,0 +1,120 @@
+{
+  "name": "Metric units",
+  "patches": [
+    {
+      "address": "0x801C6C87",
+      "expect": "0x706D",
+      "value": "0x6D6B"
+    },
+    {
+      "address": "0x801C6C88",
+      "expect": "0x0068",
+      "value": "0x682F"
+    },
+    {
+      "address": "0x800F8677",
+      "expect": "0x626C",
+      "value": "0x676B"
+    },
+    {
+      "address": "0x800F86AF",
+      "expect": "0x626C",
+      "value": "0x676B"
+    },
+    {
+      "address": "0x800F86B1",
+      "expect": "0x662D",
+      "value": "0x2F6D"
+    },
+    {
+      "address": "0x800F86B3",
+      "expect": "0x2F74",
+      "value": "0x6425"
+    },
+    {
+      "address": "0x800F86B5",
+      "expect": "0x6425",
+      "value": "0x7072"
+    },
+    {
+      "address": "0x800F86B7",
+      "expect": "0x7072",
+      "value": "0x006D"
+    },
+    {
+      "address": "0x800F86C0",
+      "expect": "0x626C",
+      "value": "0x676B"
+    },
+    {
+      "address": "0x800F86C2",
+      "expect": "0x662D",
+      "value": "0x2F6D"
+    },
+    {
+      "address": "0x800F86C4",
+      "expect": "0x2F74",
+      "value": "0x257E"
+    },
+    {
+      "address": "0x800F86C6",
+      "expect": "0x257E",
+      "value": "0x7264"
+    },
+    {
+      "address": "0x800F86C8",
+      "expect": "0x7264",
+      "value": "0x6D70"
+    },
+    {
+      "address": "0x800F86CA",
+      "expect": "0x6D70",
+      "value": "0x0000"
+    },
+    {
+      "address": "0x800F85A6",
+      "expect": "0x626C",
+      "value": "0x676B"
+    },
+    {
+      "address": "0x800F85A8",
+      "expect": "0x662D",
+      "value": "0x006D"
+    },
+    {
+      "address": "0x801C7101",
+      "expect": "0x706D",
+      "value": "0x6D6B"
+    },
+    {
+      "address": "0x801C7103",
+      "expect": "0x0068",
+      "value": "0x682F"
+    },
+    {
+      "address": "0x801EF6C3",
+      "expect": "0x626C",
+      "value": "0x676B"
+    },
+    {
+      "address": "0x801C30FF",
+      "expect": "0x626C",
+      "value": "0x676B"
+    },
+    {
+      "address": "0x801C3101",
+      "expect": "0x662D",
+      "value": "0x206D"
+    },
+    {
+      "address": "0x801C3103",
+      "expect": "0x2074",
+      "value": "0x202F"
+    },
+    {
+      "address": "0x801C3105",
+      "expect": "0x202F",
+      "value": "0x0000"
+    }
+  ]
+}

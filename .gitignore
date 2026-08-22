@@ -12,3 +12,4 @@ ovl_bin/
 trace.log
 __pycache__/
 *.pyc
+ovl_patched/
