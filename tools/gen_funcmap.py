@@ -242,6 +242,13 @@ def main():
             ):
                 continue      # branch within its own function: an internal label
             else:
+                # Deliberately overlapping rather than splitting the host at
+                # this address. Splitting looks tidier and gets coverage to
+                # 100%, but the recompiler resolves jump tables against the
+                # function it is emitting: a new boundary turns an in-function
+                # case target into a dispatch to an address no symbol names,
+                # and 0x8007C76C stops being reachable. Overlap duplicates the
+                # shared tail; that is the cost of keeping those jumps local.
                 interior.add(addr)
 
     functions = build(syms, ranges, interior)
