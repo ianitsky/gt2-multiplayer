@@ -8,6 +8,7 @@ so functions are clipped to the text ranges taken from the yaml, and symbols
 landing outside those ranges are dropped.
 """
 import argparse
+import bisect
 import json
 import re
 import struct
@@ -78,20 +79,54 @@ def load_symbols(paths):
     return syms
 
 
-def jal_targets(text, base, ranges):
-    """Every address reached by a JAL is a function entry by definition.
+def control_flow_targets(text, base, ranges):
+    """Collect every address reached by a control-flow instruction.
 
-    The splat symbol files name most functions but miss a handful of entry
-    points; without them RecompOne raises "unmapped call" at runtime, since a
-    call landing mid-function has nowhere to dispatch to.
+    JAL is the obvious case, but GT2 also reaches shared code through plain
+    jumps: at 0x8007C310 a run of thunks each load a different argument and
+    `j` into a common body at 0x8007C32C. That body is not a symbol, so a
+    dispatch to it has nowhere to land and the runtime raises "unmapped call".
+
+    Branches are included for the same reason. Whether a target is a genuine
+    entry point or merely an internal label is decided by the caller, which
+    knows which function contains what.
     """
-    targets = set()
+    targets = {}
     for lo, hi in ranges:
         for pc in range(lo, hi, 4):
             word = struct.unpack_from("<I", text, pc - base)[0]
-            if word >> 26 == 3:  # JAL
-                targets.add(((pc + 4) & 0xF0000000) | ((word & 0x03FFFFFF) << 2))
-    return {a for a in targets if any(lo <= a < hi for lo, hi in ranges)}
+            op = word >> 26
+            if op in (2, 3):  # J, JAL
+                target = ((pc + 4) & 0xF0000000) | ((word & 0x03FFFFFF) << 2)
+            elif op in (4, 5, 6, 7) or (op == 1 and ((word >> 16) & 0x1F) in (0, 1, 0x10, 0x11)):
+                offset = word & 0xFFFF
+                if offset & 0x8000:
+                    offset -= 0x10000
+                target = pc + 4 + offset * 4
+            else:
+                continue
+            if any(lo2 <= target < hi2 for lo2, hi2 in ranges):
+                targets.setdefault(target, pc)
+    return targets
+
+
+def data_pointers(image, base, ranges):
+    """Function pointers parked in the executable's data sections.
+
+    GT2 registers BIOS event handlers through 12-byte descriptors holding
+    {handler, class, spec}; the handler addresses appear nowhere in the code
+    stream, only in this table. Only non-code regions are scanned, so
+    instruction words are never mistaken for pointers.
+    """
+    pointers = set()
+    for off in range(0, len(image) - 3, 4):
+        addr = base + off
+        if any(lo <= addr < hi for lo, hi in ranges):
+            continue
+        word = struct.unpack_from("<I", image, off)[0]
+        if word % 4 == 0 and any(lo <= word < hi for lo, hi in ranges):
+            pointers.add(word)
+    return pointers
 
 
 def read_exe_text(disc, base, size, exe_sector=24, header=0x800, sector_size=2352):
@@ -110,7 +145,17 @@ def read_exe_text(disc, base, size, exe_sector=24, header=0x800, sector_size=235
     return data[header:header + size]
 
 
-def build(syms, ranges):
+def build(syms, ranges, extra_entries=()):
+    """Lay out functions, then add the discovered entry points on top.
+
+    A named function runs to the next named function. A discovered entry point
+    is a second way into a function that already exists, so it cannot be sized
+    that way: the thunks at 0x8007C310 jump into a shared body, and a slice
+    ending at the next entry point would stop before reaching it. Each entry
+    point therefore runs to the END of its host, overlapping the host and any
+    entry points between. The emitted slices duplicate the tail they share,
+    which is what makes each one self-contained.
+    """
     functions = []
     for start, end in ranges:
         addrs = sorted(a for a in syms if start <= a < end)
@@ -121,6 +166,23 @@ def build(syms, ranges):
                 "name": syms[addr],
                 "size": nxt - addr,
             })
+
+    hosts = sorted((int(f["address"], 16), f["size"]) for f in functions)
+    host_starts = [h[0] for h in hosts]
+    for addr in sorted(extra_entries):
+        i = bisect.bisect_right(host_starts, addr) - 1
+        if i < 0:
+            continue
+        host_start, host_size = hosts[i]
+        host_end = host_start + host_size
+        if not host_start < addr < host_end:
+            continue          # not interior to a host: already an entry, or in a gap
+        functions.append({
+            "address": f"0x{addr:08X}",
+            "name": f"entry_{addr:08X}",
+            "size": host_end - addr,
+        })
+
     functions.sort(key=lambda f: int(f["address"], 16))
     return functions
 
@@ -130,7 +192,7 @@ def main():
     ap.add_argument("yaml", help="splat config yaml")
     ap.add_argument("symbols", nargs="+", help="splat symbol_addrs files")
     ap.add_argument("-o", "--out", required=True)
-    ap.add_argument("--disc", help="disc image; enables JAL entry-point discovery")
+    ap.add_argument("--disc", help="disc image; enables entry-point discovery")
     ap.add_argument("--text-base", default="0x80010000")
     ap.add_argument("--text-size", default="0x99000")
     args = ap.parse_args()
@@ -142,16 +204,35 @@ def main():
 
     syms = load_symbols(args.symbols)
 
-    discovered = 0
+    gap_entries = 0
+    interior = set()
     if args.disc:
         base = int(args.text_base, 16)
-        text = read_exe_text(args.disc, base, int(args.text_size, 16))
-        for addr in sorted(jal_targets(text, base, ranges)):
-            if addr not in syms:
-                syms[addr] = f"func_{addr:08X}"
-                discovered += 1
+        image = read_exe_text(args.disc, base, int(args.text_size, 16))
 
-    functions = build(syms, ranges)
+        candidates = dict(control_flow_targets(image, base, ranges))
+        for pointer in data_pointers(image, base, ranges):
+            candidates.setdefault(pointer, None)
+
+        named = sorted(syms)
+        for addr, source_pc in sorted(candidates.items()):
+            if addr in syms:
+                continue
+            i = bisect.bisect_right(named, addr) - 1
+            owner = named[i] if i >= 0 else None
+            if owner is None:
+                # Before every symbol: a real function nobody named.
+                syms[addr] = f"func_{addr:08X}"
+                gap_entries += 1
+            elif source_pc is not None and owner == (
+                named[bisect.bisect_right(named, source_pc) - 1]
+                if bisect.bisect_right(named, source_pc) > 0 else None
+            ):
+                continue      # branch within its own function: an internal label
+            else:
+                interior.add(addr)
+
+    functions = build(syms, ranges, interior)
     if not functions:
         sys.exit("no symbols fell inside the code ranges")
 
@@ -164,7 +245,10 @@ def main():
     print(f"{args.out}: {len(functions)} functions in {len(ranges)} code range(s), "
           f"{covered}/{text_bytes} bytes ({covered/text_bytes:.1%})")
     if args.disc:
-        print(f"  {discovered} unnamed entry point(s) recovered from JAL targets")
+        print(f"  {len(interior)} interior entry point(s) recovered "
+              f"(alternate ways into an existing function)")
+        if gap_entries:
+            print(f"  {gap_entries} unnamed function(s) found outside any symbol")
     for s, e in ranges:
         print(f"  text 0x{s:08X}-0x{e:08X}  ({e - s} bytes)")
 
