@@ -30,6 +30,23 @@ public sealed class MultiplayerPanel : IPanel
     public bool IsOpen { get; set; } = true;
     public bool StartRequested { get; private set; }
 
+    /// <summary>
+    /// Reads and clears the start request together, so a caller can only ever
+    /// observe it as true once.
+    ///
+    /// The panel outlives any single lobby visit - PanelManager holds it for
+    /// the life of the process - so a plain sticky bool would still read true
+    /// the next time this panel is reused, starting a race nobody asked for.
+    /// Consuming it here instead of leaving callers to poll the property
+    /// closes that gap.
+    /// </summary>
+    public bool TryConsumeStartRequest()
+    {
+        if (!StartRequested) return false;
+        StartRequested = false;
+        return true;
+    }
+
     public void Draw()
     {
         ImGui.SetNextWindowSize(new Vector2(640, 420), ImGuiCond.FirstUseEver);
@@ -132,6 +149,13 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.TextDisabled("Waiting for every player to be ready.");
 
         ImGui.SameLine();
-        if (ImGui.Button("Leave")) _session.Leave();
+        if (ImGui.Button("Leave"))
+        {
+            _session.Leave();
+            // A start requested for this room is meaningless once the room is
+            // gone - clear it so a stale request can't start a race for a
+            // room nobody is in anymore.
+            StartRequested = false;
+        }
     }
 }

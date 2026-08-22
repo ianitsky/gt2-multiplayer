@@ -25,6 +25,11 @@ public static partial class OverlayHook
     public static void ActivateFromEntry(CpuContext c, IMemory m)
     {
         uint entry = c.A1;
+
+        // Simulation mode is where multiplayer lives now. The lobby runs to
+        // completion here; the overlay is only loaded if it declines.
+        if (Multiplayer.ModeHook.TryEnterLobby(entry)) return;
+
         if (ByEntryPoint.TryGetValue(entry, out var name))
         {
             Console.WriteLine($"[Overlay] load {name} (entry 0x{entry:X8})");
