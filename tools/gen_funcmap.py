@@ -232,6 +232,10 @@ def main():
     ap.add_argument("--disc", help="disc image; enables entry-point discovery")
     ap.add_argument("--image", help="raw code image instead of a disc, e.g. an overlay already "
                                     "extracted from GT2.OVL; enables the same discovery")
+    ap.add_argument("--whole-image", action="store_true",
+                    help="treat the whole --image as one code range instead of trusting the "
+                         "yaml's subsegments. Several GT2 overlays declare only a token amount "
+                         "of text, so discovery would have almost nothing to search.")
     ap.add_argument("--also-scan", action="append", default=[], metavar="IMAGE@BASE",
                     help="additional code image to scan for calls INTO this map's ranges. "
                          "Overlays call the main executable, and those call sites are "
@@ -241,7 +245,14 @@ def main():
     args = ap.parse_args()
 
     cfg = yaml.safe_load(open(args.yaml, encoding="utf-8"))
-    ranges = text_ranges(cfg)
+    if args.whole_image:
+        if not args.image:
+            sys.exit("--whole-image needs --image")
+        base = int(args.text_base, 16)
+        size = len(open(args.image, "rb").read()) & ~3
+        ranges = [(base, base + size)]
+    else:
+        ranges = text_ranges(cfg)
     if not ranges:
         sys.exit(f"no code segments in {args.yaml}")
 
@@ -259,10 +270,15 @@ def main():
             image = read_exe_text(args.disc, base, int(args.text_size, 16))
 
         candidates = dict(control_flow_targets(image, base, ranges))
+        # An address that is also taken as a pointer is an entry point no
+        # matter what else reaches it. Recording it with no source overrides a
+        # branch that would otherwise have it dismissed as an internal label -
+        # 0x80016258 is reached both ways, and letting the branch win kept it
+        # out of the map entirely.
         for pointer in data_pointers(image, base, ranges):
-            candidates.setdefault(pointer, None)
+            candidates[pointer] = None
         for computed in computed_addresses(image, base, ranges):
-            candidates.setdefault(computed, None)
+            candidates[computed] = None
 
         for spec in args.also_scan:
             path, _, other_base = spec.partition("@")
@@ -278,9 +294,9 @@ def main():
                     candidates.setdefault(addr, None)
             for pointer in data_pointers(other, ob, []):
                 if any(lo <= pointer < hi for lo, hi in ranges):
-                    candidates.setdefault(pointer, None)
+                    candidates[pointer] = None
             for computed in computed_addresses(other, ob, ranges):
-                candidates.setdefault(computed, None)
+                candidates[computed] = None
 
         named = sorted(syms)
         for addr, source_pc in sorted(candidates.items()):
@@ -296,7 +312,13 @@ def main():
                 named[bisect.bisect_right(named, source_pc) - 1]
                 if bisect.bisect_right(named, source_pc) > 0 else None
             ):
-                continue      # branch within its own function: an internal label
+                # A branch inside its own function is an internal label, not an
+                # entry point. Declaring it anyway is actively harmful: the
+                # recompiler splits the host at every declared address, so a
+                # label in the middle of a real function truncates it. Dropping
+                # the filter raised gt2_02 from 338 declared addresses to 1581
+                # and moved the crash EARLIER, into code that had been fine.
+                continue
             else:
                 # Deliberately overlapping rather than splitting the host at
                 # this address. Splitting looks tidier and gets coverage to

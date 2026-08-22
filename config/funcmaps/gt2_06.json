@@ -266,6 +266,11 @@
       "size": 40
     },
     {
+      "address": "0x800114CC",
+      "name": "entry_800114CC",
+      "size": 20
+    },
+    {
       "address": "0x800114E0",
       "name": "gt2_ovr6_exit_to_menu",
       "size": 60
