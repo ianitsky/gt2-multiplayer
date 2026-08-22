@@ -27,6 +27,8 @@ var cd = new CdController(fs, m);
 m.SetCd(cd);
 
 Dispatcher.Register("main", new Recompiled.MainDispatchTable());
+Dispatcher.Register("gt2_01", new Recompiled.Gt2_01DispatchTable());
+Dispatcher.Register("gt2_02", new Recompiled.Gt2_02DispatchTable());
 RecompOne.Runtime.Modding.ModLoader.LoadAll();
 
 cd.LoadToMemory(BootExe, LoadAddr, ExeOffset, ExeSize);

@@ -18,8 +18,32 @@
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": true
+    },
+    {
+      "name": "gt2_02",
+      "file": "GT2.OVL",
+      "offset": 144760,
+      "size": 44333,
+      "gzip": true,
+      "base": "0x80010000",
+      "linearSweep": true
+    },
+    {
+      "name": "gt2_03",
+      "file": "GT2.OVL",
+      "offset": 189608,
+      "size": 53389,
+      "gzip": true,
+      "base": "0x80010000",
+      "linearSweep": true
     }
   ],
-  "patches": [],
+  "patches": [
+    {
+      "function": "gt2_load_overlay",
+      "target": "GT2Port.OverlayHook.ActivateFromEntry",
+      "mode": "pre"
+    }
+  ],
   "debug": false
 }
