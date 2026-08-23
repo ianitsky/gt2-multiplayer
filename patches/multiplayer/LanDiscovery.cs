@@ -70,7 +70,7 @@ public sealed class LanDiscovery : IDisposable
     /// </summary>
     public bool TryGetHostAddress(Guid roomId, out IPAddress address)
     {
-        if (!_disposed && _seen.TryGetValue(roomId, out var entry))
+        if (!_disposed && _seen.TryGetValue(roomId, out var entry) && _clock() - entry.Heard <= Timeout)
         {
             address = entry.HostAddress;
             return true;

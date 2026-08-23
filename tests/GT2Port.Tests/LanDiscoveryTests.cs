@@ -231,4 +231,71 @@ public class LanDiscoveryTests
 
         Assert.Contains(listener.Rooms, r => r.Id == Guid.Empty);
     }
+
+    // ---- Finding 3: TryGetHostAddress must honour its own contract ----
+
+    [Fact]
+    public void TryGetHostAddress_returns_the_address_a_known_room_announced_from()
+    {
+        const int port = BasePort + 10;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
+
+        var room = Sample();
+        host.Announce(room);
+        Settle(listener);
+
+        // Broadcast on this machine arrives tagged with whatever local
+        // interface address the OS picked for it, not necessarily loopback
+        // - so assert it's a real address (not the IPAddress.None sentinel
+        // TryGetHostAddress returns for the false case), not a specific one.
+        Assert.True(listener.TryGetHostAddress(room.Id, out var address));
+        Assert.NotEqual(IPAddress.None, address);
+    }
+
+    [Fact]
+    public void TryGetHostAddress_returns_false_for_a_room_that_has_never_been_seen()
+    {
+        const int port = BasePort + 11;
+        using var listener = new LanDiscovery(port, () => _now);
+
+        Assert.False(listener.TryGetHostAddress(Guid.NewGuid(), out _));
+    }
+
+    [Fact]
+    public void TryGetHostAddress_returns_false_once_a_room_has_aged_out_even_before_the_next_Tick()
+    {
+        const int port = BasePort + 12;
+        using var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
+
+        var room = Sample();
+        host.Announce(room);
+        Settle(listener);
+        Assert.True(listener.TryGetHostAddress(room.Id, out _));
+
+        // Past the timeout, but Tick()/Expire() deliberately not called - the
+        // entry is still sitting in _seen, unswept. The contract promises
+        // false regardless of whether a sweep has happened yet (Finding 3).
+        Advance(LanDiscovery.Timeout.TotalSeconds + 0.001);
+
+        Assert.False(listener.TryGetHostAddress(room.Id, out _));
+    }
+
+    [Fact]
+    public void TryGetHostAddress_returns_false_after_dispose()
+    {
+        const int port = BasePort + 13;
+        var listener = new LanDiscovery(port, () => _now);
+        using var host = new LanDiscovery(port, () => _now);
+
+        var room = Sample();
+        host.Announce(room);
+        Settle(listener);
+        Assert.True(listener.TryGetHostAddress(room.Id, out _));
+
+        listener.Dispose();
+
+        Assert.False(listener.TryGetHostAddress(room.Id, out _));
+    }
 }

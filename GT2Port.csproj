@@ -21,4 +21,12 @@
         <ProjectReference Include="RecompOne/RecompOne.Runtime/RecompOne.Runtime.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- LanSession's ClientIntent/Serialise/TryDeserialise are internal per
+             the interface they were specified against, and the brief asks the
+             test suite to round-trip them directly - same contract as
+             RoomState's public pair - so the test assembly needs this grant. -->
+        <InternalsVisibleTo Include="GT2Port.Tests" />
+    </ItemGroup>
+
 </Project>

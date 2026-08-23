@@ -1,13 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Text;
-
-// LanSessionTests exercises the wire format (ClientIntent, Serialise,
-// TryDeserialise) directly, the same way RoomStateTests exercises RoomState's
-// - but that pair is public while this one is internal, per the interface
-// this class was specified against, so the test assembly needs this grant.
-[assembly: InternalsVisibleTo("GT2Port.Tests")]
 
 namespace GT2Port.Multiplayer;
 
@@ -44,7 +37,7 @@ public sealed class LanSession : IDisposable
 
     static readonly byte[] Magic = "G2CS"u8.ToArray();
     const byte Version = 1;
-    const int MaxStringBytes = 64;
+    const int MaxStringBytes = RoomState.MaxStringBytes;
 
     const byte ReadyFlag = 1 << 0;
     const byte LeavingFlag = 1 << 1;
@@ -121,6 +114,7 @@ public sealed class LanSession : IDisposable
     public void ClientTick(Session session, IPAddress hostAddress)
     {
         if (_disposed) return;
+        if (session.Phase != SessionPhase.Joined) return;
 
         for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
         {

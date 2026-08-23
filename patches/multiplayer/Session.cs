@@ -124,6 +124,29 @@ public sealed class Session
     /// <summary>The host's view of the room, adopted wholesale.</summary>
     public void OnRemoteState(Room room)
     {
+        if (Phase == SessionPhase.Joined && Current is { } joinedRoom)
+        {
+            // A datagram for a room other than the one we're in - forged,
+            // stale, or crossed wires - must not replace it. Only the host-
+            // side check (matching room id) was in the brief; this is the
+            // client-side half of the same guard.
+            if (room.Id != joinedRoom.Id) return;
+
+            // The room we're in just filled up between its stale
+            // announcement and us joining: the host's ApplyClientIntent
+            // ignored our intent, but it still replies with room state as
+            // it stands - a room with no row for us. Adopting it wholesale
+            // would silently drop our own presence forever. Report it the
+            // same way a host timeout is reported instead.
+            if (!room.Players.Any(p => p.Name == _playerName))
+            {
+                Current = null;
+                Phase = SessionPhase.Disconnected;
+                StatusMessage = "The room is full.";
+                return;
+            }
+        }
+
         var seenNames = new HashSet<string>();
         var deduped = new List<Player>();
 

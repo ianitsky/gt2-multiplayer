@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using GT2Port.Multiplayer;
 using RecompOne.Runtime.Host.Window;
@@ -628,6 +630,49 @@ public class SessionTests
         Assert.False(panel.TryConsumeStartRequest());
     }
 
+    // ---- Task 7 review findings round 1 ----
+    //
+    // Finding 2: a room state with no row for us means the host didn't
+    // accept us (the room filled up between its stale announcement and our
+    // join) - report it instead of silently dropping our own presence.
+    // Finding 4: a room state for a different room id must be ignored
+    // outright, the symmetric check to HostTick's own-room-id filter.
+
+    [Fact]
+    public void OnRemoteState_disconnects_a_joined_session_when_the_room_has_no_row_for_it()
+    {
+        var session = NewSession("guest");
+        Assert.True(session.Join(RoomWith(new Player("ian", "", false))));
+        var roomId = session.Current!.Id;
+
+        // Same room id as the one we joined - a genuine reply from our host
+        // - but no row for "guest": the room filled up before our intent
+        // was accepted.
+        session.OnRemoteState(new Room(roomId, "room", "track", 6,
+            [new Player("ian", "", false), new Player("someone-else", "", false)]));
+
+        Assert.Equal(SessionPhase.Disconnected, session.Phase);
+        Assert.Null(session.Current);
+        Assert.NotNull(session.StatusMessage);
+    }
+
+    [Fact]
+    public void OnRemoteState_ignores_a_room_state_for_a_different_room_while_joined()
+    {
+        var session = NewSession("guest");
+        Assert.True(session.Join(RoomWith(new Player("ian", "", false))));
+        var originalId = session.Current!.Id;
+
+        var foreignRoom = new Room(Guid.NewGuid(), "someone else's room", "track", 6,
+            [new Player("ian", "", false), new Player("intruder", "", false)]);
+        session.OnRemoteState(foreignRoom);
+
+        Assert.Equal(SessionPhase.Joined, session.Phase);
+        Assert.Equal(originalId, session.Current!.Id);
+        Assert.DoesNotContain(session.Current.Players, p => p.Name == "intruder");
+        Assert.Contains(session.Current.Players, p => p.Name == "guest");
+    }
+
     [Fact]
     public void Leaving_the_room_clears_a_pending_start_request()
     {
@@ -643,6 +688,65 @@ public class SessionTests
         panel.LeaveRoom();
 
         Assert.False(panel.TryConsumeStartRequest());
+        Assert.Equal(SessionPhase.Browsing, session.Phase);
+        Assert.Null(session.Current);
+    }
+
+    // ---- Finding 8: the leave ordering LeaveRoom relies on is untested ----
+    //
+    // SendLeave must go out while Current still holds the room id, before
+    // Session.Leave() clears it - otherwise there is no id left to address
+    // the message to. The test above (Leaving_the_room_clears_a_pending_start_request)
+    // uses a *hosting* session, where LeaveRoom's send is skipped entirely
+    // (a host tears its room down; it doesn't announce a departure from
+    // one). This one uses a joined session, so the send actually happens.
+
+    [Fact]
+    public void LeaveRoom_on_a_joined_session_sends_the_departure_before_clearing_current()
+    {
+        const int discoveryPort = 34742; // clear of LanDiscoveryTests' and this file's other discovery ports
+        const int lanSessionPort = 34752; // clear of this file's other LanSession ports
+
+        using var hostDiscovery = new LanDiscovery(discoveryPort, () => _now); // stands in for the real host, announcing the room
+        using var discovery = new LanDiscovery(discoveryPort, () => _now);
+        using var lanSession = new LanSession(lanSessionPort, () => _now);
+
+        var session = NewSession("guest");
+        var hostRoom = new Room(Guid.NewGuid(), "room", "track", 6, [new Player("ian", "", false)]);
+        Assert.True(session.Join(hostRoom));
+        var roomId = session.Current!.Id;
+
+        hostDiscovery.Announce(hostRoom);
+        for (int i = 0; i < 50 && !discovery.TryGetHostAddress(roomId, out _); i++)
+        {
+            discovery.Tick();
+            Thread.Sleep(10);
+        }
+        Assert.True(discovery.TryGetHostAddress(roomId, out _)); // positive precondition (Finding 1 applies here too)
+
+        var panel = new MultiplayerPanel(session, discovery, lanSession);
+
+        panel.LeaveRoom();
+
+        // The leave datagram targets lanSession's own configured port on
+        // loopback, so it lands right back in its own receive queue - same
+        // self-receipt technique LanSessionTests uses to observe an
+        // outbound send with only one live socket involved.
+        var socketField = typeof(LanSession).GetField("_socket", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?? throw new InvalidOperationException("LanSession no longer has a _socket field.");
+        var socket = (UdpClient)socketField.GetValue(lanSession)!;
+        IPEndPoint? from = null;
+        byte[]? data = null;
+        for (int i = 0; i < 50 && data is null; i++)
+        {
+            if (socket.Available > 0) data = socket.Receive(ref from);
+            else Thread.Sleep(10);
+        }
+
+        Assert.NotNull(data);
+        Assert.True(LanSession.TryDeserialise(data!, out var intent));
+        Assert.True(intent.Leaving);
+        Assert.Equal(roomId, intent.RoomId); // the id Current held before Leave() cleared it
         Assert.Equal(SessionPhase.Browsing, session.Phase);
         Assert.Null(session.Current);
     }
