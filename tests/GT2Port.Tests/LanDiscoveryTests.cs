@@ -125,7 +125,11 @@ public class LanDiscoveryTests
         host.Announce(room);
         Settle(listener);
 
-        for (int i = 0; i < 3; i++)
+        // Four advances of 1.0s totals 4.0s, past the 3s timeout - so this
+        // only passes if each announce actually refreshes the room's
+        // timestamp. Three advances (3.0s exactly) would pass even against a
+        // refresh that does nothing, since Expire uses "> Timeout".
+        for (int i = 0; i < 4; i++)
         {
             Advance(1.0);
             host.Announce(room);
@@ -193,8 +197,15 @@ public class LanDiscoveryTests
 
         listener.Tick();
 
-        Assert.True(listener.Rooms.Count <= LanDiscovery.MaxDatagramsPerTick,
-            $"expected at most {LanDiscovery.MaxDatagramsPerTick} rooms processed in a single Tick, got {listener.Rooms.Count}");
+        // The cap bounds a single Tick: with every datagram already queued,
+        // one Tick must process exactly the cap, no more.
+        Assert.Equal(LanDiscovery.MaxDatagramsPerTick, listener.Rooms.Count);
+
+        // ...and it does not lose anything: the rest is still sitting in the
+        // socket, waiting for the next Tick to drain it.
+        listener.Tick();
+
+        Assert.Equal(flood, listener.Rooms.Count);
     }
 
     [Fact]

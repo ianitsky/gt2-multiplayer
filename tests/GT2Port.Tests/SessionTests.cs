@@ -81,8 +81,8 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", true), new Player("guest", "", false)));
+        session.ApplyClientIntent("guest", "", false);
+        session.SetReady("ian", true);
 
         Assert.False(session.CanStart);
     }
@@ -92,8 +92,8 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", true), new Player("guest", "", true)));
+        session.ApplyClientIntent("guest", "", true);
+        session.SetReady("ian", true);
 
         Assert.True(session.CanStart);
     }
@@ -114,9 +114,7 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
-        session.OnHeard("guest");
+        session.ApplyClientIntent("guest", "", false);
 
         Advance(3.5);
         session.Tick();
@@ -129,8 +127,7 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
+        session.ApplyClientIntent("guest", "", false);
 
         for (int i = 0; i < 4; i++)
         {
@@ -196,17 +193,14 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
-        session.OnHeard("guest");
+        session.ApplyClientIntent("guest", "", false);
 
         Advance(3.5);
         session.Tick();
         Assert.DoesNotContain(session.Current!.Players, p => p.Name == "guest");
 
         // guest reconnects under the same name, with no time elapsed since.
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
+        session.ApplyClientIntent("guest", "", false);
         session.Tick();
 
         Assert.Contains(session.Current!.Players, p => p.Name == "guest");
@@ -215,21 +209,29 @@ public class SessionTests
     [Fact]
     public void OnRemoteState_refreshes_liveness_for_players_it_keeps_seeing()
     {
-        var session = NewSession();
-        session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
+        // OnRemoteState is only meaningful for a joined client (Finding 6):
+        // the liveness it refreshes here is the client's view of the host,
+        // not a guest's row on a hosting session's own room.
+        var session = NewSession("guest");
+        var initial = RoomWith(new Player("ian", "", false));
+        Assert.True(session.Join(initial));
 
-        // guest is reported by every remote state, but never calls OnHeard directly.
+        // The host is reported by every remote state, but the client never
+        // calls OnHeard directly - the host's own send loop is what refreshes it.
         for (int i = 0; i < 4; i++)
         {
             Advance(1.0);
-            session.OnRemoteState(RoomWith(
-                new Player("ian", "", false), new Player("guest", "", false)));
+            session.OnRemoteState(initial with
+            {
+                Players = [new Player("ian", "", false), new Player("guest", "", false)],
+            });
             session.Tick();
         }
 
-        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+        // 4 advances of 1.0s totals 4.0s, past the 3s timeout - so staying
+        // Joined only holds if each OnRemoteState actually refreshed the
+        // host's liveness.
+        Assert.Equal(SessionPhase.Joined, session.Phase);
     }
 
     // ---- Finding 2: duplicate names corrupt the room ----
@@ -237,17 +239,22 @@ public class SessionTests
     [Fact]
     public void OnRemoteState_preserves_local_player_state_when_duplicates_exist()
     {
-        var session = NewSession("ian");
-        session.Host("room", "track");
-        session.SetReady("ian", true);            // local player is ready
+        var session = NewSession("guest");
+        var initial = RoomWith(new Player("ian", "", false));
+        Assert.True(session.Join(initial));
+        session.SetReady("guest", true);           // local player is ready
 
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false),          // stale duplicate, listed first
-            new Player("guest", "", false),
-            new Player("ian", "", true)));         // the real entry, listed second
+        session.OnRemoteState(initial with
+        {
+            Players = [
+                new Player("ian", "", false),
+                new Player("guest", "", false),    // stale duplicate, listed first
+                new Player("guest", "", true),     // the real entry, listed second
+            ],
+        });
 
         // the local player's Ready must remain true (local knowledge preserved)
-        Assert.True(session.Current!.Players.Single(p => p.Name == "ian").Ready);
+        Assert.True(session.Current!.Players.Single(p => p.Name == "guest").Ready);
     }
 
     [Fact]
@@ -261,28 +268,39 @@ public class SessionTests
     [Fact]
     public void Remote_state_with_duplicate_names_preserves_local_player_car()
     {
-        var session = NewSession();
-        session.Host("room", "track");
-        session.SetCar("ian", "local_car");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "first", false),
-            new Player("guest", "", false),
-            new Player("ian", "second", true)));
+        var session = NewSession("guest");
+        var initial = RoomWith(new Player("ian", "", false));
+        Assert.True(session.Join(initial));
+        session.SetCar("guest", "local_car");
+        session.OnRemoteState(initial with
+        {
+            Players = [
+                new Player("ian", "", false),
+                new Player("guest", "first", false),
+                new Player("guest", "second", true),
+            ],
+        });
 
-        var ians = session.Current!.Players.Where(p => p.Name == "ian").ToList();
-        Assert.Single(ians);
-        Assert.Equal("local_car", ians[0].Car);
+        var guests = session.Current!.Players.Where(p => p.Name == "guest").ToList();
+        Assert.Single(guests);
+        Assert.Equal("local_car", guests[0].Car);
     }
 
     [Fact]
     public void Remote_state_with_duplicate_names_keeps_first_for_other_players()
     {
-        var session = NewSession("host");
-        session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("host", "", false),
-            new Player("guest", "first_car", false),
-            new Player("guest", "second_car", true)));
+        var session = NewSession("me");
+        var initial = RoomWith(new Player("host", "", false));
+        Assert.True(session.Join(initial));
+        session.OnRemoteState(initial with
+        {
+            Players = [
+                new Player("host", "", false),
+                new Player("me", "", false),
+                new Player("guest", "first_car", false),
+                new Player("guest", "second_car", true),
+            ],
+        });
 
         var guests = session.Current!.Players.Where(p => p.Name == "guest").ToList();
         Assert.Single(guests);
@@ -292,17 +310,22 @@ public class SessionTests
     [Fact]
     public void SetReady_toggles_exactly_one_row()
     {
-        var session = NewSession();
-        session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "first", false),
-            new Player("guest", "", false),
-            new Player("ian", "second", false)));
+        var session = NewSession("me");
+        var initial = RoomWith(new Player("ian", "", false));
+        Assert.True(session.Join(initial));
+        session.OnRemoteState(initial with
+        {
+            Players = [
+                new Player("ian", "first", false),
+                new Player("me", "", false),
+                new Player("ian", "second", false),
+            ],
+        });
 
         session.SetReady("ian", true);
 
         Assert.True(session.Current!.Players.Single(p => p.Name == "ian").Ready);
-        Assert.False(session.Current.Players.Single(p => p.Name == "guest").Ready);
+        Assert.False(session.Current.Players.Single(p => p.Name == "me").Ready);
     }
 
     // ---- Finding 3: recovery from Disconnected ----
@@ -366,9 +389,7 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
-        session.OnHeard("guest");
+        session.ApplyClientIntent("guest", "", false);
 
         Advance(Session.Timeout.TotalSeconds);
         session.Tick();
@@ -381,9 +402,7 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track");
-        session.OnRemoteState(RoomWith(
-            new Player("ian", "", false), new Player("guest", "", false)));
-        session.OnHeard("guest");
+        session.ApplyClientIntent("guest", "", false);
 
         Advance(Session.Timeout.TotalSeconds + 0.001);
         session.Tick();
@@ -749,5 +768,121 @@ public class SessionTests
         Assert.Equal(roomId, intent.RoomId); // the id Current held before Leave() cleared it
         Assert.Equal(SessionPhase.Browsing, session.Phase);
         Assert.Null(session.Current);
+    }
+
+    // ---- Whole-branch review, finding 1: renaming and Join's failure reasons ----
+
+    [Fact]
+    public void Rename_succeeds_while_browsing()
+    {
+        var session = NewSession("ian");
+
+        Assert.True(session.Rename("someone-else"));
+
+        Assert.Equal("someone-else", session.PlayerName);
+    }
+
+    [Fact]
+    public void Rename_rejects_a_blank_or_whitespace_name()
+    {
+        var session = NewSession("ian");
+
+        Assert.False(session.Rename(""));
+        Assert.False(session.Rename("   "));
+        Assert.Equal("ian", session.PlayerName);
+    }
+
+    [Fact]
+    public void Rename_is_refused_while_hosting()
+    {
+        var session = NewSession("ian");
+        session.Host("room", "track");
+
+        Assert.False(session.Rename("someone-else"));
+        Assert.Equal("ian", session.PlayerName);
+    }
+
+    [Fact]
+    public void Rename_is_refused_while_joined()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+
+        Assert.False(session.Rename("someone-else"));
+        Assert.Equal("guest", session.PlayerName);
+    }
+
+    [Fact]
+    public void Join_of_a_full_room_reports_the_room_is_full()
+    {
+        var full = new Room(Guid.NewGuid(), "room", "track", 2,
+            [new Player("a", "", false), new Player("b", "", false)]);
+
+        var session = NewSession("guest");
+        Assert.False(session.Join(full));
+
+        Assert.NotNull(session.StatusMessage);
+        Assert.Contains("full", session.StatusMessage);
+    }
+
+    [Fact]
+    public void Join_of_a_room_with_your_name_already_in_it_reports_that_distinctly_from_full()
+    {
+        var session = NewSession("ian");
+        Assert.False(session.Join(RoomWith(new Player("ian", "", false))));
+
+        Assert.NotNull(session.StatusMessage);
+        Assert.DoesNotContain("full", session.StatusMessage);
+    }
+
+    // ---- Whole-branch review, finding 2: Host clamps an untrusted player limit ----
+
+    [Fact]
+    public void Hosting_clamps_an_oversized_player_limit_to_the_global_cap()
+    {
+        var session = NewSession();
+        session.Host("room", "track", 999);
+
+        Assert.Equal(RoomState.MaxPlayers, session.Current!.MaxPlayers);
+    }
+
+    [Fact]
+    public void Hosting_clamps_a_player_limit_below_two_up_to_two()
+    {
+        var session = NewSession();
+        session.Host("room", "track", 1);
+
+        Assert.Equal(2, session.Current!.MaxPlayers);
+    }
+
+    [Fact]
+    public void Hosting_honours_a_player_limit_within_range()
+    {
+        var session = NewSession();
+        session.Host("room", "track", 4);
+
+        Assert.Equal(4, session.Current!.MaxPlayers);
+    }
+
+    // ---- Whole-branch review, finding 6: hosting sessions ignore remote state ----
+
+    [Fact]
+    public void OnRemoteState_is_ignored_while_hosting()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        var ownRoomId = session.Current!.Id;
+
+        // A forged or stray datagram carrying a different room entirely -
+        // if this were adopted, the host would start seeing its own room
+        // (still addressed by ownRoomId in LanDiscovery.LocalRoomId) replaced
+        // by someone else's.
+        session.OnRemoteState(RoomWith(
+            new Player("intruder", "", false), new Player("someone-else", "", false)));
+
+        Assert.Equal(SessionPhase.Hosting, session.Phase);
+        Assert.Equal(ownRoomId, session.Current!.Id);
+        Assert.Single(session.Current.Players);
+        Assert.Equal("ian", session.Current.Players[0].Name);
     }
 }

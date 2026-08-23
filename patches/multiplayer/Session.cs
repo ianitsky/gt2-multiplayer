@@ -17,7 +17,7 @@ public sealed class Session
 {
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
 
-    readonly string _playerName;
+    string _playerName;
     readonly Func<DateTime> _clock;
     readonly Dictionary<string, DateTime> _lastHeard = [];
     DateTime _hostLastHeard;
@@ -33,15 +33,37 @@ public sealed class Session
     public Room? Current { get; private set; }
     public string? StatusMessage { get; private set; }
 
+    /// <summary>
+    /// Changes the player's name before they've joined or hosted a room.
+    /// Refused once a room exists (<see cref="SessionPhase.Hosting"/> or
+    /// <see cref="SessionPhase.Joined"/>) - the host's row and any client's
+    /// keep-alive bookkeeping are keyed by name, so renaming mid-room would
+    /// desync them from what the other side still knows this player as.
+    /// </summary>
+    public bool Rename(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        if (Phase != SessionPhase.Browsing) return false;
+
+        _playerName = name;
+        return true;
+    }
+
     public bool CanStart =>
         Phase == SessionPhase.Hosting &&
         Current is { } room &&
         room.Players.Count > 1 &&
         room.Players.All(p => p.Ready);
 
-    public void Host(string roomName, string track)
+    /// <summary>
+    /// Starts hosting with <paramref name="maxPlayers"/> clamped to
+    /// 2..<see cref="RoomState.MaxPlayers"/> - one player is not multiplayer,
+    /// and a caller passing an untrusted or out-of-range value cannot widen
+    /// the room past the wire format's own cap.
+    /// </summary>
+    public void Host(string roomName, string track, int maxPlayers = RoomState.MaxPlayers)
     {
-        Current = new Room(Guid.NewGuid(), roomName, track, RoomState.MaxPlayers,
+        Current = new Room(Guid.NewGuid(), roomName, track, Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
             [new Player(_playerName, "", false)]);
         Phase = SessionPhase.Hosting;
         StatusMessage = null;
@@ -51,8 +73,16 @@ public sealed class Session
     public bool Join(Room room)
     {
         var distinctNames = room.Players.DistinctBy(p => p.Name).ToList();
-        if (distinctNames.Count >= room.MaxPlayers) return false;
-        if (distinctNames.Any(p => p.Name == _playerName)) return false;
+        if (distinctNames.Count >= room.MaxPlayers)
+        {
+            StatusMessage = "That room is full.";
+            return false;
+        }
+        if (distinctNames.Any(p => p.Name == _playerName))
+        {
+            StatusMessage = $"Someone named \"{_playerName}\" is already in that room - change your name to join.";
+            return false;
+        }
 
         Current = room with
         {
@@ -124,6 +154,14 @@ public sealed class Session
     /// <summary>The host's view of the room, adopted wholesale.</summary>
     public void OnRemoteState(Room room)
     {
+        // The host is the authority on its own room; adopting a remote copy
+        // here would let a stray or forged datagram overwrite it - including
+        // the room id, which MultiplayerPanel captured as LocalRoomId when
+        // the room was created, so the host would then start seeing its own
+        // room show up in its own room list. Only a client ever adopts
+        // remote state.
+        if (Phase == SessionPhase.Hosting) return;
+
         if (Phase == SessionPhase.Joined && Current is { } joinedRoom)
         {
             // A datagram for a room other than the one we're in - forged,

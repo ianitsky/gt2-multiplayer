@@ -23,7 +23,12 @@ public static class ModeHook
     static LanSession? _lanSession;
     static MultiplayerPanel? _panel;
 
-    public static string PlayerName { get; set; } = Environment.UserName;
+    /// <summary>
+    /// Seeds Session's initial player name. Renaming afterwards goes through
+    /// Session.Rename, driven from the room-list screen - this is only ever
+    /// read, once, when the lobby's Session is first constructed.
+    /// </summary>
+    public static string PlayerName { get; } = Environment.UserName;
 
     public static bool TryEnterLobby(uint entryPoint)
     {

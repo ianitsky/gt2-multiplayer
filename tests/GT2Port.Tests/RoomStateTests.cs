@@ -97,16 +97,10 @@ public class RoomStateTests
         // Change count from 0 to 7
         data[countByteIndex] = 7;
 
-        bool parsed = RoomState.TryDeserialise([.. data], out var room);
-
-        // If packet somehow parses with 7 players, that violates MaxPlayers invariant
-        // This assertion will fail if the count > MaxPlayers check is deleted
-        if (parsed)
-        {
-            Assert.InRange(room.Players.Count, 0, RoomState.MaxPlayers);
-            Assert.DoesNotContain(null, room.Players);
-            Assert.True(room.Players.Count <= room.MaxPlayers);
-        }
+        // A count above MaxPlayers must be rejected outright, not merely
+        // parsed-then-checked - no assertion here may sit behind an `if`
+        // that decides whether it runs.
+        Assert.False(RoomState.TryDeserialise([.. data], out _));
     }
 
     [Fact]

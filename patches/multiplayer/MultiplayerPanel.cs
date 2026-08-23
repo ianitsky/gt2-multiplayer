@@ -16,8 +16,10 @@ public sealed class MultiplayerPanel : IPanel
     readonly LanDiscovery _discovery;
     readonly LanSession _lanSession;
 
+    string _playerName;
     string _roomName = "";
     string _track = "Trial Mountain";
+    int _maxPlayers = RoomState.MaxPlayers;
     string _car = "";
     bool _creating;
 
@@ -26,6 +28,7 @@ public sealed class MultiplayerPanel : IPanel
         _session = session;
         _discovery = discovery;
         _lanSession = lanSession;
+        _playerName = session.PlayerName;
     }
 
     public string Name => "Multiplayer";
@@ -107,6 +110,10 @@ public sealed class MultiplayerPanel : IPanel
 
     void DrawRoomList()
     {
+        if (ImGui.InputText("Your name", ref _playerName, 32))
+            _session.Rename(_playerName);
+        ImGui.Separator();
+
         ImGui.Text("Rooms on this network");
         ImGui.Separator();
 
@@ -137,11 +144,12 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.Separator();
         ImGui.InputText("Name", ref _roomName, 32);
         ImGui.InputText("Track", ref _track, 32);
+        ImGui.SliderInt("Player limit", ref _maxPlayers, 2, RoomState.MaxPlayers);
 
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_roomName));
         if (ImGui.Button("Create"))
         {
-            _session.Host(_roomName, _track);
+            _session.Host(_roomName, _track, _maxPlayers);
             _discovery.LocalRoomId = _session.Current!.Id;
             _creating = false;
         }
