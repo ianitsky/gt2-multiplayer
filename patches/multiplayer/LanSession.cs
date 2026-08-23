@@ -43,14 +43,16 @@ public sealed class LanSession : IDisposable
     const byte LeavingFlag = 1 << 1;
 
     readonly UdpClient _socket;
+    readonly int _boundPort;
     readonly int _hostPort;
     readonly Func<DateTime> _clock;
     DateTime? _lastIntentSent;
     bool _disposed;
 
-    LanSession(UdpClient socket, int hostPort, Func<DateTime> clock)
+    LanSession(UdpClient socket, int boundPort, int hostPort, Func<DateTime> clock)
     {
         _socket = socket;
+        _boundPort = boundPort;
         _hostPort = hostPort;
         _clock = clock;
     }
@@ -69,8 +71,21 @@ public sealed class LanSession : IDisposable
         {
             Client = { ReceiveTimeout = 1 },
         };
-        socket.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-        return new LanSession(socket, port, clock);
+        try
+        {
+            socket.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+        }
+        catch
+        {
+            // Finding 3: the bind failed, so this socket holds no port and
+            // cannot block the other instance - but leaving it undisposed
+            // still leaks a handle per failed attempt (e.g. a player
+            // clicking "Create a room" repeatedly while another instance is
+            // already hosting).
+            socket.Dispose();
+            throw;
+        }
+        return new LanSession(socket, port, port, clock);
     }
 
     /// <summary>
@@ -86,12 +101,29 @@ public sealed class LanSession : IDisposable
         {
             Client = { ReceiveTimeout = 1 },
         };
-        socket.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
-        return new LanSession(socket, hostPort, clock);
+        try
+        {
+            socket.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
+        }
+        catch
+        {
+            // Finding 3: same shape as ForHost's - see there.
+            socket.Dispose();
+            throw;
+        }
+        var boundPort = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
+        return new LanSession(socket, boundPort, hostPort, clock);
     }
 
-    /// <summary>The port actually bound, so callers (and tests) never have to hardcode it.</summary>
-    public int BoundPort => ((IPEndPoint)_socket.Client.LocalEndPoint!).Port;
+    /// <summary>
+    /// The port actually bound, so callers (and tests) never have to
+    /// hardcode it. Captured once at bind time rather than read from the
+    /// socket on every call: <see cref="Dispose"/> disposes the socket too,
+    /// and unlike every other public member here this one needs a value to
+    /// hand back rather than simply doing nothing, so it cannot just check
+    /// <c>_disposed</c> and return early the way they do (Finding 6).
+    /// </summary>
+    public int BoundPort => _boundPort;
 
     /// <summary>
     /// The exception from the most recent failed send, or null if the last

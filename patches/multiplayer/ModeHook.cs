@@ -40,6 +40,29 @@ public static class ModeHook
     /// </summary>
     public static string PlayerName { get; } = Environment.UserName;
 
+    /// <summary>What to do with <see cref="_lanSession"/> for one iteration of <see cref="RunLobby"/>'s loop.</summary>
+    internal enum SocketAction { Keep, RebuildAsHost, RebuildAsClient, Drop }
+
+    /// <summary>
+    /// The socket lifecycle, as a pure function of the role the current
+    /// socket was built for (null if there is none) and the phase the
+    /// session is in now. <see cref="RunLobby"/> needs a live ImGui context
+    /// and so cannot be unit-tested itself; this is everything about the
+    /// lifecycle decision that isn't ImGui-shaped, pulled out so it can be.
+    /// Staying in the same phase two ticks running must come back Keep, not
+    /// a rebuild - rebuilding every frame would exhaust ephemeral ports.
+    /// </summary>
+    internal static SocketAction DecideSocketAction(SessionPhase? currentRole, SessionPhase phase)
+    {
+        if (phase == SessionPhase.Hosting)
+            return currentRole == SessionPhase.Hosting ? SocketAction.Keep : SocketAction.RebuildAsHost;
+        if (phase == SessionPhase.Joined)
+            return currentRole == SessionPhase.Joined ? SocketAction.Keep : SocketAction.RebuildAsClient;
+        // Browsing and Disconnected hold no socket: drop one if there still
+        // is one, otherwise there is nothing to do.
+        return currentRole is null ? SocketAction.Keep : SocketAction.Drop;
+    }
+
     public static bool TryEnterLobby(uint entryPoint)
     {
         if (entryPoint != SimulationEntryPoint) return false;
@@ -74,90 +97,122 @@ public static class ModeHook
     {
         var lastAnnounce = DateTime.UtcNow;
 
-        // Exits either when a race is started or when the player closes the
-        // panel with its own close button - without the latter, closing the
-        // panel leaves no visible UI but keeps pumping forever, freezing the
-        // game behind a window that can never be dismissed.
-        while (_panel!.IsOpen && !_panel.TryConsumeStartRequest())
+        try
         {
-            RecompOne.Runtime.Runtime.PumpHost();
-            _discovery!.Tick();
-            _session!.Tick();
-
-            if (_session.Phase == SessionPhase.Hosting)
+            // Exits either when a race is started or when the player closes
+            // the panel with its own close button - without the latter,
+            // closing the panel leaves no visible UI but keeps pumping
+            // forever, freezing the game behind a window that can never be
+            // dismissed.
+            while (_panel!.IsOpen && !_panel.TryConsumeStartRequest())
             {
-                if (_lanSessionRole != SessionPhase.Hosting)
+                RecompOne.Runtime.Runtime.PumpHost();
+                _discovery!.Tick();
+                _session!.Tick();
+
+                switch (DecideSocketAction(_lanSessionRole, _session.Phase))
                 {
-                    _lanSession?.Dispose();
-                    _lanSession = null;
-                    _lanSessionRole = null;
-                    try
-                    {
-                        _lanSession = LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
-                        _lanSessionRole = SessionPhase.Hosting;
-                    }
-                    catch (SocketException)
-                    {
-                        // Another instance on this machine is already
-                        // hosting on this port - binding would either fail
-                        // (as here) or, with ReuseAddress, succeed and then
-                        // silently receive nothing. Either way this player
-                        // cannot host here, so send them back to the room
-                        // list instead of leaving them in a room nobody
-                        // else can ever reach.
-                        _session.ReportProblem(
-                            "Another instance is already hosting on this machine - join it instead.");
-                    }
+                    case SocketAction.RebuildAsHost:
+                        _lanSession?.Dispose();
+                        _lanSession = null;
+                        _lanSessionRole = null;
+                        try
+                        {
+                            _lanSession = LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
+                            _lanSessionRole = SessionPhase.Hosting;
+                        }
+                        catch (SocketException)
+                        {
+                            // Another instance on this machine is already
+                            // hosting on this port - binding would either
+                            // fail (as here) or, with ReuseAddress, succeed
+                            // and then silently receive nothing. Either way
+                            // this player cannot host here, so send them
+                            // back to the room list instead of leaving them
+                            // in a room nobody else can ever reach.
+                            _session.ReportProblem(
+                                "Another instance is already hosting on this machine - join it instead.");
+                        }
+                        break;
+
+                    case SocketAction.RebuildAsClient:
+                        _lanSession?.Dispose();
+                        _lanSession = null;
+                        _lanSessionRole = null;
+                        try
+                        {
+                            _lanSession = LanSession.ForClient(SessionPort, () => DateTime.UtcNow);
+                            _lanSessionRole = SessionPhase.Joined;
+                        }
+                        catch (SocketException)
+                        {
+                            // Finding 4: symmetrical with the Hosting branch
+                            // above - both fields are already cleared, so a
+                            // failed build here cannot leave _lanSession
+                            // pointing at a disposed object or
+                            // _lanSessionRole holding a stale role.
+                            _session.ReportProblem(
+                                "Could not join - could not open a session socket on this machine.");
+                        }
+                        break;
+
+                    case SocketAction.Drop:
+                        // Browsing and Disconnected hold no socket, so the
+                        // port - the host's fixed one, or a client's
+                        // ephemeral one - is free for another instance on
+                        // this machine.
+                        _lanSession?.Dispose();
+                        _lanSession = null;
+                        _lanSessionRole = null;
+                        break;
+
+                    case SocketAction.Keep:
+                        break;
                 }
-                _lanSession?.HostTick(_session);
-            }
-            else if (_session.Phase == SessionPhase.Joined)
-            {
-                if (_lanSessionRole != SessionPhase.Joined)
+
+                if (_session.Phase == SessionPhase.Hosting)
                 {
-                    _lanSession?.Dispose();
-                    _lanSession = LanSession.ForClient(SessionPort, () => DateTime.UtcNow);
-                    _lanSessionRole = SessionPhase.Joined;
+                    _lanSession?.HostTick(_session);
                 }
-                if (_discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
-                    _lanSession.ClientTick(_session, hostAddress);
-            }
-            else
-            {
-                // Browsing and Disconnected hold no socket, so the port -
-                // the host's fixed one, or a client's ephemeral one - is
-                // free for another instance on this machine.
-                _lanSession?.Dispose();
-                _lanSession = null;
-                _lanSessionRole = null;
+                else if (_session.Phase == SessionPhase.Joined &&
+                         _discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
+                {
+                    _lanSession?.ClientTick(_session, hostAddress);
+                }
+
+                if (_session.Phase == SessionPhase.Hosting &&
+                    DateTime.UtcNow - lastAnnounce > TimeSpan.FromSeconds(1))
+                {
+                    _discovery.Announce(_session.Current!);
+                    lastAnnounce = DateTime.UtcNow;
+                }
+
+                Thread.Sleep(16);
             }
 
-            if (_session.Phase == SessionPhase.Hosting &&
-                DateTime.UtcNow - lastAnnounce > TimeSpan.FromSeconds(1))
-            {
-                _discovery.Announce(_session.Current!);
-                lastAnnounce = DateTime.UtcNow;
-            }
+            _panel.IsOpen = false;
 
-            Thread.Sleep(16);
+            // Leave whatever room this visit ended in so the next visit
+            // reopens on the room list instead of the previous visit's
+            // room, players and ready flags. LeaveRoom also discards any
+            // pending start request, so re-entering can't immediately fall
+            // straight back out.
+            _panel.LeaveRoom();
         }
-
-        _panel.IsOpen = false;
-
-        // Leave whatever room this visit ended in so the next visit reopens
-        // on the room list instead of the previous visit's room, players and
-        // ready flags. LeaveRoom also discards any pending start request, so
-        // re-entering can't immediately fall straight back out.
-        _panel.LeaveRoom();
-
-        // LeaveRoom runs after the loop above has already stopped checking
-        // Phase, so the loop's own cleanup branch never gets a turn to drop
-        // whatever socket this visit was using (e.g. closing the panel
-        // while Hosting). Without this, the port stays held until the lobby
-        // is reopened - freeing it here instead means another instance on
-        // this machine can host or join as soon as this player leaves.
-        _lanSession?.Dispose();
-        _lanSession = null;
-        _lanSessionRole = null;
+        finally
+        {
+            // Finding 5: unconditional. LeaveRoom above runs after the loop
+            // has already stopped calling DecideSocketAction, so nothing
+            // else drops whatever socket this visit was using (e.g. closing
+            // the panel while Hosting) - and without a finally, any
+            // exception escaping the loop would skip this and leave 34719
+            // bound for the rest of the process, which on one machine means
+            // the other instance can never host again. Freeing it here
+            // means another instance on this machine can host or join as
+            // soon as this call returns, exception or not.
+            _lanSession?.Dispose();
+            _lanSession = null;
+            _lanSessionRole = null;
+        }
     }
 }

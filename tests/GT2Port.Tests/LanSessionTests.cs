@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using GT2Port.Multiplayer;
 using Xunit;
 
@@ -19,13 +18,6 @@ public class LanSessionTests
 
     static LanSession.ClientIntent SampleIntent(bool ready, bool leaving) =>
         new(Guid.Parse("11111111-2222-3333-4444-555555555555"), "guest", "Skyline GT-R", ready, leaving);
-
-    static UdpClient GetSocket(LanSession session)
-    {
-        var field = typeof(LanSession).GetField("_socket", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("LanSession no longer has a _socket field.");
-        return (UdpClient)field.GetValue(session)!;
-    }
 
     // ---- wire format ----
 
@@ -90,6 +82,14 @@ public class LanSessionTests
     public void ForClient_binds_a_port_that_is_neither_0_nor_the_host_port()
     {
         const int hostPort = BasePort + 12;
+
+        // Finding 8: hold the host port with a real ForHost first. Without
+        // this, hostPort is never bound by anything and sits below
+        // Windows' ephemeral range, so the OS-assigned client port could
+        // never land on it anyway - the negative assertion below would be
+        // unfalsifiable. Binding it for real is both falsifiable and the
+        // production arrangement.
+        using var host = LanSession.ForHost(hostPort, () => _now);
         using var client = LanSession.ForClient(hostPort, () => _now);
 
         Assert.NotEqual(0, client.BoundPort);
@@ -375,6 +375,7 @@ public class LanSessionTests
             session.ClientTick(clientSession, IPAddress.Loopback);
             session.SendLeave(clientSession, IPAddress.Loopback);
             _ = session.LastSendFailure;
+            _ = session.BoundPort; // Finding 6: must return quietly, like every other member here
             session.Dispose(); // disposing twice must also not throw
         });
 
@@ -396,6 +397,17 @@ public class LanSessionTests
         Assert.True(clientSession.Join(hostSession.Current!));
         using var client = LanSession.ForClient(hostPort, () => _now);
 
+        // Finding 1: a value set on the host's own row, after the client
+        // already joined locally, so the client can only ever come to know
+        // it by actually receiving HostTick's reply over the wire and
+        // ingesting it via ClientTick's OnRemoteState - Join, above, ran
+        // before this was set, so it cannot have carried it in.
+        hostSession.SetCar("ian", "R32 GT-R");
+
+        // Positive precondition: confirm the client does not already know
+        // this before a single datagram has been exchanged.
+        Assert.DoesNotContain(clientSession.Current!.Players, p => p.Name == "ian" && p.Car == "R32 GT-R");
+
         bool DriveUntil(Func<bool> condition)
         {
             for (int i = 0; i < 200 && !condition(); i++)
@@ -409,8 +421,7 @@ public class LanSessionTests
         }
 
         Assert.True(DriveUntil(() =>
-            hostSession.Current!.Players.Count == 2 &&
-            clientSession.Current!.Players.Count == 2));
+            clientSession.Current!.Players.Any(p => p.Name == "ian" && p.Car == "R32 GT-R")));
 
         Assert.Contains(hostSession.Current!.Players, p => p.Name == "ian");
         Assert.Contains(hostSession.Current.Players, p => p.Name == "guest");
