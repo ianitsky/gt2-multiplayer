@@ -20,20 +20,22 @@ public sealed class MultiplayerPanel : IPanel
     // so the instance this panel should use for sending changes underneath
     // it, and can be null (e.g. while Browsing, between rooms).
     readonly Func<LanSession?> _lanSession;
+    readonly CourseMaps _courseMaps;
 
     string _playerName;
     string _roomName = "";
-    string _track = "Trial Mountain";
+    string _track = CourseTable.All[0].Code;
     int _maxPlayers = RoomState.MaxPlayers;
     string _car = "";
     Guid? _carSeededFor;
     bool _creating;
 
-    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession)
+    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession, CourseMaps courseMaps)
     {
         _session = session;
         _discovery = discovery;
         _lanSession = lanSession;
+        _courseMaps = courseMaps;
         _playerName = session.PlayerName;
     }
 
@@ -153,7 +155,7 @@ public sealed class MultiplayerPanel : IPanel
         {
             ImGui.PushID(room.Id.ToString());
             var host = room.Players.Count > 0 ? room.Players[0].Name : "";
-            ImGui.Text($"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {room.Track}");
+            ImGui.Text($"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}");
             ImGui.SameLine();
 
             bool full = room.Players.Count >= room.MaxPlayers;
@@ -172,7 +174,7 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.Text("New room");
         ImGui.Separator();
         ImGui.InputText("Name", ref _roomName, 32);
-        ImGui.InputText("Track", ref _track, 32);
+        DrawCourseGrid();
         ImGui.SliderInt("Player limit", ref _maxPlayers, 2, RoomState.MaxPlayers);
 
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_roomName));
@@ -186,6 +188,88 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.SameLine();
         if (ImGui.Button("Cancel")) _creating = false;
+    }
+
+    // 96x96 to match the map pictures themselves, plus enough of a margin for
+    // a wrapped display name beneath - the longest names ("Red Rock Valley
+    // Speedway") run to three lines at that width.
+    const float MapSize = 96f;
+    static readonly Vector2 CourseCellSize = new(MapSize + 16f, MapSize + 16f + 3f * 16f);
+
+    /// <summary>
+    /// One cell per course, Tarmac then Dirt, wrapped to the window's width
+    /// and scrollable so 27 of them cannot push the Create/Cancel buttons off
+    /// the screen. Every cell is drawn at the same fixed size regardless of
+    /// whether its map loaded, so a missing picture never reflows the grid.
+    /// </summary>
+    void DrawCourseGrid()
+    {
+        var spacing = ImGui.GetStyle().ItemSpacing;
+
+        ImGui.BeginChild("CourseGrid", new Vector2(0f, 260f), ImGuiChildFlags.Border);
+
+        float columnsF = (ImGui.GetContentRegionAvail().X + spacing.X) / (CourseCellSize.X + spacing.X);
+        int columns = Math.Max(1, (int)columnsF);
+
+        CourseSurface? surface = null;
+        int column = 0;
+        for (int i = 0; i < CourseTable.All.Count; i++)
+        {
+            var course = CourseTable.All[i];
+            if (course.Surface != surface)
+            {
+                surface = course.Surface;
+                column = 0;
+                if (i > 0) ImGui.Spacing();
+                ImGui.TextUnformatted(surface == CourseSurface.Tarmac ? "Tarmac" : "Dirt");
+            }
+
+            if (column > 0) ImGui.SameLine();
+            DrawCourseCell(course);
+
+            column++;
+            if (column >= columns) column = 0;
+        }
+
+        ImGui.EndChild();
+    }
+
+    void DrawCourseCell(Course course)
+    {
+        ImGui.PushID(course.Code);
+
+        bool selected = _track == course.Code;
+        var borderColor = selected ? ImGui.GetStyle().Colors[(int)ImGuiCol.Text] : new Vector4(0f, 0f, 0f, 0f);
+        ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(4f, 4f));
+
+        ImGui.BeginChild("cell", CourseCellSize, ImGuiChildFlags.Border);
+
+        // Line art on transparency: tinted by the current text colour so it
+        // stays visible on a dark theme instead of vanishing.
+        uint texture = _courseMaps.TextureFor(course.Code);
+        if (texture != 0)
+        {
+            var tint = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+            ImGui.Image((nint)texture, new Vector2(MapSize, MapSize), Vector2.Zero, Vector2.One, tint);
+        }
+        else
+        {
+            ImGui.Dummy(new Vector2(MapSize, MapSize));
+        }
+
+        ImGui.PushTextWrapPos(ImGui.GetCursorPos().X + MapSize);
+        ImGui.TextUnformatted(course.Name);
+        ImGui.PopTextWrapPos();
+
+        ImGui.EndChild();
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor();
+
+        if (ImGui.IsItemClicked())
+            _track = course.Code;
+
+        ImGui.PopID();
     }
 
     void DrawLobby()
@@ -204,7 +288,7 @@ public sealed class MultiplayerPanel : IPanel
             _car = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Car ?? "";
         }
 
-        ImGui.Text($"{room.Name}   {room.Track}");
+        ImGui.Text($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
         ImGui.Separator();
 
         foreach (var player in room.Players)

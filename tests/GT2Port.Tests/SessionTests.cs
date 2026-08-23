@@ -697,7 +697,8 @@ public class SessionTests
         // or receives, it only satisfies MultiplayerPanel's constructor.
         using var discovery = new LanDiscovery(34740, () => _now);
         using var lanSession = LanSession.ForHost(34750, () => _now);
-        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession);
+        using var courseMaps = new CourseMaps(() => null);
+        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession, courseMaps);
 
         Assert.False(panel.TryConsumeStartRequest());
 
@@ -756,9 +757,10 @@ public class SessionTests
     {
         using var discovery = new LanDiscovery(34741, () => _now);
         using var lanSession = LanSession.ForHost(34751, () => _now);
+        using var courseMaps = new CourseMaps(() => null);
         var session = NewSession();
         session.Host("room", "track");
-        var panel = new MultiplayerPanel(session, discovery, () => lanSession);
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps);
 
         typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
             .SetValue(panel, true);
@@ -802,7 +804,8 @@ public class SessionTests
         }
         Assert.True(discovery.TryGetHostAddress(roomId, out _)); // positive precondition (Finding 1 applies here too)
 
-        var panel = new MultiplayerPanel(session, discovery, () => lanSession);
+        using var courseMaps = new CourseMaps(() => null);
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps);
 
         panel.LeaveRoom();
 

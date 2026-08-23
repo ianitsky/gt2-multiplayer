@@ -23,6 +23,14 @@ public static class ModeHook
     static LanDiscovery? _discovery;
     static LanSession? _lanSession;
 
+    // The archive is opened lazily - only when the picker actually asks for a
+    // texture - not eagerly here, since building the panel shouldn't require
+    // touching the disc at all (e.g. a session with no disc configured still
+    // gets a working lobby, just with name-only cells). CourseMaps is built
+    // once the lobby is entered so the panel always has one to draw from.
+    static VolArchive? _archive;
+    static CourseMaps? _courseMaps;
+
     /// <summary>
     /// Which role <see cref="_lanSession"/> was built for - null when there
     /// is none. Host and client now bind differently (see LanSession.ForHost
@@ -69,6 +77,7 @@ public static class ModeHook
 
         _session ??= new Session(PlayerName, () => DateTime.UtcNow);
         _discovery ??= new LanDiscovery(DiscoveryPort, () => DateTime.UtcNow);
+        _courseMaps ??= new CourseMaps(() => _archive ??= VolArchive.TryOpen(RecompOne.Runtime.Runtime.CdPath));
         // LanSession itself isn't built here: which factory to call depends
         // on the role (host or client), and that isn't known until the
         // player picks one from the room list. RunLobby builds it once the
@@ -77,7 +86,7 @@ public static class ModeHook
         // as RunLobby rebuilds or drops it underneath it.
         if (_panel == null)
         {
-            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession);
+            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession, _courseMaps);
             PanelManager.Register(_panel);
         }
         _panel.IsOpen = true;
