@@ -38,6 +38,15 @@ public static class ModeHook
     static bool _archiveAttempted;
     static CourseMaps? _courseMaps;
 
+    // Built alongside _courseMaps, on the same first-lobby-entry trigger and
+    // from the same lazily-opened _archive: the car picker needs the disc's
+    // car names no more eagerly than the course grid needs its pictures.
+    // CarCatalogue.Load also folds in config/car-groups.json, relative to
+    // the working directory, exactly once - it is not re-read for the life
+    // of the process.
+    static CarInfo? _carInfo;
+    static CarCatalogue? _carCatalogue;
+
     /// <summary>
     /// Which role <see cref="_lanSession"/> was built for - null when there
     /// is none. Host and client now bind differently (see LanSession.ForHost
@@ -93,6 +102,23 @@ public static class ModeHook
             }
             return _archive;
         });
+
+        // Built once, here rather than lazily like CourseMaps' textures: the
+        // picker needs names up front, not one car at a time on first draw.
+        // Shares _archiveAttempted/_archive with the CourseMaps getter above,
+        // so whichever of the two runs first is the one that actually opens
+        // the disc.
+        if (_carCatalogue == null)
+        {
+            if (!_archiveAttempted)
+            {
+                _archiveAttempted = true;
+                _archive = VolArchive.TryOpen(RecompOne.Runtime.Runtime.CdPath);
+            }
+            _carInfo = CarInfo.TryLoad(_archive);
+            _carCatalogue = CarCatalogue.Load(_carInfo, Path.Combine("config", "car-groups.json"));
+        }
+
         // LanSession itself isn't built here: which factory to call depends
         // on the role (host or client), and that isn't known until the
         // player picks one from the room list. RunLobby builds it once the
@@ -101,7 +127,7 @@ public static class ModeHook
         // as RunLobby rebuilds or drops it underneath it.
         if (_panel == null)
         {
-            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession, _courseMaps);
+            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession, _courseMaps, _carCatalogue);
             PanelManager.Register(_panel);
         }
         _panel.IsOpen = true;

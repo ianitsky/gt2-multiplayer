@@ -23,7 +23,7 @@ public class LanDiscoveryTests
     void Advance(double seconds) => _now = _now.AddSeconds(seconds);
 
     static Room Sample(string name = "Ian's room") =>
-        new(Guid.NewGuid(), name, "Trial Mountain", 6, [new Player("ian", "", false)]);
+        new(Guid.NewGuid(), name, "Trial Mountain", "special", 6, [new Player("ian", "", false)]);
 
     /// <summary>Gives the datagram time to make it across loopback.</summary>
     static void Settle(LanDiscovery listener)
@@ -240,7 +240,7 @@ public class LanDiscoveryTests
         using var sender = new UdpClient();
         sender.EnableBroadcast = true;
 
-        var zeroIdRoom = new Room(Guid.Empty, "Zero id room", "Trial Mountain", 6, [new Player("ian", "", false)]);
+        var zeroIdRoom = new Room(Guid.Empty, "Zero id room", "Trial Mountain", "special", 6, [new Player("ian", "", false)]);
         var data = RoomState.Serialise(zeroIdRoom);
         sender.Send(data, data.Length, new IPEndPoint(IPAddress.Broadcast, port));
 

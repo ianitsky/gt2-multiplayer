@@ -7,7 +7,7 @@ public class RoomStateTests
 {
     static Room Sample() => new(
         Guid.Parse("11111111-2222-3333-4444-555555555555"),
-        "Ian's room", "Trial Mountain", 6,
+        "Ian's room", "Trial Mountain", "special", 6,
         [new Player("ian", "Skyline", true), new Player("guest", "Supra", false)]);
 
     [Fact]
@@ -19,6 +19,7 @@ public class RoomStateTests
         Assert.Equal(original.Id, back.Id);
         Assert.Equal(original.Name, back.Name);
         Assert.Equal(original.Track, back.Track);
+        Assert.Equal(original.CarGroup, back.CarGroup);
         Assert.Equal(original.MaxPlayers, back.MaxPlayers);
         Assert.Equal(original.Players.Count, back.Players.Count);
     }
@@ -61,11 +62,11 @@ public class RoomStateTests
         // Build a minimal packet with 0 players, then append 7 minimal valid players
         var empty = new Room(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            "", "", 6, []);
+            "", "", "", 6, []);
 
         var data = RoomState.Serialise(empty).ToList();
-        // Packet is now: version(1) + guid(16) + name_len(1) + track_len(1) + maxPlayers(1) + count(1)
-        // = 1 + 16 + 1 + 1 + 1 + 1 = 21 bytes, with count at byte 20
+        // Packet is now: version(1) + guid(16) + name_len(1) + track_len(1) + carGroup_len(1) + maxPlayers(1) + count(1)
+        // = 1 + 16 + 1 + 1 + 1 + 1 + 1 = 22 bytes, with count at byte 21
 
         // The count byte is at index data.Count - 1
         int countByteIndex = data.Count - 1;
@@ -92,11 +93,11 @@ public class RoomStateTests
     {
         var room = new Room(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            "", "", 6, []);
+            "", "", "", 6, []);
 
         var data = RoomState.Serialise(room).ToList();
         // Same layout as Rejects_corrupted_packet_while_preserving_invariants:
-        // version(1) + guid(16) + name_len(1) + track_len(1) + maxPlayers(1) + count(1)
+        // version(1) + guid(16) + name_len(1) + track_len(1) + carGroup_len(1) + maxPlayers(1) + count(1)
         // - maxPlayers sits right before count, at data.Count - 2.
         int maxPlayersByteIndex = data.Count - 2;
 
@@ -120,7 +121,7 @@ public class RoomStateTests
         // cap currently is - this is the true worst case, not a stand-in for it.
         var longString = new string('x', RoomState.MaxStringBytes);
         var full = new Room(
-            Guid.NewGuid(), longString, longString, RoomState.MaxPlayers,
+            Guid.NewGuid(), longString, longString, longString, RoomState.MaxPlayers,
             [.. Enumerable.Range(0, RoomState.MaxPlayers)
                 .Select(_ => new Player(longString, longString, true))]);
 
@@ -169,5 +170,27 @@ public class RoomStateTests
         Assert.DoesNotContain('�', back.Name);
         Assert.StartsWith(back.Name, longName);
         Assert.NotEmpty(back.Name);
+    }
+
+    [Fact]
+    public void Round_trips_the_car_group()
+    {
+        var room = new Room(Guid.NewGuid(), "Room", "2p_mountain", "special", 6,
+            [new Player("ian", "dvpgn", true)]);
+
+        Assert.True(RoomState.TryDeserialise(RoomState.Serialise(room), out var back));
+
+        Assert.Equal("special", back.CarGroup);
+        Assert.Equal("dvpgn", back.Players[0].Car);
+    }
+
+    [Fact]
+    public void Rejects_a_packet_from_the_older_format()
+    {
+        var room = new Room(Guid.NewGuid(), "Room", "2p_mountain", "special", 6, []);
+        var packet = RoomState.Serialise(room);
+        packet[0] = 1;
+
+        Assert.False(RoomState.TryDeserialise(packet, out _));
     }
 }

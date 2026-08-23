@@ -4,7 +4,7 @@ namespace GT2Port.Multiplayer;
 
 public record Player(string Name, string Car, bool Ready);
 
-public record Room(Guid Id, string Name, string Track, int MaxPlayers, IReadOnlyList<Player> Players);
+public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers, IReadOnlyList<Player> Players);
 
 /// <summary>
 /// The wire format for room state.
@@ -18,7 +18,7 @@ public record Room(Guid Id, string Name, string Track, int MaxPlayers, IReadOnly
 /// </summary>
 public static class RoomState
 {
-    const byte Version = 1;
+    const byte Version = 2;
     public const int MaxPlayers = 6;
     public const int MaxStringBytes = 64;
 
@@ -48,6 +48,7 @@ public static class RoomState
         buffer.AddRange(room.Id.ToByteArray());
         WriteString(buffer, room.Name);
         WriteString(buffer, room.Track);
+        WriteString(buffer, room.CarGroup);
         buffer.Add((byte)room.MaxPlayers);
         buffer.Add((byte)room.Players.Count);
         foreach (var player in room.Players)
@@ -71,6 +72,7 @@ public static class RoomState
 
         if (!TryString(data, ref offset, out string name)) return false;
         if (!TryString(data, ref offset, out string track)) return false;
+        if (!TryString(data, ref offset, out string carGroup)) return false;
         if (!TryByte(data, ref offset, out byte maxPlayers) || maxPlayers > MaxPlayers) return false;
         if (!TryByte(data, ref offset, out byte count) || count > MaxPlayers) return false;
 
@@ -83,7 +85,7 @@ public static class RoomState
             players.Add(new Player(playerName, car, ready != 0));
         }
 
-        room = new Room(id, name, track, maxPlayers, players);
+        room = new Room(id, name, track, carGroup, maxPlayers, players);
         return true;
     }
 

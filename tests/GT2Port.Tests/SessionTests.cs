@@ -14,7 +14,7 @@ public class SessionTests
     void Advance(double seconds) => _now = _now.AddSeconds(seconds);
 
     static Room RoomWith(params Player[] players) =>
-        new(Guid.NewGuid(), "room", "Trial Mountain", 6, players);
+        new(Guid.NewGuid(), "room", "Trial Mountain", "special", 6, players);
 
     [Fact]
     public void Starts_out_browsing()
@@ -26,7 +26,7 @@ public class SessionTests
     public void Hosting_creates_a_room_containing_the_host()
     {
         var session = NewSession();
-        session.Host("Ian's room", "Trial Mountain");
+        session.Host("Ian's room", "Trial Mountain", "special");
 
         Assert.Equal(SessionPhase.Hosting, session.Phase);
         Assert.Equal("Ian's room", session.Current!.Name);
@@ -47,7 +47,7 @@ public class SessionTests
     [Fact]
     public void Joining_a_full_room_is_refused()
     {
-        var full = new Room(Guid.NewGuid(), "room", "track", 2,
+        var full = new Room(Guid.NewGuid(), "room", "track", "special", 2,
             [new Player("a", "", false), new Player("b", "", false)]);
 
         var session = NewSession("guest");
@@ -59,7 +59,7 @@ public class SessionTests
     public void Leaving_returns_to_browsing()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.Leave();
 
         Assert.Equal(SessionPhase.Browsing, session.Phase);
@@ -70,7 +70,7 @@ public class SessionTests
     public void Start_needs_more_than_one_player()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.SetReady("ian", true);
 
         Assert.False(session.CanStart);
@@ -80,7 +80,7 @@ public class SessionTests
     public void Start_needs_everyone_ready()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
         session.SetReady("ian", true);
 
@@ -91,7 +91,7 @@ public class SessionTests
     public void Host_can_start_when_all_are_ready()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", true);
         session.SetReady("ian", true);
 
@@ -113,7 +113,7 @@ public class SessionTests
     public void Host_drops_a_player_that_goes_silent()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
 
         Advance(3.5);
@@ -126,7 +126,7 @@ public class SessionTests
     public void Host_keeps_a_player_that_keeps_talking()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
 
         for (int i = 0; i < 4; i++)
@@ -158,7 +158,7 @@ public class SessionTests
     public void Setting_ready_shows_up_in_the_room()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.SetReady("ian", true);
 
         Assert.True(session.Current!.Players[0].Ready);
@@ -180,7 +180,7 @@ public class SessionTests
     public void Setting_a_car_shows_up_in_the_room()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.SetCar("ian", "Skyline GT-R");
 
         Assert.Equal("Skyline GT-R", session.Current!.Players[0].Car);
@@ -192,7 +192,7 @@ public class SessionTests
     public void A_reconnecting_player_survives_the_next_tick()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
 
         Advance(3.5);
@@ -391,7 +391,7 @@ public class SessionTests
         session.Tick();
         Assert.Equal(SessionPhase.Disconnected, session.Phase);
 
-        session.Host("guest's room", "track");
+        session.Host("guest's room", "track", "special");
 
         Assert.Equal(SessionPhase.Hosting, session.Phase);
         Assert.Equal("guest's room", session.Current!.Name);
@@ -447,7 +447,7 @@ public class SessionTests
     public void Host_keeps_a_player_at_exactly_the_timeout()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
 
         Advance(Session.Timeout.TotalSeconds);
@@ -460,7 +460,7 @@ public class SessionTests
     public void Host_drops_a_player_just_past_the_timeout()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
 
         Advance(Session.Timeout.TotalSeconds + 0.001);
@@ -501,7 +501,7 @@ public class SessionTests
     public void Hosting_uses_the_global_max_players_constant()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
 
         Assert.Equal(RoomState.MaxPlayers, session.Current!.MaxPlayers);
     }
@@ -511,7 +511,7 @@ public class SessionTests
     [Fact]
     public void Join_clamps_max_players_to_the_global_cap()
     {
-        var oversized = new Room(Guid.NewGuid(), "room", "track", 999,
+        var oversized = new Room(Guid.NewGuid(), "room", "track", "special", 999,
             [new Player("ian", "", false)]);
 
         var session = NewSession("guest");
@@ -523,7 +523,7 @@ public class SessionTests
     [Fact]
     public void Join_allows_entry_to_room_with_duplicates_but_fewer_distinct_players_than_cap()
     {
-        var roomWithDupes = new Room(Guid.NewGuid(), "room", "track", 3,
+        var roomWithDupes = new Room(Guid.NewGuid(), "room", "track", "special", 3,
             [new Player("ian", "", false), new Player("guest", "", false), new Player("ian", "", false)]);
 
         var session = NewSession("alice");
@@ -537,7 +537,7 @@ public class SessionTests
     public void ApplyClientIntent_adds_an_unknown_name()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
 
         session.ApplyClientIntent("guest", "Supra", true);
 
@@ -551,7 +551,7 @@ public class SessionTests
     public void ApplyClientIntent_updates_a_known_name_rather_than_duplicating_it()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "Supra", false);
 
         session.ApplyClientIntent("guest", "Skyline", true);
@@ -566,7 +566,7 @@ public class SessionTests
     public void ApplyClientIntent_on_a_full_room_adds_nothing()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         for (int i = 0; i < RoomState.MaxPlayers - 1; i++)
             session.ApplyClientIntent($"guest{i}", "", false);
         Assert.Equal(RoomState.MaxPlayers, session.Current!.Players.Count);
@@ -581,7 +581,7 @@ public class SessionTests
     public void ApplyClientIntent_cannot_alter_the_hosts_own_row()
     {
         var session = NewSession(); // host is "ian"
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
 
         session.ApplyClientIntent("ian", "Skyline", true);
 
@@ -595,7 +595,7 @@ public class SessionTests
     public void ApplyClientIntent_keeps_the_player_alive_across_a_tick_past_the_timeout()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
 
         Advance(2.0);
@@ -610,7 +610,7 @@ public class SessionTests
     public void ApplyClientLeave_removes_the_player_and_allows_an_immediate_rejoin()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
         Assert.Contains(session.Current!.Players, p => p.Name == "guest");
 
@@ -629,7 +629,7 @@ public class SessionTests
     public void ApplyClientLeave_cannot_remove_the_hosts_own_row()
     {
         var session = NewSession(); // host is "ian"
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
 
         session.ApplyClientLeave("ian");
 
@@ -698,7 +698,7 @@ public class SessionTests
         using var discovery = new LanDiscovery(34740, () => _now);
         using var lanSession = LanSession.ForHost(34750, () => _now);
         using var courseMaps = new CourseMaps(() => null);
-        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession, courseMaps);
+        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession, courseMaps, CarCatalogue.FromJson(null, null));
 
         Assert.False(panel.TryConsumeStartRequest());
 
@@ -727,7 +727,7 @@ public class SessionTests
         // Same room id as the one we joined - a genuine reply from our host
         // - but no row for "guest": the room filled up before our intent
         // was accepted.
-        session.OnRemoteState(new Room(roomId, "room", "track", 6,
+        session.OnRemoteState(new Room(roomId, "room", "track", "special", 6,
             [new Player("ian", "", false), new Player("someone-else", "", false)]));
 
         Assert.Equal(SessionPhase.Disconnected, session.Phase);
@@ -742,7 +742,7 @@ public class SessionTests
         Assert.True(session.Join(RoomWith(new Player("ian", "", false))));
         var originalId = session.Current!.Id;
 
-        var foreignRoom = new Room(Guid.NewGuid(), "someone else's room", "track", 6,
+        var foreignRoom = new Room(Guid.NewGuid(), "someone else's room", "track", "special", 6,
             [new Player("ian", "", false), new Player("intruder", "", false)]);
         session.OnRemoteState(foreignRoom);
 
@@ -759,8 +759,8 @@ public class SessionTests
         using var lanSession = LanSession.ForHost(34751, () => _now);
         using var courseMaps = new CourseMaps(() => null);
         var session = NewSession();
-        session.Host("room", "track");
-        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps);
+        session.Host("room", "track", "special");
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps, CarCatalogue.FromJson(null, null));
 
         typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
             .SetValue(panel, true);
@@ -792,7 +792,7 @@ public class SessionTests
         using var lanSession = LanSession.ForHost(lanSessionPort, () => _now);
 
         var session = NewSession("guest");
-        var hostRoom = new Room(Guid.NewGuid(), "room", "track", 6, [new Player("ian", "", false)]);
+        var hostRoom = new Room(Guid.NewGuid(), "room", "track", "special", 6, [new Player("ian", "", false)]);
         Assert.True(session.Join(hostRoom));
         var roomId = session.Current!.Id;
 
@@ -805,7 +805,7 @@ public class SessionTests
         Assert.True(discovery.TryGetHostAddress(roomId, out _)); // positive precondition (Finding 1 applies here too)
 
         using var courseMaps = new CourseMaps(() => null);
-        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps);
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps, CarCatalogue.FromJson(null, null));
 
         panel.LeaveRoom();
 
@@ -858,7 +858,7 @@ public class SessionTests
     public void Rename_is_refused_while_hosting()
     {
         var session = NewSession("ian");
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
 
         Assert.False(session.Rename("someone-else"));
         Assert.Equal("ian", session.PlayerName);
@@ -877,7 +877,7 @@ public class SessionTests
     [Fact]
     public void Join_of_a_full_room_reports_the_room_is_full()
     {
-        var full = new Room(Guid.NewGuid(), "room", "track", 2,
+        var full = new Room(Guid.NewGuid(), "room", "track", "special", 2,
             [new Player("a", "", false), new Player("b", "", false)]);
 
         var session = NewSession("guest");
@@ -903,7 +903,7 @@ public class SessionTests
     public void Hosting_clamps_an_oversized_player_limit_to_the_global_cap()
     {
         var session = NewSession();
-        session.Host("room", "track", 999);
+        session.Host("room", "track", "special", 999);
 
         Assert.Equal(RoomState.MaxPlayers, session.Current!.MaxPlayers);
     }
@@ -912,7 +912,7 @@ public class SessionTests
     public void Hosting_clamps_a_player_limit_below_two_up_to_two()
     {
         var session = NewSession();
-        session.Host("room", "track", 1);
+        session.Host("room", "track", "special", 1);
 
         Assert.Equal(2, session.Current!.MaxPlayers);
     }
@@ -921,7 +921,7 @@ public class SessionTests
     public void Hosting_honours_a_player_limit_within_range()
     {
         var session = NewSession();
-        session.Host("room", "track", 4);
+        session.Host("room", "track", "special", 4);
 
         Assert.Equal(4, session.Current!.MaxPlayers);
     }
@@ -932,7 +932,7 @@ public class SessionTests
     public void OnRemoteState_is_ignored_while_hosting()
     {
         var session = NewSession();
-        session.Host("room", "track");
+        session.Host("room", "track", "special");
         var ownRoomId = session.Current!.Id;
 
         // A forged or stray datagram carrying a different room entirely -

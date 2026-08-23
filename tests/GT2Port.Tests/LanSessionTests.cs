@@ -139,7 +139,7 @@ public class LanSessionTests
     {
         const int port = BasePort + 4;
         var hostSession = new Session("ian", () => _now);
-        hostSession.Host("Ian's room", "Trial Mountain");
+        hostSession.Host("Ian's room", "Trial Mountain", "special");
         using var host = LanSession.ForHost(port, () => _now);
 
         using var rawClient = new UdpClient { Client = { ReceiveTimeout = 2000 } };
@@ -173,7 +173,7 @@ public class LanSessionTests
     {
         const int hostPort = BasePort + 5;
         var clientSession = new Session("guest", () => _now);
-        var initialRoom = new Room(Guid.NewGuid(), "Ian's room", "Trial Mountain", RoomState.MaxPlayers,
+        var initialRoom = new Room(Guid.NewGuid(), "Ian's room", "Trial Mountain", "special", RoomState.MaxPlayers,
             [new Player("ian", "", false)]);
         Assert.True(clientSession.Join(initialRoom));
 
@@ -215,7 +215,7 @@ public class LanSessionTests
     {
         const int port = BasePort + 6;
         var hostSession = new Session("ian", () => _now);
-        hostSession.Host("room", "track");
+        hostSession.Host("room", "track", "special");
         using var host = LanSession.ForHost(port, () => _now);
         using var rawClient = new UdpClient { Client = { ReceiveTimeout = 2000 } };
 
@@ -261,7 +261,7 @@ public class LanSessionTests
     public void SendLeave_sends_a_leaving_flagged_intent_addressed_to_the_host_port()
     {
         const int hostPort = BasePort + 7;
-        var hostRoom = new Room(Guid.NewGuid(), "room", "track", RoomState.MaxPlayers, [new Player("ian", "", false)]);
+        var hostRoom = new Room(Guid.NewGuid(), "room", "track", "special", RoomState.MaxPlayers, [new Player("ian", "", false)]);
         var clientSession = new Session("guest", () => _now);
         Assert.True(clientSession.Join(hostRoom));
         clientSession.SetCar("guest", "Supra");
@@ -288,7 +288,7 @@ public class LanSessionTests
     {
         const int port = BasePort + 10;
         var hostSession = new Session("ian", () => _now);
-        hostSession.Host("room", "track");
+        hostSession.Host("room", "track", "special");
         using var host = LanSession.ForHost(port, () => _now);
         using var rawClient = new UdpClient { Client = { ReceiveTimeout = 2000 } };
 
@@ -323,7 +323,7 @@ public class LanSessionTests
     {
         const int hostPort = BasePort + 8;
         var clientSession = new Session("guest", () => _now);
-        var room = new Room(Guid.NewGuid(), "room", "track", RoomState.MaxPlayers, [new Player("ian", "", false)]);
+        var room = new Room(Guid.NewGuid(), "room", "track", "special", RoomState.MaxPlayers, [new Player("ian", "", false)]);
         Assert.True(clientSession.Join(room));
 
         using var rawHost = new UdpClient(new IPEndPoint(IPAddress.Loopback, hostPort)) { Client = { ReceiveTimeout = 1 } };
@@ -365,7 +365,7 @@ public class LanSessionTests
         session.Dispose();
 
         var hostSession = new Session("ian", () => _now);
-        hostSession.Host("room", "track");
+        hostSession.Host("room", "track", "special");
         var clientSession = new Session("guest", () => _now);
         clientSession.Join(hostSession.Current!);
 
@@ -390,7 +390,7 @@ public class LanSessionTests
         const int hostPort = BasePort + 11;
 
         var hostSession = new Session("ian", () => _now);
-        hostSession.Host("Ian's room", "Trial Mountain");
+        hostSession.Host("Ian's room", "Trial Mountain", "special");
         using var host = LanSession.ForHost(hostPort, () => _now);
 
         var clientSession = new Session("guest", () => _now);

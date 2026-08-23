@@ -61,9 +61,9 @@ public sealed class Session
     /// and a caller passing an untrusted or out-of-range value cannot widen
     /// the room past the wire format's own cap.
     /// </summary>
-    public void Host(string roomName, string track, int maxPlayers = RoomState.MaxPlayers)
+    public void Host(string roomName, string track, string carGroup, int maxPlayers = RoomState.MaxPlayers)
     {
-        Current = new Room(Guid.NewGuid(), roomName, track, Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
+        Current = new Room(Guid.NewGuid(), roomName, track, carGroup, Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
             [new Player(_playerName, "", false)]);
         Phase = SessionPhase.Hosting;
         StatusMessage = null;

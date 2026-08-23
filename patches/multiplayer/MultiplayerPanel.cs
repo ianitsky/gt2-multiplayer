@@ -21,13 +21,13 @@ public sealed class MultiplayerPanel : IPanel
     // it, and can be null (e.g. while Browsing, between rooms).
     readonly Func<LanSession?> _lanSession;
     readonly CourseMaps _courseMaps;
+    readonly CarCatalogue _carCatalogue;
 
     string _playerName;
     string _roomName = "";
     string _track = CourseTable.All[0].Code;
+    string _carGroup;
     int _maxPlayers = RoomState.MaxPlayers;
-    string _car = "";
-    Guid? _carSeededFor;
     bool _creating;
 
     // Set when the Create screen is (re)entered, so the grid scrolls the
@@ -41,13 +41,15 @@ public sealed class MultiplayerPanel : IPanel
     // at any real frame rate.
     readonly Dictionary<string, bool> _cellHovered = new(StringComparer.Ordinal);
 
-    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession, CourseMaps courseMaps)
+    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession, CourseMaps courseMaps, CarCatalogue carCatalogue)
     {
         _session = session;
         _discovery = discovery;
         _lanSession = lanSession;
         _courseMaps = courseMaps;
+        _carCatalogue = carCatalogue;
         _playerName = session.PlayerName;
+        _carGroup = carCatalogue.Groups.Count > 0 ? carCatalogue.Groups[0].Id : "";
     }
 
     public string Name => "Multiplayer";
@@ -191,12 +193,14 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.InputText("Name", ref _roomName, 32);
         ImGui.TextUnformatted("Course");
         DrawCourseGrid();
+        ImGui.TextUnformatted("Car class");
+        DrawCarGroupSelector();
         ImGui.SliderInt("Player limit", ref _maxPlayers, 2, RoomState.MaxPlayers);
 
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_roomName));
         if (ImGui.Button("Create"))
         {
-            _session.Host(_roomName, _track, _maxPlayers);
+            _session.Host(_roomName, _track, _carGroup, _maxPlayers);
             _discovery.LocalRoomId = _session.Current!.Id;
             _creating = false;
         }
@@ -204,6 +208,23 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.SameLine();
         if (ImGui.Button("Cancel")) _creating = false;
+    }
+
+    /// <summary>
+    /// One radio button per group, in catalogue order, on a single row - a
+    /// handful of groups at most (the arcade five plus whatever a config
+    /// file adds), so a grid like the course picker's would be overkill.
+    /// The radio dot itself is the "chosen one marked" the brief asks for.
+    /// </summary>
+    void DrawCarGroupSelector()
+    {
+        var groups = _carCatalogue.Groups;
+        for (int i = 0; i < groups.Count; i++)
+        {
+            if (i > 0) ImGui.SameLine();
+            if (ImGui.RadioButton(groups[i].Name, _carGroup == groups[i].Id))
+                _carGroup = groups[i].Id;
+        }
     }
 
     // 96x96 logical pixels to match the map pictures themselves at 100% DPI
@@ -331,27 +352,14 @@ public sealed class MultiplayerPanel : IPanel
     {
         var room = _session.Current!;
 
-        // _car is a scratch buffer for the InputText widget below, not the
-        // source of truth - the local player's row is. Reseed it whenever a
-        // different room is entered (a fresh Host/Join, room.Id having
-        // changed) so a room's leftover text doesn't sit in the field for
-        // the next one, and so the field starts matching whatever car this
-        // player already had in the room (e.g. rejoining).
-        if (_carSeededFor != room.Id)
-        {
-            _carSeededFor = room.Id;
-            _car = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Car ?? "";
-        }
-
         ImGui.Text($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
         ImGui.Separator();
 
         foreach (var player in room.Players)
-            ImGui.Text($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {player.Car}");
+            ImGui.Text($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
 
         ImGui.Separator();
-        if (ImGui.InputText("My car", ref _car, 32))
-            _session.SetCar(_session.PlayerName, _car);
+        DrawCarList(room);
 
         if (ImGui.Button("Ready")) _session.SetReady(_session.PlayerName, true);
         ImGui.SameLine();
@@ -367,5 +375,40 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.SameLine();
         if (ImGui.Button("Leave")) LeaveRoom();
+    }
+
+    /// <summary>
+    /// The car picker for the room's own group. The group comes from the
+    /// room, not from whatever this player last had selected while hosting
+    /// - a client's room.CarGroup may not even be one this build knows about
+    /// (an id from a config file it doesn't have), in which case this shows
+    /// the raw id and offers no cars rather than throwing or guessing at a
+    /// substitute group.
+    /// </summary>
+    void DrawCarList(Room room)
+    {
+        ImGui.TextUnformatted("Car");
+
+        if (!_carCatalogue.TryFind(room.CarGroup, out var group))
+        {
+            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
+                $"This build does not have car group \"{room.CarGroup}\".");
+            return;
+        }
+
+        string currentCar = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Car ?? "";
+
+        // Eight rows tall, scrolling for the rest - sized from the live line
+        // height and frame padding rather than a pixel constant, the same
+        // lesson the course grid had to relearn at 150% display scale.
+        float rowHeight = ImGui.GetTextLineHeightWithSpacing();
+        float listHeight = rowHeight * 8f + ImGui.GetStyle().FramePadding.Y * 2f;
+        ImGui.BeginChild("CarList", new Vector2(0f, listHeight), ImGuiChildFlags.Border);
+        foreach (var code in group.Cars)
+        {
+            if (ImGui.Selectable(_carCatalogue.DisplayName(code), code == currentCar))
+                _session.SetCar(_session.PlayerName, code);
+        }
+        ImGui.EndChild();
     }
 }
