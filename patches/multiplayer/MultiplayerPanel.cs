@@ -47,6 +47,21 @@ public sealed class MultiplayerPanel : IPanel
         return true;
     }
 
+    /// <summary>
+    /// Leaves the current room and discards any pending start request for it.
+    ///
+    /// A start request for a room nobody is in anymore is meaningless, so the
+    /// two always go together. Shared by the "Leave" button and by
+    /// ModeHook.RunLobby's own exit, so a lobby visit that ends any other way
+    /// (closing the panel) leaves the session just as clean as pressing Leave
+    /// does.
+    /// </summary>
+    public void LeaveRoom()
+    {
+        _session.Leave();
+        StartRequested = false;
+    }
+
     public void Draw()
     {
         ImGui.SetNextWindowSize(new Vector2(640, 420), ImGuiCond.FirstUseEver);
@@ -149,13 +164,6 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.TextDisabled("Waiting for every player to be ready.");
 
         ImGui.SameLine();
-        if (ImGui.Button("Leave"))
-        {
-            _session.Leave();
-            // A start requested for this room is meaningless once the room is
-            // gone - clear it so a stale request can't start a race for a
-            // room nobody is in anymore.
-            StartRequested = false;
-        }
+        if (ImGui.Button("Leave")) LeaveRoom();
     }
 }

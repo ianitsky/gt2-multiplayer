@@ -51,7 +51,11 @@ public static class ModeHook
     {
         var lastAnnounce = DateTime.UtcNow;
 
-        while (!_panel!.TryConsumeStartRequest())
+        // Exits either when a race is started or when the player closes the
+        // panel with its own close button - without the latter, closing the
+        // panel leaves no visible UI but keeps pumping forever, freezing the
+        // game behind a window that can never be dismissed.
+        while (_panel!.IsOpen && !_panel.TryConsumeStartRequest())
         {
             RecompOne.Runtime.Runtime.PumpHost();
             _discovery!.Tick();
@@ -68,5 +72,11 @@ public static class ModeHook
         }
 
         _panel.IsOpen = false;
+
+        // Leave whatever room this visit ended in so the next visit reopens
+        // on the room list instead of the previous visit's room, players and
+        // ready flags. LeaveRoom also discards any pending start request, so
+        // re-entering can't immediately fall straight back out.
+        _panel.LeaveRoom();
     }
 }

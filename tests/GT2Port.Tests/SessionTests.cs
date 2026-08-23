@@ -1,4 +1,6 @@
+using System.Reflection;
 using GT2Port.Multiplayer;
+using RecompOne.Runtime.Host.Window;
 using Xunit;
 
 namespace GT2Port.Tests;
@@ -447,5 +449,68 @@ public class SessionTests
         var session = NewSession("alice");
         Assert.True(session.Join(roomWithDupes));
         Assert.Equal(SessionPhase.Joined, session.Phase);
+    }
+
+    // ---- Task 5 review round 2: overlay-load gate, panel close, stale state ----
+    //
+    // ModeHook.RunLobby and MultiplayerPanel.Draw both need a live ImGui
+    // context (Draw calls ImGui.Begin/InputText/Button directly, and RunLobby
+    // blocks pumping the host window) so neither is reachable from a plain
+    // xunit test. What's below covers everything that is: the entry-point
+    // gate itself, and the state MultiplayerPanel carries across a lobby
+    // visit, which is exactly what Findings 2 and 3 of the round-2 review
+    // were about.
+
+    [Fact]
+    public void ModeHook_declines_an_entry_point_that_is_not_simulation()
+    {
+        var panelsBefore = PanelManager.Panels.Count;
+
+        bool entered = ModeHook.TryEnterLobby(0x12345678u);
+
+        Assert.False(entered);
+
+        // No panel registered and no session built - confirmed via reflection
+        // since ModeHook exposes neither as a public member (same pattern
+        // LanDiscoveryTests uses to reach LanDiscovery's private _socket).
+        Assert.Equal(panelsBefore, PanelManager.Panels.Count);
+        var sessionField = typeof(ModeHook).GetField("_session", BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.Null(sessionField!.GetValue(null));
+    }
+
+    [Fact]
+    public void Panel_start_request_is_consumed_exactly_once()
+    {
+        // Port is well clear of LanDiscoveryTests' BasePort+0..9 range and
+        // ModeHook's own DiscoveryPort - this discovery instance never sends
+        // or receives, it only satisfies MultiplayerPanel's constructor.
+        using var discovery = new LanDiscovery(34740, () => _now);
+        var panel = new MultiplayerPanel(NewSession(), discovery);
+
+        Assert.False(panel.TryConsumeStartRequest());
+
+        typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
+            .SetValue(panel, true);
+
+        Assert.True(panel.TryConsumeStartRequest());
+        Assert.False(panel.TryConsumeStartRequest());
+    }
+
+    [Fact]
+    public void Leaving_the_room_clears_a_pending_start_request()
+    {
+        using var discovery = new LanDiscovery(34741, () => _now);
+        var session = NewSession();
+        session.Host("room", "track");
+        var panel = new MultiplayerPanel(session, discovery);
+
+        typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
+            .SetValue(panel, true);
+
+        panel.LeaveRoom();
+
+        Assert.False(panel.TryConsumeStartRequest());
+        Assert.Equal(SessionPhase.Browsing, session.Phase);
+        Assert.Null(session.Current);
     }
 }

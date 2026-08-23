@@ -26,9 +26,11 @@ public static partial class OverlayHook
     {
         uint entry = c.A1;
 
-        // Simulation mode is where multiplayer lives now. The lobby runs to
-        // completion here; the overlay is only loaded if it declines.
-        if (Multiplayer.ModeHook.TryEnterLobby(entry)) return;
+        // Simulation mode opens the multiplayer lobby first. When the lobby
+        // finishes, the overlay loads exactly as it always has and the game
+        // carries on unaware. The pre-hook cannot skip the load below: it
+        // only marks which overlay is arriving, so the load always follows.
+        Multiplayer.ModeHook.TryEnterLobby(entry);
 
         if (ByEntryPoint.TryGetValue(entry, out var name))
         {
