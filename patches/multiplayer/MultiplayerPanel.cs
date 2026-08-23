@@ -21,6 +21,7 @@ public sealed class MultiplayerPanel : IPanel
     string _track = "Trial Mountain";
     int _maxPlayers = RoomState.MaxPlayers;
     string _car = "";
+    Guid? _carSeededFor;
     bool _creating;
 
     public MultiplayerPanel(Session session, LanDiscovery discovery, LanSession lanSession)
@@ -95,7 +96,17 @@ public sealed class MultiplayerPanel : IPanel
         switch (_session.Phase)
         {
             case SessionPhase.Browsing:
+                if (_creating) DrawCreate(); else DrawRoomList();
+                break;
             case SessionPhase.Disconnected:
+                // Disconnected is a message on the room list, not a screen
+                // of its own. The message itself was already captured above
+                // (StatusMessage), so it still renders this frame; Leave()
+                // then returns the phase to Browsing before the room list is
+                // drawn, so renaming works immediately instead of being
+                // refused until Join/Host/Leave is pressed, and the message
+                // does not linger past this one frame.
+                _session.Leave();
                 if (_creating) DrawCreate(); else DrawRoomList();
                 break;
             case SessionPhase.Hosting:
@@ -114,6 +125,18 @@ public sealed class MultiplayerPanel : IPanel
             _session.Rename(_playerName);
         ImGui.Separator();
 
+        // Only the most recent outcome, never a history of occasional loss -
+        // that is exactly what LastSendFailure already tracks. Whichever
+        // channel most recently failed to send is the one worth naming;
+        // both share the same likely cause, a firewall blocking this app,
+        // since binding either socket is what would have prompted for it.
+        if (_discovery.LastSendFailure is { } discoveryFailure)
+            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
+                $"Broadcasting failed: {discoveryFailure.Message} - a firewall may be blocking this app.");
+        else if (_lanSession.LastSendFailure is { } sessionFailure)
+            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
+                $"Sending failed: {sessionFailure.Message} - a firewall may be blocking this app.");
+
         ImGui.Text("Rooms on this network");
         ImGui.Separator();
 
@@ -124,7 +147,8 @@ public sealed class MultiplayerPanel : IPanel
         foreach (var room in rooms)
         {
             ImGui.PushID(room.Id.ToString());
-            ImGui.Text($"{room.Name}   {room.Track}   {room.Players.Count}/{room.MaxPlayers}");
+            var host = room.Players.Count > 0 ? room.Players[0].Name : "";
+            ImGui.Text($"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {room.Track}");
             ImGui.SameLine();
 
             bool full = room.Players.Count >= room.MaxPlayers;
@@ -162,6 +186,19 @@ public sealed class MultiplayerPanel : IPanel
     void DrawLobby()
     {
         var room = _session.Current!;
+
+        // _car is a scratch buffer for the InputText widget below, not the
+        // source of truth - the local player's row is. Reseed it whenever a
+        // different room is entered (a fresh Host/Join, room.Id having
+        // changed) so a room's leftover text doesn't sit in the field for
+        // the next one, and so the field starts matching whatever car this
+        // player already had in the room (e.g. rejoining).
+        if (_carSeededFor != room.Id)
+        {
+            _carSeededFor = room.Id;
+            _car = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Car ?? "";
+        }
+
         ImGui.Text($"{room.Name}   {room.Track}");
         ImGui.Separator();
 

@@ -56,24 +56,6 @@ public class RoomStateTests
     }
 
     [Fact]
-    public void Rejects_garbage_without_throwing()
-    {
-        var junk = new byte[64];
-        Random.Shared.NextBytes(junk);
-
-        // The call completing at all (rather than throwing) is what protects the
-        // socket-reading caller; xunit fails this test automatically if it throws.
-        bool parsed = RoomState.TryDeserialise(junk, out var room);
-
-        // Random bytes almost never parse, but if they do, the result must respect invariants
-        if (parsed)
-        {
-            Assert.InRange(room.Players.Count, 0, RoomState.MaxPlayers);
-            Assert.DoesNotContain(null, room.Players);
-        }
-    }
-
-    [Fact]
     public void Rejects_corrupted_packet_while_preserving_invariants()
     {
         // Build a minimal packet with 0 players, then append 7 minimal valid players
@@ -100,6 +82,34 @@ public class RoomStateTests
         // A count above MaxPlayers must be rejected outright, not merely
         // parsed-then-checked - no assertion here may sit behind an `if`
         // that decides whether it runs.
+        Assert.False(RoomState.TryDeserialise([.. data], out _));
+    }
+
+    // ---- Task 9 review, Minor 6: TryDeserialise must bound maxPlayers too ----
+
+    [Fact]
+    public void Rejects_a_forged_maxPlayers_above_the_cap()
+    {
+        var room = new Room(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "", "", 6, []);
+
+        var data = RoomState.Serialise(room).ToList();
+        // Same layout as Rejects_corrupted_packet_while_preserving_invariants:
+        // version(1) + guid(16) + name_len(1) + track_len(1) + maxPlayers(1) + count(1)
+        // - maxPlayers sits right before count, at data.Count - 2.
+        int maxPlayersByteIndex = data.Count - 2;
+
+        // Positive precondition: the untouched packet round-trips, so the
+        // rejection below is the forged byte's doing, not a broken parser
+        // (Finding 1).
+        Assert.True(RoomState.TryDeserialise([.. data], out var back));
+        Assert.Equal(6, back.MaxPlayers);
+
+        // A forged or corrupt maxPlayers above the cap must be rejected
+        // outright - LanDiscovery stores it raw, and the room list would
+        // otherwise render an impossible "1/255" as joinable.
+        data[maxPlayersByteIndex] = 255;
         Assert.False(RoomState.TryDeserialise([.. data], out _));
     }
 

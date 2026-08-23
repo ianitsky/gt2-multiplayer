@@ -71,7 +71,7 @@ public static class RoomState
 
         if (!TryString(data, ref offset, out string name)) return false;
         if (!TryString(data, ref offset, out string track)) return false;
-        if (!TryByte(data, ref offset, out byte maxPlayers)) return false;
+        if (!TryByte(data, ref offset, out byte maxPlayers) || maxPlayers > MaxPlayers) return false;
         if (!TryByte(data, ref offset, out byte count) || count > MaxPlayers) return false;
 
         var players = new List<Player>(count);

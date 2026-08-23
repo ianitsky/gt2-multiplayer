@@ -213,8 +213,14 @@ public sealed class Session
             }
         }
 
-        if (deduped.Count != room.Players.Count)
-            room = room with { Players = deduped };
+        // Unconditional: deduped already carries the local player's existing
+        // row (preserved above) even when no duplicate was collapsed, which
+        // is the normal case for every real host reply. Guarding this on
+        // deduped.Count != room.Players.Count skipped the assignment in
+        // exactly that normal case, so the incoming copy of the local row -
+        // Ready and Car as the host last knew them, not as they are now -
+        // silently overwrote what the player had just set locally.
+        room = room with { Players = deduped };
 
         Current = room;
         _hostLastHeard = _clock();

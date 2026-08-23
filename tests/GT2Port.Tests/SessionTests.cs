@@ -257,6 +257,39 @@ public class SessionTests
         Assert.True(session.Current!.Players.Single(p => p.Name == "guest").Ready);
     }
 
+    // ---- Task 9 review, Critical 1: the normal case has no duplicates ----
+    //
+    // Both tests above only ever hand OnRemoteState a room with a duplicate
+    // of the local player's name, so both take the branch that replaces
+    // `room` with `deduped`. Every real host reply is duplicate-free - one
+    // row per name - so this is the case that actually matters, and it was
+    // the one silently skipping the preservation entirely.
+
+    [Fact]
+    public void OnRemoteState_preserves_local_player_state_without_duplicates()
+    {
+        var session = NewSession("guest");
+        var initial = RoomWith(new Player("ian", "", false));
+        Assert.True(session.Join(initial));
+        session.SetReady("guest", true);
+        session.SetCar("guest", "local_car");
+
+        // Duplicate-free: exactly one row per name, same shape as a genuine
+        // host reply. The host's copy of "guest" disagrees with what this
+        // client just set locally - it's answering the *previous* intent.
+        session.OnRemoteState(initial with
+        {
+            Players = [
+                new Player("ian", "", false),
+                new Player("guest", "stale_car", false),
+            ],
+        });
+
+        var guest = session.Current!.Players.Single(p => p.Name == "guest");
+        Assert.True(guest.Ready);
+        Assert.Equal("local_car", guest.Car);
+    }
+
     [Fact]
     public void Joining_a_room_that_already_has_your_name_is_refused()
     {
@@ -362,6 +395,32 @@ public class SessionTests
 
         Assert.Equal(SessionPhase.Hosting, session.Phase);
         Assert.Equal("guest's room", session.Current!.Name);
+    }
+
+    // ---- Task 9 review, Important 2: Disconnected is a message on the room
+    // list, not a screen that refuses renaming ----
+    //
+    // MultiplayerPanel now calls Leave() itself before drawing the room list
+    // for a Disconnected session (see MultiplayerPanel.Draw), specifically so
+    // this holds: renaming does not stay refused until the player presses
+    // Join, Host or a dedicated Leave button that the room list doesn't have.
+
+    [Fact]
+    public void Renaming_succeeds_immediately_after_recovering_from_a_disconnected_session()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+        session.OnRemoteState(RoomWith(new Player("ian", "", false)));
+
+        Advance(3.5);
+        session.Tick();
+        Assert.Equal(SessionPhase.Disconnected, session.Phase);
+        Assert.False(session.Rename("someone-else")); // still refused before recovery
+
+        session.Leave();
+
+        Assert.True(session.Rename("someone-else"));
+        Assert.Equal("someone-else", session.PlayerName);
     }
 
     // ---- Finding 4: StatusMessage clearing is untested ----

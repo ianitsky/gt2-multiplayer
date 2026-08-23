@@ -11,7 +11,13 @@ public class LanDiscoveryTests
     // Every test gets its own port off this base so a stray in-flight
     // broadcast from one test's host can never land in another test's
     // listener (Finding 4). Offsets below are unique per test and obvious.
-    const int BasePort = 34719;
+    //
+    // Well clear of ModeHook's DiscoveryPort (34718) and SessionPort (34719)
+    // - the old base sat exactly on SessionPort, harmless between tests but
+    // a collision with a running game (Task 9 review, Minor 8) - and of the
+    // extra ports SessionTests and LanSessionTests bind for themselves; see
+    // those files for their own ranges.
+    const int BasePort = 34800;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
     void Advance(double seconds) => _now = _now.AddSeconds(seconds);

@@ -8,7 +8,7 @@ namespace GT2Port.Tests;
 
 public class LanSessionTests
 {
-    // Well clear of LanDiscoveryTests' BasePort+0..13 (34719-34732) and of the
+    // Well clear of LanDiscoveryTests' BasePort+0..13 (34800-34813) and of the
     // extra LanDiscovery/LanSession ports SessionTests binds (34740, 34741,
     // 34742, 34750, 34751, 34752) - see those files for why each test needs
     // its own port. Offsets below run through BasePort+10.
