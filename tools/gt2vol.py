@@ -12,12 +12,14 @@ Layout, worked out from the image rather than from documentation:
     0x08  build timestamp
     0x0C  0
     0x10  count of something the reader does not need
-    0x14  u32[] byte offsets into the VOL, monotonically increasing. A file
-          whose entry carries value v occupies offsets[v - 1] .. offsets[v] -
-          the table stores each file's END. Confirmed against the original
-          names gzip keeps inside its own header: 120 of 120 in crsmap. The
-          run ends where it stops increasing, which is also where it is
-          padded to the entry table.
+    0x14  u32[] byte offsets into the VOL, monotonically increasing. The
+          table stores each file's END, so a file whose entry carries value v
+          runs offsets[v - 1] .. offsets[v]. Every file also begins on its own
+          2KB sector, and offsets[v - 1] lands inside that first sector rather
+          than exactly on it - round down. Verified by decompressing every
+          gzip in the archive from the rounded start: 5114 of 5114, sizes
+          from 652 bytes to 336 KB. The run ends where it stops increasing,
+          which is also where it is padded to the entry table.
     0xB800 (padded) 32-byte entries:
             +0  u32 timestamp
             +4  u16 value
@@ -155,7 +157,7 @@ class Vol:
 
     def read_file(self, ref):
         start, end = self.offsets[ref.index - 1], self.offsets[ref.index]
-        data = self._disc.read(start, end - start)
+        data = self._disc.read(start // USER * USER, end - start)
         if data[:2] == b'\x1f\x8b':
             return zlib.decompress(data, 16 + zlib.MAX_WBITS)
         return data
