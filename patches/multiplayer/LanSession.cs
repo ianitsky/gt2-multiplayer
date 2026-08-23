@@ -43,22 +43,55 @@ public sealed class LanSession : IDisposable
     const byte LeavingFlag = 1 << 1;
 
     readonly UdpClient _socket;
-    readonly int _port;
+    readonly int _hostPort;
     readonly Func<DateTime> _clock;
     DateTime? _lastIntentSent;
     bool _disposed;
 
-    public LanSession(int port, Func<DateTime> clock)
+    LanSession(UdpClient socket, int hostPort, Func<DateTime> clock)
     {
-        _port = port;
+        _socket = socket;
+        _hostPort = hostPort;
         _clock = clock;
-        _socket = new UdpClient
+    }
+
+    /// <summary>
+    /// Binds <paramref name="port"/> - the well-known port clients address -
+    /// without <see cref="SocketOptionName.ReuseAddress"/>. A second host on
+    /// this machine binding the identical port would otherwise succeed and
+    /// then silently receive nothing, which is exactly the failure this
+    /// class exists to remove; without it, the bind throws and the conflict
+    /// is visible to the caller instead.
+    /// </summary>
+    public static LanSession ForHost(int port, Func<DateTime> clock)
+    {
+        var socket = new UdpClient
         {
             Client = { ReceiveTimeout = 1 },
         };
-        _socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        _socket.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+        socket.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+        return new LanSession(socket, port, clock);
     }
+
+    /// <summary>
+    /// Binds port 0, so the OS assigns a free ephemeral port - two clients
+    /// on the same machine each get their own, so they never collide with
+    /// each other or with a host's well-known port. Sends are addressed to
+    /// <paramref name="hostPort"/>, the host's well-known port, not this
+    /// socket's own.
+    /// </summary>
+    public static LanSession ForClient(int hostPort, Func<DateTime> clock)
+    {
+        var socket = new UdpClient
+        {
+            Client = { ReceiveTimeout = 1 },
+        };
+        socket.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
+        return new LanSession(socket, hostPort, clock);
+    }
+
+    /// <summary>The port actually bound, so callers (and tests) never have to hardcode it.</summary>
+    public int BoundPort => ((IPEndPoint)_socket.Client.LocalEndPoint!).Port;
 
     /// <summary>
     /// The exception from the most recent failed send, or null if the last
@@ -162,7 +195,7 @@ public sealed class LanSession : IDisposable
     }
 
     void SendIntent(ClientIntent intent, IPAddress hostAddress) =>
-        Send(Serialise(intent), new IPEndPoint(hostAddress, _port));
+        Send(Serialise(intent), new IPEndPoint(hostAddress, _hostPort));
 
     void SendRoomState(Room room, IPEndPoint to) =>
         Send(RoomState.Serialise(room), to);

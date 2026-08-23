@@ -696,8 +696,8 @@ public class SessionTests
         // ModeHook's own DiscoveryPort - this discovery instance never sends
         // or receives, it only satisfies MultiplayerPanel's constructor.
         using var discovery = new LanDiscovery(34740, () => _now);
-        using var lanSession = new LanSession(34750, () => _now);
-        var panel = new MultiplayerPanel(NewSession(), discovery, lanSession);
+        using var lanSession = LanSession.ForHost(34750, () => _now);
+        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession);
 
         Assert.False(panel.TryConsumeStartRequest());
 
@@ -755,10 +755,10 @@ public class SessionTests
     public void Leaving_the_room_clears_a_pending_start_request()
     {
         using var discovery = new LanDiscovery(34741, () => _now);
-        using var lanSession = new LanSession(34751, () => _now);
+        using var lanSession = LanSession.ForHost(34751, () => _now);
         var session = NewSession();
         session.Host("room", "track");
-        var panel = new MultiplayerPanel(session, discovery, lanSession);
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession);
 
         typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
             .SetValue(panel, true);
@@ -787,7 +787,7 @@ public class SessionTests
 
         using var hostDiscovery = new LanDiscovery(discoveryPort, () => _now); // stands in for the real host, announcing the room
         using var discovery = new LanDiscovery(discoveryPort, () => _now);
-        using var lanSession = new LanSession(lanSessionPort, () => _now);
+        using var lanSession = LanSession.ForHost(lanSessionPort, () => _now);
 
         var session = NewSession("guest");
         var hostRoom = new Room(Guid.NewGuid(), "room", "track", 6, [new Player("ian", "", false)]);
@@ -802,7 +802,7 @@ public class SessionTests
         }
         Assert.True(discovery.TryGetHostAddress(roomId, out _)); // positive precondition (Finding 1 applies here too)
 
-        var panel = new MultiplayerPanel(session, discovery, lanSession);
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession);
 
         panel.LeaveRoom();
 

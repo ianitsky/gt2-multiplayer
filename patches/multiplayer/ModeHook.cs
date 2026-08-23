@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using RecompOne.Runtime.Host.Window;
 
 namespace GT2Port.Multiplayer;
@@ -21,6 +22,15 @@ public static class ModeHook
     static Session? _session;
     static LanDiscovery? _discovery;
     static LanSession? _lanSession;
+
+    /// <summary>
+    /// Which role <see cref="_lanSession"/> was built for - null when there
+    /// is none. Host and client now bind differently (see LanSession.ForHost
+    /// / ForClient), so a role change means the existing instance no longer
+    /// matches and must be rebuilt, not just reused.
+    /// </summary>
+    static SessionPhase? _lanSessionRole;
+
     static MultiplayerPanel? _panel;
 
     /// <summary>
@@ -36,10 +46,15 @@ public static class ModeHook
 
         _session ??= new Session(PlayerName, () => DateTime.UtcNow);
         _discovery ??= new LanDiscovery(DiscoveryPort, () => DateTime.UtcNow);
-        _lanSession ??= new LanSession(SessionPort, () => DateTime.UtcNow);
+        // LanSession itself isn't built here: which factory to call depends
+        // on the role (host or client), and that isn't known until the
+        // player picks one from the room list. RunLobby builds it once the
+        // role is known. The panel is given a getter rather than a snapshot
+        // reference so it always sees whichever instance is current, even
+        // as RunLobby rebuilds or drops it underneath it.
         if (_panel == null)
         {
-            _panel = new MultiplayerPanel(_session, _discovery, _lanSession);
+            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession);
             PanelManager.Register(_panel);
         }
         _panel.IsOpen = true;
@@ -71,12 +86,50 @@ public static class ModeHook
 
             if (_session.Phase == SessionPhase.Hosting)
             {
-                _lanSession!.HostTick(_session);
+                if (_lanSessionRole != SessionPhase.Hosting)
+                {
+                    _lanSession?.Dispose();
+                    _lanSession = null;
+                    _lanSessionRole = null;
+                    try
+                    {
+                        _lanSession = LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
+                        _lanSessionRole = SessionPhase.Hosting;
+                    }
+                    catch (SocketException)
+                    {
+                        // Another instance on this machine is already
+                        // hosting on this port - binding would either fail
+                        // (as here) or, with ReuseAddress, succeed and then
+                        // silently receive nothing. Either way this player
+                        // cannot host here, so send them back to the room
+                        // list instead of leaving them in a room nobody
+                        // else can ever reach.
+                        _session.ReportProblem(
+                            "Another instance is already hosting on this machine - join it instead.");
+                    }
+                }
+                _lanSession?.HostTick(_session);
             }
-            else if (_session.Phase == SessionPhase.Joined &&
-                     _discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
+            else if (_session.Phase == SessionPhase.Joined)
             {
-                _lanSession!.ClientTick(_session, hostAddress);
+                if (_lanSessionRole != SessionPhase.Joined)
+                {
+                    _lanSession?.Dispose();
+                    _lanSession = LanSession.ForClient(SessionPort, () => DateTime.UtcNow);
+                    _lanSessionRole = SessionPhase.Joined;
+                }
+                if (_discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
+                    _lanSession.ClientTick(_session, hostAddress);
+            }
+            else
+            {
+                // Browsing and Disconnected hold no socket, so the port -
+                // the host's fixed one, or a client's ephemeral one - is
+                // free for another instance on this machine.
+                _lanSession?.Dispose();
+                _lanSession = null;
+                _lanSessionRole = null;
             }
 
             if (_session.Phase == SessionPhase.Hosting &&
@@ -96,5 +149,15 @@ public static class ModeHook
         // ready flags. LeaveRoom also discards any pending start request, so
         // re-entering can't immediately fall straight back out.
         _panel.LeaveRoom();
+
+        // LeaveRoom runs after the loop above has already stopped checking
+        // Phase, so the loop's own cleanup branch never gets a turn to drop
+        // whatever socket this visit was using (e.g. closing the panel
+        // while Hosting). Without this, the port stays held until the lobby
+        // is reopened - freeing it here instead means another instance on
+        // this machine can host or join as soon as this player leaves.
+        _lanSession?.Dispose();
+        _lanSession = null;
+        _lanSessionRole = null;
     }
 }

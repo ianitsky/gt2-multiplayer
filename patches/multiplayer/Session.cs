@@ -231,6 +231,19 @@ public sealed class Session
 
     public void OnHeard(string playerName) => _lastHeard[playerName] = _clock();
 
+    /// <summary>
+    /// Reports a problem that kept the player from ever getting into a room.
+    /// The same transition <see cref="Tick"/> performs on a host timeout,
+    /// minus the <see cref="SessionPhase.Disconnected"/> phase: the player
+    /// isn't disconnected here, they never got connected.
+    /// </summary>
+    public void ReportProblem(string message)
+    {
+        Current = null;
+        Phase = SessionPhase.Browsing;
+        StatusMessage = message;
+    }
+
     public void Tick()
     {
         if (Current is not { } room) return;

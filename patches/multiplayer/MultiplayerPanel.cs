@@ -14,7 +14,12 @@ public sealed class MultiplayerPanel : IPanel
 {
     readonly Session _session;
     readonly LanDiscovery _discovery;
-    readonly LanSession _lanSession;
+
+    // A getter rather than a snapshot reference: ModeHook now builds and
+    // drops the LanSession per role (host binds one way, client another),
+    // so the instance this panel should use for sending changes underneath
+    // it, and can be null (e.g. while Browsing, between rooms).
+    readonly Func<LanSession?> _lanSession;
 
     string _playerName;
     string _roomName = "";
@@ -24,7 +29,7 @@ public sealed class MultiplayerPanel : IPanel
     Guid? _carSeededFor;
     bool _creating;
 
-    public MultiplayerPanel(Session session, LanDiscovery discovery, LanSession lanSession)
+    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession)
     {
         _session = session;
         _discovery = discovery;
@@ -72,7 +77,7 @@ public sealed class MultiplayerPanel : IPanel
         if (_session.Phase == SessionPhase.Joined && _session.Current is { } room &&
             _discovery.TryGetHostAddress(room.Id, out var hostAddress))
         {
-            _lanSession.SendLeave(_session, hostAddress);
+            _lanSession()?.SendLeave(_session, hostAddress);
         }
 
         _session.Leave();
@@ -133,7 +138,7 @@ public sealed class MultiplayerPanel : IPanel
         if (_discovery.LastSendFailure is { } discoveryFailure)
             ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
                 $"Broadcasting failed: {discoveryFailure.Message} - a firewall may be blocking this app.");
-        else if (_lanSession.LastSendFailure is { } sessionFailure)
+        else if (_lanSession()?.LastSendFailure is { } sessionFailure)
             ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
                 $"Sending failed: {sessionFailure.Message} - a firewall may be blocking this app.");
 

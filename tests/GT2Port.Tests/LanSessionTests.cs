@@ -11,7 +11,7 @@ public class LanSessionTests
     // Well clear of LanDiscoveryTests' BasePort+0..13 (34800-34813) and of the
     // extra LanDiscovery/LanSession ports SessionTests binds (34740, 34741,
     // 34742, 34750, 34751, 34752) - see those files for why each test needs
-    // its own port. Offsets below run through BasePort+10.
+    // its own port. Offsets below run through BasePort+14.
     const int BasePort = 34760;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
@@ -84,27 +84,55 @@ public class LanSessionTests
         Assert.False(LanSession.TryDeserialise(data, out _));
     }
 
+    // ---- ForHost / ForClient ----
+
+    [Fact]
+    public void ForClient_binds_a_port_that_is_neither_0_nor_the_host_port()
+    {
+        const int hostPort = BasePort + 12;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+
+        Assert.NotEqual(0, client.BoundPort);
+        Assert.NotEqual(hostPort, client.BoundPort);
+    }
+
+    [Fact]
+    public void Two_ForClient_instances_at_once_each_get_their_own_port()
+    {
+        const int hostPort = BasePort + 13;
+        using var a = LanSession.ForClient(hostPort, () => _now);
+        using var b = LanSession.ForClient(hostPort, () => _now);
+
+        Assert.NotEqual(a.BoundPort, b.BoundPort);
+    }
+
+    [Fact]
+    public void ForHost_on_a_port_already_held_by_another_ForHost_throws()
+    {
+        const int port = BasePort + 14;
+        using var first = LanSession.ForHost(port, () => _now);
+
+        // Positive precondition: prove the port was actually claimed before
+        // trusting that a second bind on it fails.
+        Assert.Equal(port, first.BoundPort);
+
+        Assert.Throws<SocketException>(() => LanSession.ForHost(port, () => _now));
+    }
+
     // ---- host and client on loopback ----
     //
     // A genuine round trip needs two live LanSession sockets, each able to
-    // both send and receive, sharing the one well-known port every real peer
-    // uses (matching production, and LanDiscoveryTests' convention of host
-    // and listener sharing a port). On this machine, two sockets bound
-    // wildcard to the identical port with ReuseAddress do not both receive
-    // unicast traffic - only the first one bound ever does, regardless of
-    // send order or destination address (verified experimentally: the
-    // second-bound socket received zero of ten packets sent directly at it).
-    // Broadcast is unaffected (both LanDiscoveryTests instances get every
-    // broadcast), which is why that class doesn't hit this.
-    //
-    // So each direction below is tested with the real LanSession under test
-    // on one side, and a plain UdpClient - bound to an unrelated ephemeral
-    // port, never sharing the port under test - standing in for the other
-    // side. That plain socket exercises the exact bytes LanSession puts on
-    // the wire (via the internal Serialise/TryDeserialise it shares with the
-    // class under test), so what's under test is genuinely this class's
-    // HostTick/ClientTick behaviour, just not two live instances of it
-    // sharing one OS port in one process.
+    // both send and receive. Now that host and client bind differently -
+    // the host a fixed port, the client an OS-assigned ephemeral one - two
+    // real instances in one process can finally talk to each other without
+    // depending on undefined "first binder wins" delivery behaviour. Most
+    // of the tests below still pair a real LanSession under test with a
+    // plain UdpClient standing in for the other side (exercising the exact
+    // bytes LanSession puts on the wire via the internal
+    // Serialise/TryDeserialise it shares with the class under test), which
+    // keeps each one focused on a single method. The interop test further
+    // down is the exception: it drives two real instances together, because
+    // that is the one thing no single-instance test can prove.
 
     [Fact]
     public void HostTick_applies_a_clients_intent_and_replies_with_the_room_state_after_applying()
@@ -112,7 +140,7 @@ public class LanSessionTests
         const int port = BasePort + 4;
         var hostSession = new Session("ian", () => _now);
         hostSession.Host("Ian's room", "Trial Mountain");
-        using var host = new LanSession(port, () => _now);
+        using var host = LanSession.ForHost(port, () => _now);
 
         using var rawClient = new UdpClient { Client = { ReceiveTimeout = 2000 } };
 
@@ -143,7 +171,7 @@ public class LanSessionTests
     [Fact]
     public void ClientTick_ingests_a_room_state_reply_into_the_session()
     {
-        const int port = BasePort + 5;
+        const int hostPort = BasePort + 5;
         var clientSession = new Session("guest", () => _now);
         var initialRoom = new Room(Guid.NewGuid(), "Ian's room", "Trial Mountain", RoomState.MaxPlayers,
             [new Player("ian", "", false)]);
@@ -156,7 +184,7 @@ public class LanSessionTests
         // only appear once the host's reply below is actually ingested.
         Assert.Equal(2, clientSession.Current!.Players.Count);
 
-        using var client = new LanSession(port, () => _now);
+        using var client = LanSession.ForClient(hostPort, () => _now);
 
         // The whole-room reply the host would have sent back: same room id,
         // plus a third player the client has no way of knowing about except
@@ -168,7 +196,7 @@ public class LanSessionTests
         using (var rawHost = new UdpClient())
         {
             var data = RoomState.Serialise(updatedRoom);
-            rawHost.Send(data, data.Length, new IPEndPoint(IPAddress.Loopback, port));
+            rawHost.Send(data, data.Length, new IPEndPoint(IPAddress.Loopback, client.BoundPort));
         }
 
         for (int i = 0; i < 50 && !clientSession.Current!.Players.Any(p => p.Name == "stranger"); i++)
@@ -188,7 +216,7 @@ public class LanSessionTests
         const int port = BasePort + 6;
         var hostSession = new Session("ian", () => _now);
         hostSession.Host("room", "track");
-        using var host = new LanSession(port, () => _now);
+        using var host = LanSession.ForHost(port, () => _now);
         using var rawClient = new UdpClient { Client = { ReceiveTimeout = 2000 } };
 
         // Positive precondition (Finding 1 from the discovery review applies
@@ -223,41 +251,31 @@ public class LanSessionTests
     // in LanSession, and the comment said so. Split into two tests that each
     // follow the file's established one-real-instance-plus-a-stand-in
     // pattern instead: the first proves SendLeave puts a correctly addressed
-    // Leaving datagram on the wire (self-receipt on the single real socket
-    // under test - the same technique ClientTick_sends_its_own_intent...
-    // above uses, and just as deterministic since only one socket is ever
-    // involved); the second proves HostTick treats a Leaving datagram as a
-    // departure, the same way HostTick_applies_a_clients_intent... proves it
-    // treats a non-leaving one as an update.
+    // Leaving datagram on the wire, received here by a plain UdpClient bound
+    // to the host's well-known port standing in for the host; the second
+    // proves HostTick treats a Leaving datagram as a departure, the same way
+    // HostTick_applies_a_clients_intent... proves it treats a non-leaving
+    // one as an update.
 
     [Fact]
-    public void SendLeave_sends_a_leaving_flagged_intent_addressed_to_the_current_room()
+    public void SendLeave_sends_a_leaving_flagged_intent_addressed_to_the_host_port()
     {
-        const int port = BasePort + 7;
+        const int hostPort = BasePort + 7;
         var hostRoom = new Room(Guid.NewGuid(), "room", "track", RoomState.MaxPlayers, [new Player("ian", "", false)]);
         var clientSession = new Session("guest", () => _now);
         Assert.True(clientSession.Join(hostRoom));
         clientSession.SetCar("guest", "Supra");
         clientSession.SetReady("guest", true);
 
-        using var client = new LanSession(port, () => _now);
+        using var rawHost = new UdpClient(new IPEndPoint(IPAddress.Loopback, hostPort)) { Client = { ReceiveTimeout = 2000 } };
+        using var client = LanSession.ForClient(hostPort, () => _now);
 
         client.SendLeave(clientSession, IPAddress.Loopback);
 
-        // hostAddress is loopback and the destination port equals this
-        // session's own bind port, so the send lands right back in its own
-        // receive queue.
-        var socket = GetSocket(client);
         IPEndPoint? from = null;
-        byte[]? data = null;
-        for (int i = 0; i < 50 && data is null; i++)
-        {
-            if (socket.Available > 0) data = socket.Receive(ref from);
-            else Thread.Sleep(10);
-        }
+        var data = rawHost.Receive(ref from);
 
-        Assert.NotNull(data);
-        Assert.True(LanSession.TryDeserialise(data!, out var intent));
+        Assert.True(LanSession.TryDeserialise(data, out var intent));
         Assert.True(intent.Leaving);
         Assert.Equal(hostRoom.Id, intent.RoomId);
         Assert.Equal("guest", intent.Name);
@@ -271,7 +289,7 @@ public class LanSessionTests
         const int port = BasePort + 10;
         var hostSession = new Session("ian", () => _now);
         hostSession.Host("room", "track");
-        using var host = new LanSession(port, () => _now);
+        using var host = LanSession.ForHost(port, () => _now);
         using var rawClient = new UdpClient { Client = { ReceiveTimeout = 2000 } };
 
         // Positive precondition (Finding 1 applies here too): prove the
@@ -303,26 +321,22 @@ public class LanSessionTests
     [Fact]
     public void ClientTick_sends_its_own_intent_no_more_than_five_times_a_second()
     {
-        const int port = BasePort + 8;
+        const int hostPort = BasePort + 8;
         var clientSession = new Session("guest", () => _now);
         var room = new Room(Guid.NewGuid(), "room", "track", RoomState.MaxPlayers, [new Player("ian", "", false)]);
         Assert.True(clientSession.Join(room));
 
-        using var client = new LanSession(port, () => _now);
-        var socket = GetSocket(client);
+        using var rawHost = new UdpClient(new IPEndPoint(IPAddress.Loopback, hostPort)) { Client = { ReceiveTimeout = 1 } };
+        using var client = LanSession.ForClient(hostPort, () => _now);
 
-        // hostAddress is loopback, and this client's own destination port
-        // equals its own bind port, so its sends land right back in its own
-        // receive queue - a convenient way to count them without a second
-        // socket fighting for the same port.
         int CountAndDrainSelfSent()
         {
             Thread.Sleep(30); // give a loopback send time to land
             int count = 0;
-            while (socket.Available > 0)
+            while (rawHost.Available > 0)
             {
                 IPEndPoint? from = null;
-                socket.Receive(ref from);
+                rawHost.Receive(ref from);
                 count++;
             }
             return count;
@@ -347,7 +361,7 @@ public class LanSessionTests
     public void Safe_to_use_after_dispose()
     {
         const int port = BasePort + 9;
-        var session = new LanSession(port, () => _now);
+        var session = LanSession.ForHost(port, () => _now);
         session.Dispose();
 
         var hostSession = new Session("ian", () => _now);
@@ -365,5 +379,51 @@ public class LanSessionTests
         });
 
         Assert.Null(ex);
+    }
+
+    // ---- real host and real client interoperating in one process ----
+
+    [Fact]
+    public void Two_real_LanSession_instances_interoperate_over_loopback()
+    {
+        const int hostPort = BasePort + 11;
+
+        var hostSession = new Session("ian", () => _now);
+        hostSession.Host("Ian's room", "Trial Mountain");
+        using var host = LanSession.ForHost(hostPort, () => _now);
+
+        var clientSession = new Session("guest", () => _now);
+        Assert.True(clientSession.Join(hostSession.Current!));
+        using var client = LanSession.ForClient(hostPort, () => _now);
+
+        bool DriveUntil(Func<bool> condition)
+        {
+            for (int i = 0; i < 200 && !condition(); i++)
+            {
+                host.HostTick(hostSession);
+                client.ClientTick(clientSession, IPAddress.Loopback);
+                Advance(0.25); // clears ClientTick's own five-times-a-second limit every iteration
+                Thread.Sleep(5);
+            }
+            return condition();
+        }
+
+        Assert.True(DriveUntil(() =>
+            hostSession.Current!.Players.Count == 2 &&
+            clientSession.Current!.Players.Count == 2));
+
+        Assert.Contains(hostSession.Current!.Players, p => p.Name == "ian");
+        Assert.Contains(hostSession.Current.Players, p => p.Name == "guest");
+        Assert.Contains(clientSession.Current!.Players, p => p.Name == "ian");
+        Assert.Contains(clientSession.Current.Players, p => p.Name == "guest");
+
+        // CanStart needs every player ready, including the host. The host
+        // readies itself locally - it owns its own row and there's no wire
+        // involved in that - while the client's readiness has to travel
+        // over the channel under test, which is the point of this test.
+        hostSession.SetReady("ian", true);
+        clientSession.SetReady("guest", true);
+
+        Assert.True(DriveUntil(() => hostSession.CanStart));
     }
 }
