@@ -17,6 +17,7 @@ public class CourseTableTests
     public void Every_course_has_a_unique_code_and_a_name()
     {
         Assert.Equal(CourseTable.All.Count, CourseTable.All.Select(c => c.Code).Distinct().Count());
+        Assert.All(CourseTable.All, c => Assert.False(string.IsNullOrWhiteSpace(c.Code)));
         Assert.All(CourseTable.All, c => Assert.False(string.IsNullOrWhiteSpace(c.Name)));
     }
 

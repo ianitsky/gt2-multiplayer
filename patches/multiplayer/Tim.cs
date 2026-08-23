@@ -35,8 +35,8 @@ public static class Tim
         if (!TryU32(span, ref offset, out uint magic) || magic != Magic) return false;
         if (!TryU32(span, ref offset, out uint flags)) return false;
 
-        uint depth = flags & 3;
-        if (depth != 0 && depth != 1) return false; // only 4bpp and 8bpp are handled
+        uint depth = flags & 7; // pmode is bits 0-2; only 4bpp (0) and 8bpp (1) are handled
+        if (depth != 0 && depth != 1) return false;
 
         ushort[]? palette = null;
         if ((flags & ClutPresentFlag) != 0 && !TryClut(span, ref offset, out palette)) return false;
@@ -53,6 +53,7 @@ public static class Tim
         if (neededPixelBytes > length - 12) return false;
 
         int w = words * (depth == 0 ? 4 : 2);
+        if (w <= 0 || rows <= 0) return false; // a picture with no pixels is not a decoded picture
         long outputBytes = (long)w * rows * 4;
         if (outputBytes > MaxOutputBytes) return false;
 
@@ -113,8 +114,10 @@ public static class Tim
         g = (byte)(((c >> 5) & 31) << 3);
         b = (byte)(((c >> 10) & 31) << 3);
         // 15 low bits zero and the semi-transparency bit clear is TIM's
-        // transparent black; everything else is opaque.
-        a = (c & 0x7FFF) == 0 ? (byte)0 : (byte)255;
+        // transparent black; everything else is opaque - including 0x8000,
+        // opaque black with only the semi-transparency bit set, an ordinary
+        // colour for line art to use.
+        a = (c & 0x7FFF) == 0 && (c & 0x8000) == 0 ? (byte)0 : (byte)255;
         return true;
     }
 

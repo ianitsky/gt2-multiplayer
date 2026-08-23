@@ -30,6 +30,17 @@ public sealed class MultiplayerPanel : IPanel
     Guid? _carSeededFor;
     bool _creating;
 
+    // Set when the Create screen is (re)entered, so the grid scrolls the
+    // selected course into view once, the same frame it becomes visible,
+    // instead of opening scrolled to the top with the selection off screen.
+    bool _scrollToSelection;
+
+    // One frame of hover lag: whether the border/background should highlight
+    // is decided before BeginChild runs for that cell, so it reflects last
+    // frame's IsItemHovered() result rather than this one's - imperceptible
+    // at any real frame rate.
+    readonly Dictionary<string, bool> _cellHovered = new(StringComparer.Ordinal);
+
     public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession, CourseMaps courseMaps)
     {
         _session = session;
@@ -166,7 +177,11 @@ public sealed class MultiplayerPanel : IPanel
         }
 
         ImGui.Separator();
-        if (ImGui.Button("Create a room")) _creating = true;
+        if (ImGui.Button("Create a room"))
+        {
+            _creating = true;
+            _scrollToSelection = true;
+        }
     }
 
     void DrawCreate()
@@ -174,6 +189,7 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.Text("New room");
         ImGui.Separator();
         ImGui.InputText("Name", ref _roomName, 32);
+        ImGui.TextUnformatted("Course");
         DrawCourseGrid();
         ImGui.SliderInt("Player limit", ref _maxPlayers, 2, RoomState.MaxPlayers);
 
@@ -190,11 +206,29 @@ public sealed class MultiplayerPanel : IPanel
         if (ImGui.Button("Cancel")) _creating = false;
     }
 
-    // 96x96 to match the map pictures themselves, plus enough of a margin for
-    // a wrapped display name beneath - the longest names ("Red Rock Valley
-    // Speedway") run to three lines at that width.
+    // 96x96 logical pixels to match the map pictures themselves at 100% DPI
+    // and UI scale - scaled at draw time by the same factor the rest of the
+    // panel already follows (HostWindow.DpiScale * the UI scale setting, the
+    // same product Theme.Scale applies to ScaleAllSizes), rather than being
+    // pinned to a fixed pixel size that only looks right at 100%.
     const float MapSize = 96f;
-    static readonly Vector2 CourseCellSize = new(MapSize + 16f, MapSize + 16f + 3f * 16f);
+
+    /// <summary>
+    /// The map picture's current on-screen size and the cell that frames it -
+    /// derived from the host's live scale and font metrics rather than fixed
+    /// in pixels (review IMPORTANT 3). Enough margin beside the map for a
+    /// wrapped display name below it: three lines at the current line height,
+    /// which is what the longest names ("Red Rock Valley Speedway") need.
+    /// </summary>
+    (float MapSize, Vector2 CellSize) CourseCellMetrics()
+    {
+        float scale = RecompOne.Runtime.Host.HostWindow.DpiScale * ImGui.GetIO().FontGlobalScale;
+        float mapSize = MapSize * scale;
+        var margin = ImGui.GetStyle().ItemSpacing;
+        float lineHeight = ImGui.GetTextLineHeightWithSpacing();
+        var cellSize = new Vector2(mapSize + margin.X, mapSize + margin.Y + 3f * lineHeight);
+        return (mapSize, cellSize);
+    }
 
     /// <summary>
     /// One cell per course, Tarmac then Dirt, wrapped to the window's width
@@ -204,11 +238,18 @@ public sealed class MultiplayerPanel : IPanel
     /// </summary>
     void DrawCourseGrid()
     {
+        var (mapSize, cellSize) = CourseCellMetrics();
         var spacing = ImGui.GetStyle().ItemSpacing;
+        float lineHeight = ImGui.GetTextLineHeightWithSpacing();
 
-        ImGui.BeginChild("CourseGrid", new Vector2(0f, 260f), ImGuiChildFlags.Border);
+        // Tall enough for the section label plus one full row of cells, with
+        // enough of a second row peeking in to hint that it scrolls - a
+        // multiple of the (now live-scaled) cell height rather than a
+        // constant that only matched one particular font size.
+        float gridHeight = lineHeight + spacing.Y + cellSize.Y * 1.5f;
+        ImGui.BeginChild("CourseGrid", new Vector2(0f, gridHeight), ImGuiChildFlags.Border);
 
-        float columnsF = (ImGui.GetContentRegionAvail().X + spacing.X) / (CourseCellSize.X + spacing.X);
+        float columnsF = (ImGui.GetContentRegionAvail().X + spacing.X) / (cellSize.X + spacing.X);
         int columns = Math.Max(1, (int)columnsF);
 
         CourseSurface? surface = null;
@@ -225,7 +266,13 @@ public sealed class MultiplayerPanel : IPanel
             }
 
             if (column > 0) ImGui.SameLine();
-            DrawCourseCell(course);
+            DrawCourseCell(course, mapSize, cellSize);
+
+            if (_scrollToSelection && course.Code == _track)
+            {
+                ImGui.SetScrollHereY(0.5f);
+                _scrollToSelection = false;
+            }
 
             column++;
             if (column >= columns) column = 0;
@@ -234,35 +281,43 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.EndChild();
     }
 
-    void DrawCourseCell(Course course)
+    void DrawCourseCell(Course course, float mapSize, Vector2 cellSize)
     {
         ImGui.PushID(course.Code);
 
         bool selected = _track == course.Code;
-        var borderColor = selected ? ImGui.GetStyle().Colors[(int)ImGuiCol.Text] : new Vector4(0f, 0f, 0f, 0f);
+        bool hovered = _cellHovered.TryGetValue(course.Code, out var wasHovered) && wasHovered;
+
+        // A cell nobody has selected still gets a faint border so the grid
+        // reads as a set of clickable cells rather than bare pictures with
+        // one outlined outlier, and brightens on hover for feedback that the
+        // cell under the mouse is about to be picked.
+        var textColor = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+        var borderColor = selected ? textColor
+            : new Vector4(textColor.X, textColor.Y, textColor.Z, hovered ? 0.6f : 0.25f);
         ImGui.PushStyleColor(ImGuiCol.Border, borderColor);
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(4f, 4f));
 
-        ImGui.BeginChild("cell", CourseCellSize, ImGuiChildFlags.Border);
+        ImGui.BeginChild("cell", cellSize, ImGuiChildFlags.Border);
 
         // Line art on transparency: tinted by the current text colour so it
         // stays visible on a dark theme instead of vanishing.
         uint texture = _courseMaps.TextureFor(course.Code);
         if (texture != 0)
         {
-            var tint = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
-            ImGui.Image((nint)texture, new Vector2(MapSize, MapSize), Vector2.Zero, Vector2.One, tint);
+            ImGui.Image((nint)texture, new Vector2(mapSize, mapSize), Vector2.Zero, Vector2.One, textColor);
         }
         else
         {
-            ImGui.Dummy(new Vector2(MapSize, MapSize));
+            ImGui.Dummy(new Vector2(mapSize, mapSize));
         }
 
-        ImGui.PushTextWrapPos(ImGui.GetCursorPos().X + MapSize);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPos().X + mapSize);
         ImGui.TextUnformatted(course.Name);
         ImGui.PopTextWrapPos();
 
         ImGui.EndChild();
+        _cellHovered[course.Code] = ImGui.IsItemHovered();
         ImGui.PopStyleVar();
         ImGui.PopStyleColor();
 

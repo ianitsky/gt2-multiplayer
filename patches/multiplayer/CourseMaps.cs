@@ -33,5 +33,16 @@ public sealed class CourseMaps : IDisposable
         return texture;
     }
 
+    /// <summary>
+    /// Marks this instance unusable; further <see cref="TextureFor"/> calls
+    /// return 0 instead of touching the archive again. It does not delete the
+    /// uploaded GL textures or release the archive backing them: both are
+    /// process-lifetime statics owned by <c>ModeHook</c> (the archive is only
+    /// borrowed here through a getter, never owned), so there is nothing this
+    /// instance is the last owner of. There is also no public API on
+    /// <c>HostWindow</c> to free a texture by id from outside it - only tests
+    /// construct and dispose a <see cref="CourseMaps"/> today, to prove they
+    /// are done with one before building the next.
+    /// </summary>
     public void Dispose() => _disposed = true;
 }

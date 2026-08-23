@@ -62,12 +62,14 @@ public class TimTests
         var clut = new ushort[16];
         clut[0] = 0;
         clut[1] = Colour(248, 248, 248);
-        var tim = Build(0, clut, words: 1, rows: 1, pixels: [0x10, 0x00]);
+        clut[2] = 0x8000; // opaque black: all 15 colour bits zero, but the semi-transparency bit set
+        var tim = Build(0, clut, words: 1, rows: 1, pixels: [0x10, 0x02]);
 
         Assert.True(Tim.TryDecode(tim, out _, out _, out var rgba));
 
-        Assert.Equal(0, rgba[3]);     // index 0 is see-through
-        Assert.Equal(255, rgba[7]);   // index 1 is not
+        Assert.Equal(0, rgba[3]);      // index 0 is see-through
+        Assert.Equal(255, rgba[7]);    // index 1 is not
+        Assert.Equal(255, rgba[11]);   // index 2 - opaque black - is not either
     }
 
     [Fact]

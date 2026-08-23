@@ -335,12 +335,21 @@ public sealed class VolArchive : IDisposable
         return data is not null && data.Length == length ? data : null;
     }
 
+    /// <summary>
+    /// Reads up to <paramref name="length"/> bytes without ever allocating
+    /// more than the archive actually supplies: sector by sector into a
+    /// buffer that grows to fit what was really read, not a single
+    /// up-front allocation sized off a possibly-absurd declared length. A
+    /// length like a corrupt or hand-built offset table can claim (up to
+    /// 2 GB, per <see cref="int.MaxValue"/> below) must never turn into an
+    /// allocation that size before the first sector is even read.
+    /// </summary>
     static byte[]? ReadRaw(Func<int, byte[]?> readSector, long offset, long length)
     {
         if (length <= 0) return [];
         if (length > int.MaxValue) return null;
 
-        var result = new byte[length];
+        var chunks = new List<byte[]>();
         long done = 0;
         long pos = offset;
         while (done < length)
@@ -348,15 +357,27 @@ public sealed class VolArchive : IDisposable
             int sectorIndex = (int)(pos / Sector);
             int sectorOffset = (int)(pos % Sector);
             var sector = readSector(sectorIndex);
-            if (sector is null) return done == 0 ? null : result[..(int)done];
+            if (sector is null) break;
 
             int available = sector.Length - sectorOffset;
-            if (available <= 0) return done == 0 ? null : result[..(int)done];
+            if (available <= 0) break;
 
             int n = (int)Math.Min(length - done, available);
-            Array.Copy(sector, sectorOffset, result, done, n);
+            var chunk = new byte[n];
+            Array.Copy(sector, sectorOffset, chunk, 0, n);
+            chunks.Add(chunk);
             done += n;
             pos += n;
+        }
+
+        if (done == 0) return null;
+
+        var result = new byte[done];
+        long at = 0;
+        foreach (var chunk in chunks)
+        {
+            Array.Copy(chunk, 0, result, at, chunk.Length);
+            at += chunk.Length;
         }
         return result;
     }

@@ -28,7 +28,14 @@ public static class ModeHook
     // touching the disc at all (e.g. a session with no disc configured still
     // gets a working lobby, just with name-only cells). CourseMaps is built
     // once the lobby is entered so the panel always has one to draw from.
+    //
+    // _archiveAttempted tracks whether the open was tried at all, separately
+    // from whether it succeeded: TryOpen returning null (no disc, no
+    // GT2.VOL) does not stick through a plain "??=" on _archive itself, so
+    // without this flag every one of the grid's 27 cache misses on the first
+    // frame with no readable disc would retry the full .cue parse.
     static VolArchive? _archive;
+    static bool _archiveAttempted;
     static CourseMaps? _courseMaps;
 
     /// <summary>
@@ -77,7 +84,15 @@ public static class ModeHook
 
         _session ??= new Session(PlayerName, () => DateTime.UtcNow);
         _discovery ??= new LanDiscovery(DiscoveryPort, () => DateTime.UtcNow);
-        _courseMaps ??= new CourseMaps(() => _archive ??= VolArchive.TryOpen(RecompOne.Runtime.Runtime.CdPath));
+        _courseMaps ??= new CourseMaps(() =>
+        {
+            if (!_archiveAttempted)
+            {
+                _archiveAttempted = true;
+                _archive = VolArchive.TryOpen(RecompOne.Runtime.Runtime.CdPath);
+            }
+            return _archive;
+        });
         // LanSession itself isn't built here: which factory to call depends
         // on the role (host or client), and that isn't known until the
         // player picks one from the room list. RunLobby builds it once the

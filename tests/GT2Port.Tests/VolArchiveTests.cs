@@ -19,8 +19,13 @@ public class VolArchiveTests
     /// they are what the reader has to get right. Every offset carries a
     /// non-zero remainder, so a reader that does not round down to the sector
     /// reads the wrong bytes. And every declared size is padded out to whole
-    /// sectors, so a file's declared length runs past its content - exactly as
-    /// on the disc, where .carcolor declares 54 bytes more than it is given.
+    /// sectors, so a file's declared length runs past its content by that
+    /// padding - the same shape of overrun the disc has (.carcolor declares
+    /// 54 bytes more than it is given). This fixture's remainder is a
+    /// constant added to every offset, though, so the overrun this produces
+    /// is always the file's own zero padding: each read still stops exactly
+    /// on the next file's sector boundary, and the fixture never reproduces a
+    /// read that overruns into a neighbouring file's data.
     /// </summary>
     static byte[] BuildArchive(IReadOnlyList<Item> entries)
     {
@@ -172,14 +177,46 @@ public class VolArchiveTests
     [Fact]
     public void Refuses_a_path_that_is_not_there()
     {
+        var payload = Encoding.ASCII.GetBytes("readme content");
         var image = BuildArchive([
             new Item("..", null, 0),
-            new Item("readme", [1], Last: true),
+            new Item("readme", payload, Last: true),
         ]);
         using var vol = VolArchive.FromImage(image);
 
-        Assert.True(vol.TryRead("readme", out _));          // the archive works
+        // Compare content, not just the bool: a reader that resolves "readme"
+        // to entirely the wrong sector would still pass a check that only
+        // discards the bytes.
+        Assert.True(vol.TryRead("readme", out var data));
+        Assert.Equal(payload, data[..payload.Length]);
         Assert.False(vol.TryRead("crsmap/nothing", out _));  // and still says no
+    }
+
+    [Fact]
+    public void Refuses_an_absurd_declared_length_without_allocating_it()
+    {
+        // A hand-built image whose one file claims offsets 4096 and
+        // 4096 + int.MaxValue - a declared length of exactly int.MaxValue,
+        // which passes the ">int.MaxValue" guard in ReadRaw and used to be
+        // allocated outright before a single byte was read. The image
+        // itself is a handful of sectors: nowhere near that much data is
+        // actually there to return.
+        var image = new byte[4 * Sector];
+        Encoding.ASCII.GetBytes("GTFS").CopyTo(image, 0);
+        BitConverter.GetBytes(4096u).CopyTo(image, 0x14);
+        BitConverter.GetBytes((uint)(4096L + int.MaxValue)).CopyTo(image, 0x18);
+        BitConverter.GetBytes(0u).CopyTo(image, 0x1C); // terminator: table ends here
+
+        int entryBase = Sector;
+        BitConverter.GetBytes((ushort)1).CopyTo(image, entryBase + 4); // value: file #1
+        image[entryBase + 6] = 0x80;                                   // Last, not a directory
+        Encoding.ASCII.GetBytes("big").CopyTo(image, entryBase + 7);
+
+        using var vol = VolArchive.FromImage(image);
+
+        // Must come back false, not throw and not spend a couple of
+        // gigabytes finding out.
+        Assert.False(vol.TryRead("big", out _));
     }
 
     [Fact]
@@ -195,11 +232,12 @@ public class VolArchiveTests
             new Item("..", null, 0),
             new Item("readme", Encoding.ASCII.GetBytes("hello"), Last: true),
         ]);
-        // The fixture's image runs one whole sector past the last file's
-        // padded data (the buffer that keeps a rounded-down start from ever
-        // reading off the end). Cutting only that trailing sector still
-        // leaves the file's single data sector intact, so the cut has to
-        // remove two sectors to actually take the data away.
+        // BuildArchive rounds its image length up to a whole extra sector
+        // past the last file's data, the way the disc itself pads to a
+        // sector boundary - it is not a buffer a read ever reaches into, with
+        // this fixture's constant remainder. Cutting only that trailing
+        // sector would still leave the file's single data sector intact, so
+        // the cut has to remove two sectors to actually take the data away.
         var cut = image[..(image.Length - 2 * Sector)];
         using var vol = VolArchive.FromImage(cut);
 

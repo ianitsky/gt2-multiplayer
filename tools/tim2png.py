@@ -21,7 +21,7 @@ def decode(data):
     magic, flags = struct.unpack_from('<II', data, 0)
     if magic != MAGIC:
         raise SystemExit(f'not a TIM: magic {magic:#x}')
-    depth = flags & 3
+    depth = flags & 7  # pmode is bits 0-2; only 4bpp (0) and 8bpp (1) are handled
     if depth not in (0, 1):
         raise SystemExit(f'only 4bpp and 8bpp are handled, got depth code {depth}')
 

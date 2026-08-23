@@ -114,8 +114,13 @@ def main():
     courses = ([(c, n, 'Tarmac') for c, n in read(data, tarmac_run)]
                + [(c, n, 'Dirt') for c, n in read(data, dirt_run)])
 
+    def cs_string(s):
+        """Escape a string for a C# string literal, so a course name or code
+        carrying a quote or backslash produces a file that still compiles."""
+        return s.replace('\\', '\\\\').replace('"', '\\"')
+
     rows = '\n'.join(
-        f'        new Course("{code}", "{name}", CourseSurface.{surface}),'
+        f'        new Course("{cs_string(code)}", "{cs_string(name)}", CourseSurface.{surface}),'
         for code, name, surface in courses)
 
     with open(OUTPUT, 'w', encoding='utf-8', newline='\n') as f:
