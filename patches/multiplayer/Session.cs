@@ -79,6 +79,48 @@ public sealed class Session
     public void SetCar(string playerName, string car) =>
         UpdatePlayer(playerName, p => p with { Car = car });
 
+    /// <summary>
+    /// Applies a client's whole intent, received over the wire: update if
+    /// the name is already in the room, add it if there is room, otherwise
+    /// ignore. Host-only, and never touches the host's own row - a client
+    /// cannot ready up, change car, or (via <see cref="ApplyClientLeave"/>)
+    /// remove the host by sending a message that happens to carry its name.
+    /// </summary>
+    public void ApplyClientIntent(string name, string car, bool ready)
+    {
+        if (Phase != SessionPhase.Hosting) return;
+        if (name == _playerName) return;
+        if (Current is not { } room) return;
+
+        if (room.Players.Any(p => p.Name == name))
+        {
+            UpdatePlayer(name, p => p with { Car = car, Ready = ready });
+            OnHeard(name);
+        }
+        else if (room.Players.Count < room.MaxPlayers)
+        {
+            Current = room with { Players = [.. room.Players, new Player(name, car, ready)] };
+            OnHeard(name);
+        }
+        // else: room is full - ignore, no row added and no keep-alive recorded.
+    }
+
+    /// <summary>
+    /// Removes a client that announced it is leaving, and forgets its
+    /// keep-alive record so an immediate rejoin under the same name is not
+    /// instantly re-kicked by a stale timestamp. Host-only, and never
+    /// touches the host's own row.
+    /// </summary>
+    public void ApplyClientLeave(string name)
+    {
+        if (Phase != SessionPhase.Hosting) return;
+        if (name == _playerName) return;
+        if (Current is not { } room) return;
+
+        Current = room with { Players = [.. room.Players.Where(p => p.Name != name)] };
+        _lastHeard.Remove(name);
+    }
+
     /// <summary>The host's view of the room, adopted wholesale.</summary>
     public void OnRemoteState(Room room)
     {

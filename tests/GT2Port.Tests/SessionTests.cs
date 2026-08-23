@@ -451,6 +451,137 @@ public class SessionTests
         Assert.Equal(SessionPhase.Joined, session.Phase);
     }
 
+    // ---- Task 7: host-side application of a client's intent ----
+
+    [Fact]
+    public void ApplyClientIntent_adds_an_unknown_name()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+
+        session.ApplyClientIntent("guest", "Supra", true);
+
+        var guest = session.Current!.Players.SingleOrDefault(p => p.Name == "guest");
+        Assert.NotNull(guest);
+        Assert.Equal("Supra", guest!.Car);
+        Assert.True(guest.Ready);
+    }
+
+    [Fact]
+    public void ApplyClientIntent_updates_a_known_name_rather_than_duplicating_it()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.ApplyClientIntent("guest", "Supra", false);
+
+        session.ApplyClientIntent("guest", "Skyline", true);
+
+        var guests = session.Current!.Players.Where(p => p.Name == "guest").ToList();
+        Assert.Single(guests);
+        Assert.Equal("Skyline", guests[0].Car);
+        Assert.True(guests[0].Ready);
+    }
+
+    [Fact]
+    public void ApplyClientIntent_on_a_full_room_adds_nothing()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        for (int i = 0; i < RoomState.MaxPlayers - 1; i++)
+            session.ApplyClientIntent($"guest{i}", "", false);
+        Assert.Equal(RoomState.MaxPlayers, session.Current!.Players.Count);
+
+        session.ApplyClientIntent("one-too-many", "", false);
+
+        Assert.Equal(RoomState.MaxPlayers, session.Current!.Players.Count);
+        Assert.DoesNotContain(session.Current.Players, p => p.Name == "one-too-many");
+    }
+
+    [Fact]
+    public void ApplyClientIntent_cannot_alter_the_hosts_own_row()
+    {
+        var session = NewSession(); // host is "ian"
+        session.Host("room", "track");
+
+        session.ApplyClientIntent("ian", "Skyline", true);
+
+        var host = Assert.Single(session.Current!.Players);
+        Assert.Equal("ian", host.Name);
+        Assert.Equal("", host.Car);
+        Assert.False(host.Ready);
+    }
+
+    [Fact]
+    public void ApplyClientIntent_keeps_the_player_alive_across_a_tick_past_the_timeout()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.ApplyClientIntent("guest", "", false);
+
+        Advance(2.0);
+        session.ApplyClientIntent("guest", "", false); // refreshes the keep-alive
+        Advance(2.0); // 4s total, past the 3s timeout, but only 2s since the refresh
+        session.Tick();
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+    }
+
+    [Fact]
+    public void ApplyClientLeave_removes_the_player_and_allows_an_immediate_rejoin()
+    {
+        var session = NewSession();
+        session.Host("room", "track");
+        session.ApplyClientIntent("guest", "", false);
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+
+        session.ApplyClientLeave("guest");
+        Assert.DoesNotContain(session.Current!.Players, p => p.Name == "guest");
+
+        // Rejoining immediately must not be instantly re-kicked by a stale
+        // keep-alive timestamp left over from before the leave.
+        session.ApplyClientIntent("guest", "", false);
+        session.Tick();
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+    }
+
+    [Fact]
+    public void ApplyClientLeave_cannot_remove_the_hosts_own_row()
+    {
+        var session = NewSession(); // host is "ian"
+        session.Host("room", "track");
+
+        session.ApplyClientLeave("ian");
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "ian");
+    }
+
+    [Fact]
+    public void ApplyClientIntent_and_ApplyClientLeave_do_nothing_while_joined()
+    {
+        var session = NewSession("guest");
+        session.Join(RoomWith(new Player("ian", "", false)));
+
+        session.ApplyClientIntent("someone", "", true);
+        session.ApplyClientLeave("ian");
+
+        Assert.Equal(2, session.Current!.Players.Count);
+        Assert.Contains(session.Current.Players, p => p.Name == "ian");
+        Assert.DoesNotContain(session.Current.Players, p => p.Name == "someone");
+    }
+
+    [Fact]
+    public void ApplyClientIntent_and_ApplyClientLeave_do_nothing_while_browsing()
+    {
+        var session = NewSession();
+
+        session.ApplyClientIntent("someone", "", true);
+        session.ApplyClientLeave("someone");
+
+        Assert.Equal(SessionPhase.Browsing, session.Phase);
+        Assert.Null(session.Current);
+    }
+
     // ---- Task 5 review round 2: overlay-load gate, panel close, stale state ----
     //
     // ModeHook.RunLobby and MultiplayerPanel.Draw both need a live ImGui
@@ -485,7 +616,8 @@ public class SessionTests
         // ModeHook's own DiscoveryPort - this discovery instance never sends
         // or receives, it only satisfies MultiplayerPanel's constructor.
         using var discovery = new LanDiscovery(34740, () => _now);
-        var panel = new MultiplayerPanel(NewSession(), discovery);
+        using var lanSession = new LanSession(34750, () => _now);
+        var panel = new MultiplayerPanel(NewSession(), discovery, lanSession);
 
         Assert.False(panel.TryConsumeStartRequest());
 
@@ -500,9 +632,10 @@ public class SessionTests
     public void Leaving_the_room_clears_a_pending_start_request()
     {
         using var discovery = new LanDiscovery(34741, () => _now);
+        using var lanSession = new LanSession(34751, () => _now);
         var session = NewSession();
         session.Host("room", "track");
-        var panel = new MultiplayerPanel(session, discovery);
+        var panel = new MultiplayerPanel(session, discovery, lanSession);
 
         typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
             .SetValue(panel, true);

@@ -27,7 +27,7 @@ public sealed class LanDiscovery : IDisposable
     readonly UdpClient _socket;
     readonly int _port;
     readonly Func<DateTime> _clock;
-    readonly Dictionary<Guid, (Room Room, DateTime Heard)> _seen = [];
+    readonly Dictionary<Guid, (Room Room, DateTime Heard, IPAddress HostAddress)> _seen = [];
     bool _disposed;
 
     public LanDiscovery(int port, Func<DateTime> clock)
@@ -60,6 +60,24 @@ public sealed class LanDiscovery : IDisposable
     public SocketException? LastSendFailure { get; private set; }
 
     public IReadOnlyList<Room> Rooms => _disposed ? [] : [.. _seen.Values.Select(v => v.Room)];
+
+    /// <summary>
+    /// The address the most recent announcement for <paramref name="roomId"/>
+    /// arrived from - the only place a client can learn where to send its
+    /// intent. False for a room that has never been seen, one that has
+    /// expired, or after <see cref="Dispose"/>: it is stored alongside the
+    /// room in <c>_seen</c>, so it can never outlive it.
+    /// </summary>
+    public bool TryGetHostAddress(Guid roomId, out IPAddress address)
+    {
+        if (!_disposed && _seen.TryGetValue(roomId, out var entry))
+        {
+            address = entry.HostAddress;
+            return true;
+        }
+        address = IPAddress.None;
+        return false;
+    }
 
     public void Announce(Room room)
     {
@@ -106,7 +124,7 @@ public sealed class LanDiscovery : IDisposable
 
             if (!RoomState.TryDeserialise(data, out var room)) continue;
             if (LocalRoomId is Guid localId && room.Id == localId) continue;
-            _seen[room.Id] = (room, _clock());
+            _seen[room.Id] = (room, _clock(), from!.Address);
         }
     }
 

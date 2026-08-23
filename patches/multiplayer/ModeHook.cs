@@ -16,9 +16,11 @@ public static class ModeHook
     const uint SimulationEntryPoint = 0x80013628u;   // gt2_ovr5_entrypoint0
 
     const int DiscoveryPort = 34718;
+    const int SessionPort = 34719;
 
     static Session? _session;
     static LanDiscovery? _discovery;
+    static LanSession? _lanSession;
     static MultiplayerPanel? _panel;
 
     public static string PlayerName { get; set; } = Environment.UserName;
@@ -29,9 +31,10 @@ public static class ModeHook
 
         _session ??= new Session(PlayerName, () => DateTime.UtcNow);
         _discovery ??= new LanDiscovery(DiscoveryPort, () => DateTime.UtcNow);
+        _lanSession ??= new LanSession(SessionPort, () => DateTime.UtcNow);
         if (_panel == null)
         {
-            _panel = new MultiplayerPanel(_session, _discovery);
+            _panel = new MultiplayerPanel(_session, _discovery, _lanSession);
             PanelManager.Register(_panel);
         }
         _panel.IsOpen = true;
@@ -60,6 +63,16 @@ public static class ModeHook
             RecompOne.Runtime.Runtime.PumpHost();
             _discovery!.Tick();
             _session!.Tick();
+
+            if (_session.Phase == SessionPhase.Hosting)
+            {
+                _lanSession!.HostTick(_session);
+            }
+            else if (_session.Phase == SessionPhase.Joined &&
+                     _discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
+            {
+                _lanSession!.ClientTick(_session, hostAddress);
+            }
 
             if (_session.Phase == SessionPhase.Hosting &&
                 DateTime.UtcNow - lastAnnounce > TimeSpan.FromSeconds(1))

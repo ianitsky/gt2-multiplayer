@@ -14,16 +14,18 @@ public sealed class MultiplayerPanel : IPanel
 {
     readonly Session _session;
     readonly LanDiscovery _discovery;
+    readonly LanSession _lanSession;
 
     string _roomName = "";
     string _track = "Trial Mountain";
     string _car = "";
     bool _creating;
 
-    public MultiplayerPanel(Session session, LanDiscovery discovery)
+    public MultiplayerPanel(Session session, LanDiscovery discovery, LanSession lanSession)
     {
         _session = session;
         _discovery = discovery;
+        _lanSession = lanSession;
     }
 
     public string Name => "Multiplayer";
@@ -55,9 +57,20 @@ public sealed class MultiplayerPanel : IPanel
     /// ModeHook.RunLobby's own exit, so a lobby visit that ends any other way
     /// (closing the panel) leaves the session just as clean as pressing Leave
     /// does.
+    ///
+    /// A joined client announces its departure before Session.Leave clears
+    /// Current - once it is cleared there is no room id left to address the
+    /// message to. The host doesn't need this: it isn't leaving a room it
+    /// owns, it's tearing one down, and there is nobody to notify.
     /// </summary>
     public void LeaveRoom()
     {
+        if (_session.Phase == SessionPhase.Joined && _session.Current is { } room &&
+            _discovery.TryGetHostAddress(room.Id, out var hostAddress))
+        {
+            _lanSession.SendLeave(_session, hostAddress);
+        }
+
         _session.Leave();
         StartRequested = false;
     }
