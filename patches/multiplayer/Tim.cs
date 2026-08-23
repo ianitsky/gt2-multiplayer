@@ -41,16 +41,20 @@ public static class Tim
         ushort[]? palette = null;
         if ((flags & ClutPresentFlag) != 0 && !TryClut(span, ref offset, out palette)) return false;
 
-        int blockStart = offset;
-        if (!TryU32(span, ref offset, out uint length)) return false;
-        if (length < 12 || (long)blockStart + length > span.Length) return false;
+        // The block's declared length is advisory, not a bound. Two of the
+        // game's own course maps - tahiti_t_2p and tahiti_d_new_2p - declare
+        // 9228 bytes for a 24-word, 96-row image that occupies 4620, and both
+        // decode correctly from their geometry. What has to be present is the
+        // pixels the geometry asks for, which is also what still catches a
+        // truncated file.
+        if (!TryU32(span, ref offset, out _)) return false;
         if (!TryU16(span, ref offset, out _)) return false; // vram x
         if (!TryU16(span, ref offset, out _)) return false; // vram y
         if (!TryU16(span, ref offset, out ushort words)) return false;
         if (!TryU16(span, ref offset, out ushort rows)) return false;
 
         long neededPixelBytes = (long)words * 2 * rows;
-        if (neededPixelBytes > length - 12) return false;
+        if (neededPixelBytes > span.Length - offset) return false;
 
         int w = words * (depth == 0 ? 4 : 2);
         if (w <= 0 || rows <= 0) return false; // a picture with no pixels is not a decoded picture

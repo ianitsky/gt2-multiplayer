@@ -6,7 +6,8 @@ namespace GT2Port.Tests;
 public class TimTests
 {
     /// <summary>A TIM with one CLUT and one image block, built field by field.</summary>
-    static byte[] Build(uint depth, ushort[] clut, ushort words, ushort rows, byte[] pixels)
+    static byte[] Build(uint depth, ushort[] clut, ushort words, ushort rows, byte[] pixels,
+                        uint? declaredImageLength = null)
     {
         var ms = new MemoryStream();
         var w = new BinaryWriter(ms);
@@ -16,7 +17,7 @@ public class TimTests
         w.Write((ushort)0); w.Write((ushort)0);
         w.Write((ushort)clut.Length); w.Write((ushort)1);
         foreach (var c in clut) w.Write(c);
-        w.Write((uint)(12 + pixels.Length));
+        w.Write(declaredImageLength ?? (uint)(12 + pixels.Length));
         w.Write((ushort)0); w.Write((ushort)0);
         w.Write(words); w.Write(rows);
         w.Write(pixels);
@@ -96,4 +97,24 @@ public class TimTests
         Assert.True(Tim.TryDecode(tim, out _, out _, out _));       // whole file decodes
         Assert.False(Tim.TryDecode(tim[..(tim.Length - 8)], out _, out _, out _));
     }
+
+    [Fact]
+    public void Decodes_an_image_whose_declared_block_length_overstates_it()
+    {
+        // Two of the game's own course maps do exactly this: tahiti_t_2p and
+        // tahiti_d_new_2p declare 9228 bytes for a 24-word, 96-row image that
+        // occupies 4620. The geometry is what says how many pixels there are.
+        var clut = new ushort[16];
+        clut[1] = Colour(248, 0, 0);
+        var honest = Build(0, clut, words: 1, rows: 1, pixels: [0x11, 0x00]);
+        var inflated = Build(0, clut, words: 1, rows: 1, pixels: [0x11, 0x00],
+                             declaredImageLength: 9228);
+
+        Assert.True(Tim.TryDecode(honest, out int width, out _, out var fromHonest));
+        Assert.True(Tim.TryDecode(inflated, out int inflatedWidth, out _, out var fromInflated));
+
+        Assert.Equal(width, inflatedWidth);
+        Assert.Equal(fromHonest, fromInflated);
+    }
+
 }
