@@ -50,6 +50,17 @@ public class CarInfoTests
         return image.ToArray();
     }
 
+    /// <summary>
+    /// A database holding exactly the given codes, each named "Car " + code.
+    /// Shared seam for sibling test files that just need CarInfo to answer
+    /// "is this a real car" without caring about the wire format.
+    /// </summary>
+    internal static CarInfo BuildDatabaseFor(params string[] codes)
+    {
+        var cars = codes.Select(code => (code, (byte[])[0x00], "Car " + code)).ToArray();
+        return CarInfo.TryParse(BuildDatabase(cars))!;
+    }
+
     [Fact]
     public void Reads_a_name_through_the_packed_code()
     {
