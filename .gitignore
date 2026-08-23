@@ -13,3 +13,4 @@ trace.log
 __pycache__/
 *.pyc
 ovl_patched/
+test_output*.txt
