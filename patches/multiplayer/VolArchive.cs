@@ -10,11 +10,15 @@ namespace GT2Port.Multiplayer;
 /// before: overlays come from GT2.OVL, and the game reaches everything else
 /// through its own GTFS code, so listing or reading an entry ourselves means
 /// parsing the format directly. Ported from <c>tools/gt2vol.py</c>, the
-/// reference reader whose layout notes were verified against the real disc,
-/// with one departure: file offsets here are read as relative to where the
-/// entries table ends rather than as absolute archive positions, because that
-/// is what round-trips through <c>VolArchiveTests.BuildArchive</c>'s fixture
-/// images. See the task report for the byte-level evidence.
+/// reference reader whose layout notes were verified against the real disc.
+/// Offsets in the header are absolute byte positions from byte 0 of the
+/// archive - there is no separate data base to locate. A file with directory
+/// value <c>v</c> starts at the sector containing <c>offsets[v-1]</c>, rounded
+/// DOWN, and its declared length is <c>offsets[v] - offsets[v-1]</c>, which
+/// runs past the file's actual content (the disc pads to a sector boundary);
+/// a raw read's tail is slack, while a gzipped member is unaffected because
+/// <see cref="System.IO.Compression.GZipStream"/> stops at the end of the one
+/// member it decompresses.
 /// </summary>
 public sealed class VolArchive : IDisposable
 {
@@ -31,16 +35,6 @@ public sealed class VolArchive : IDisposable
     readonly Dictionary<int, Entry> _entryCache = [];
     readonly Dictionary<string, List<string>> _dirCache = [];
     bool _disposed;
-
-    // Where file data begins, past the padded entries table. Unlike the
-    // offset table and entries table (whose own extents are self-describing),
-    // nothing in the header gives this away directly, so it is discovered
-    // once by walking every directory reachable from the root and taking the
-    // highest entry index touched - the entries table has no gaps, so that
-    // walk's count times 32 bytes, padded to a sector, is its size. Lazy and
-    // cached: nothing needs it until the first file read.
-    long? _dataBase;
-    bool _dataBaseAttempted;
 
     readonly record struct Entry(string Name, ushort Value, byte Flags);
 
@@ -179,19 +173,20 @@ public sealed class VolArchive : IDisposable
         ushort value = found.Value;
         if (value < 1 || value >= _offsets.Length) return false;
 
-        var dataBase = GetDataBase();
-        if (dataBase is null) return false;
-
-        // Every file starts on its own sector, so the previous file's raw
-        // (unpadded) end is rounded UP past whatever padding follows it to
-        // find where this file actually begins; the byte count read is what
-        // remains between that rounded start and this file's own raw end.
-        long start = CeilToSector(_offsets[value - 1]);
+        // Offsets are absolute byte positions from byte 0 of the archive. A
+        // file starts at the sector CONTAINING offsets[v-1] - rounded down,
+        // never up - and its declared length is the raw distance to the next
+        // offset, which runs past the actual content (the disc pads to a
+        // sector boundary). That overrun is why a raw read has to be trimmed
+        // by the caller; a gzipped member is unaffected since GZipStream
+        // stops at the end of its one member regardless of trailing slack.
+        uint rawStart = _offsets[value - 1];
         uint end = _offsets[value];
-        if (end < start) return false;
-        long length = end - start;
+        if (end < rawStart) return false;
+        long start = FloorToSector(rawStart);
+        long length = end - rawStart;
 
-        var bytes = ReadExact(dataBase.Value + start, length);
+        var bytes = ReadExact(start, length);
         if (bytes is null) return false;
 
         if (path.EndsWith(".gz", StringComparison.Ordinal))
@@ -287,60 +282,7 @@ public sealed class VolArchive : IDisposable
         return false;
     }
 
-    static long CeilToSector(uint value) => ((long)value + Sector - 1) / Sector * Sector;
-
-    /// <summary>
-    /// Where file data begins: past the entries table, whose size is not
-    /// stored anywhere the header exposes. Computed once by walking every
-    /// directory reachable from the root, then cached - null (and re-tried
-    /// never again) if that walk cannot complete.
-    /// </summary>
-    long? GetDataBase()
-    {
-        if (_dataBaseAttempted) return _dataBase;
-        _dataBaseAttempted = true;
-
-        int? count = DiscoverEntryCount();
-        if (count is null) return null;
-
-        _dataBase = _entryBase + ((long)count.Value * EntrySize + Sector - 1) / Sector * Sector;
-        return _dataBase;
-    }
-
-    /// <summary>
-    /// Upper bound on directories visited while discovering the entry count,
-    /// so a directory cycle (or a crafted/corrupt archive) cannot loop forever.
-    /// </summary>
-    const int MaxDiscoveredDirectories = 65536;
-
-    int? DiscoverEntryCount()
-    {
-        var visited = new HashSet<int> { 0 };
-        var queue = new Queue<int>();
-        queue.Enqueue(0);
-        int maxIndex = -1;
-
-        int guard = 0;
-        while (queue.Count > 0)
-        {
-            if (++guard > MaxDiscoveredDirectories) return null;
-
-            int index = queue.Dequeue();
-            for (int i = 0; i < MaxListingEntries; i++)
-            {
-                if (!TryGetEntry(index, out var entry)) return null;
-                if (index > maxIndex) maxIndex = index;
-
-                if ((entry.Flags & DirectoryFlag) != 0 && entry.Name != ".." && visited.Add(entry.Value))
-                    queue.Enqueue(entry.Value);
-
-                if ((entry.Flags & LastFlag) != 0) break;
-                index++;
-            }
-        }
-
-        return maxIndex + 1;
-    }
+    static long FloorToSector(uint value) => (long)value / Sector * Sector;
 
     /// <summary>
     /// Upper bound on entries read for a single directory listing, so a

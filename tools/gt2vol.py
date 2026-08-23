@@ -12,14 +12,20 @@ Layout, worked out from the image rather than from documentation:
     0x08  build timestamp
     0x0C  0
     0x10  count of something the reader does not need
-    0x14  u32[] byte offsets into the VOL, monotonically increasing. The
-          table stores each file's END, so a file whose entry carries value v
-          runs offsets[v - 1] .. offsets[v]. Every file also begins on its own
-          2KB sector, and offsets[v - 1] lands inside that first sector rather
-          than exactly on it - round down. Verified by decompressing every
-          gzip in the archive from the rounded start: 5114 of 5114, sizes
-          from 652 bytes to 336 KB. The run ends where it stops increasing,
-          which is also where it is padded to the entry table.
+    0x14  u32[] byte offsets into the VOL, monotonically increasing, absolute
+          from byte 0. A file whose entry carries value v starts at the sector
+          CONTAINING offsets[v - 1] - round down - and runs
+          offsets[v] - offsets[v - 1] bytes.
+
+          That length overruns the content. .carcolor declares 12342 bytes but
+          the next file begins 12288 bytes later, so its last 54 are slack the
+          next file is written over. Every gzip member still decompresses
+          because a gzip stream ends where it ends and the slack is ignored:
+          5114 of 5114, from 652 bytes to 336 KB. Reading at the unrounded
+          offset instead finds a gzip header in 0 of 400 sampled members.
+
+          The run ends where it stops increasing, which is also where it is
+          padded to the entry table.
     0xB800 (padded) 32-byte entries:
             +0  u32 timestamp
             +4  u16 value

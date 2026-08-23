@@ -13,36 +13,39 @@ public class VolArchiveTests
     sealed record Item(string Name, byte[]? Payload, int FirstChild = -1, bool Last = false);
 
     /// <summary>
-    /// Builds a GTFS image byte for byte the way the disc stores one, so the
-    /// reader is tested against the real layout rather than against a
-    /// convenient one. Files land in the order given, each on its own sector.
+    /// Builds a GTFS image the way the disc stores one.
+    ///
+    /// Two properties of the real archive are reproduced deliberately, because
+    /// they are what the reader has to get right. Every offset carries a
+    /// non-zero remainder, so a reader that does not round down to the sector
+    /// reads the wrong bytes. And every declared size is padded out to whole
+    /// sectors, so a file's declared length runs past its content - exactly as
+    /// on the disc, where .carcolor declares 54 bytes more than it is given.
     /// </summary>
     static byte[] BuildArchive(IReadOnlyList<Item> entries)
     {
         var files = entries.Where(e => e.Payload is not null).ToList();
 
-        // Offset table stores each file's END, and consecutive files sit on
-        // consecutive sector boundaries, so a file's end is its start plus its
-        // length, not its start plus a whole sector.
-        var offsets = new List<uint> { 0 };
-        int sector = 0;
-        var startSector = new Dictionary<string, int>();
-        foreach (var f in files)
-        {
-            startSector[f.Name] = sector;
-            offsets.Add((uint)(sector * Sector + f.Payload!.Length));
-            sector += (f.Payload.Length + Sector - 1) / Sector;
-        }
-
-        int tableBytes = 0x14 + offsets.Count * 4;
+        int tableBytes = 0x14 + (files.Count + 1) * 4 + 4;   // + the terminator
         int entryBase = (tableBytes + Sector - 1) / Sector * Sector;
         int dataBase = entryBase + (entries.Count * 32 + Sector - 1) / Sector * Sector;
 
-        var image = new byte[dataBase + sector * Sector];
+        // The remainder every offset carries. Any value in 1..2047 does; a
+        // round number would let a reader that skips the rounding pass.
+        const int Remainder = 500;
+
+        var offsets = new List<uint> { (uint)(dataBase + Remainder) };
+        foreach (var f in files)
+        {
+            int padded = (f.Payload!.Length + Sector - 1) / Sector * Sector;
+            offsets.Add(offsets[^1] + (uint)padded);
+        }
+
+        var image = new byte[(int)offsets[^1] / Sector * Sector + Sector];
         Encoding.ASCII.GetBytes("GTFS").CopyTo(image, 0);
         for (int i = 0; i < offsets.Count; i++)
             BitConverter.GetBytes(offsets[i]).CopyTo(image, 0x14 + i * 4);
-        // The run must stop increasing so the reader knows where it ends.
+        // The run has to stop increasing so the reader knows where it ends.
         BitConverter.GetBytes(0u).CopyTo(image, 0x14 + offsets.Count * 4);
 
         int fileIndex = 0;
@@ -52,10 +55,11 @@ public class VolArchiveTests
             int at = entryBase + i * 32;
             ushort value = e.Payload is null ? (ushort)e.FirstChild : (ushort)(++fileIndex);
             BitConverter.GetBytes(value).CopyTo(image, at + 4);
-            image[at + 6] = (byte)((e.Payload is null && e.FirstChild >= 0 ? 0x01 : 0x00) | (e.Last ? 0x80 : 0x00));
+            image[at + 6] = (byte)((e.Payload is null && e.FirstChild >= 0 ? 0x01 : 0x00)
+                                   | (e.Last ? 0x80 : 0x00));
             Encoding.ASCII.GetBytes(e.Name).CopyTo(image, at + 7);
             if (e.Payload is not null)
-                e.Payload.CopyTo(image, dataBase + startSector[e.Name] * Sector);
+                e.Payload.CopyTo(image, (int)offsets[fileIndex - 1] / Sector * Sector);
         }
         return image;
     }
@@ -78,8 +82,10 @@ public class VolArchiveTests
         ]);
         using var vol = VolArchive.FromImage(image);
 
+        // Declared length overruns the content by the sector-padding slack, so
+        // a raw read is compared by prefix.
         Assert.True(vol.TryRead("readme", out var data));
-        Assert.Equal(payload, data);
+        Assert.Equal(payload, data[..payload.Length]);
     }
 
     [Fact]
@@ -95,7 +101,7 @@ public class VolArchiveTests
         using var vol = VolArchive.FromImage(image);
 
         Assert.True(vol.TryRead("crsmap/2p_mountain.tim", out var data));
-        Assert.Equal(payload, data);
+        Assert.Equal(payload, data[..payload.Length]);
     }
 
     [Fact]
@@ -124,15 +130,17 @@ public class VolArchiveTests
         using var vol = VolArchive.FromImage(image);
 
         Assert.True(vol.TryRead("big", out var data));
-        Assert.Equal(payload, data);
+        Assert.Equal(payload, data[..payload.Length]);
     }
 
     [Fact]
     public void Reads_the_file_after_one_that_did_not_fill_its_last_sector()
     {
-        // The rule this pins: a file's stored offset is its unpadded end, but
-        // the next file still begins on the next whole sector. Reading the
-        // second file from its unrounded offset returns the tail of the first.
+        // The rule this pins: a file's start is offsets[v-1], rounded DOWN to
+        // the sector that contains it - never up. offsets[v-1] here carries
+        // the fixture's non-zero remainder, so it is not itself sector
+        // aligned; a reader that forgets to round down lands one sector short
+        // of "second" and reads the tail of "first" instead.
         var first = new byte[3000];
         var second = Encoding.ASCII.GetBytes("second file");
         var image = BuildArchive([
@@ -143,7 +151,7 @@ public class VolArchiveTests
         using var vol = VolArchive.FromImage(image);
 
         Assert.True(vol.TryRead("second", out var data));
-        Assert.Equal(second, data);
+        Assert.Equal(second, data[..second.Length]);
     }
 
     [Fact]
@@ -187,7 +195,12 @@ public class VolArchiveTests
             new Item("..", null, 0),
             new Item("readme", Encoding.ASCII.GetBytes("hello"), Last: true),
         ]);
-        var cut = image[..(image.Length - Sector)];
+        // The fixture's image runs one whole sector past the last file's
+        // padded data (the buffer that keeps a rounded-down start from ever
+        // reading off the end). Cutting only that trailing sector still
+        // leaves the file's single data sector intact, so the cut has to
+        // remove two sectors to actually take the data away.
+        var cut = image[..(image.Length - 2 * Sector)];
         using var vol = VolArchive.FromImage(cut);
 
         Assert.False(vol.TryRead("readme", out _));
