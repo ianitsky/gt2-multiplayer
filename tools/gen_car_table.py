@@ -82,13 +82,14 @@ def main():
     lo, hi = code_block(data)
     all_runs = runs_of_pointers(data, lo, hi)
 
-    # Report what was actually found, not the filtered view below - a run
-    # that got split into a lone pointer and the rest would otherwise be
-    # reported as if the lone pointer were never there at all.
     sizes = [len(r) for r in all_runs if len(r) > 1]
     if sizes != EXPECTED_SIZES:
         raise SystemExit(
             f'{OVERLAY}: expected five runs of {EXPECTED_SIZES}, found run sizes '
+            # Report what was actually found, not the filtered view above - a
+            # run that got split into a lone pointer and the rest would
+            # otherwise be reported as if the lone pointer were never there
+            # at all.
             f'{[len(r) for r in all_runs]}. '
             'The overlay changed shape - read it before touching this script.')
 

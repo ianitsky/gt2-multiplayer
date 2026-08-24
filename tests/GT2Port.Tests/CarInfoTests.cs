@@ -133,12 +133,18 @@ public class CarInfoTests
     }
 
     [Fact]
-    public void Refuses_a_database_truncated_before_its_own_record_table_fits()
+    public void Refuses_a_database_truncated_before_its_own_car_count_fits()
     {
+        // Review Minor 7: db[..15] cut into the record table itself and hit
+        // the exact same "record table does not fit" guard that
+        // Refuses_a_count_the_file_cannot_hold already covers. Cut inside
+        // the count field instead, at offset 4-8, so this reaches the
+        // earlier "the count itself was not readable" guard - a different
+        // branch, not a rewrite of the same one.
         var db = BuildDatabase(("h2s2n", [0x94], "Honda S2000"));
 
         Assert.NotNull(CarInfo.TryParse(db));                       // whole file parses
-        Assert.Null(CarInfo.TryParse(db[..15]));                    // cuts into the one record itself
+        Assert.Null(CarInfo.TryParse(db[..6]));                     // cuts into the count field itself
     }
 
     [Fact]
@@ -261,5 +267,67 @@ public class CarInfoTests
         Assert.NotNull(info);
         Assert.False(info!.TryName("gv4rr", out _));
         Assert.Equal("Honda S2000", info.DisplayName("h2s2n"));      // an earlier car is unaffected
+    }
+
+    [Fact]
+    public void The_last_car_resolves_to_its_own_name_past_an_appended_counted_string()
+    {
+        // Review Important 3: neither existing overrun test pins the bug its
+        // fix was written for. Appending only non-NUL bytes leaves exactly
+        // one terminator in the buffer, and stripping every terminator
+        // leaves none - both are red against the unfixed (whole-file
+        // rejecting) code, but neither exercises a *second* well-formed
+        // candidate. The naive alternative fix - scan backward from
+        // data.Length for the last NUL - passes both of those and still
+        // returns the wrong name for car 1110 on the real disc.
+        //
+        // A NUL-terminated counted string appended after a well-formed
+        // database is exactly that second candidate: 0x05 "ABCDE" 0x00 is a
+        // valid length-counted block in its own right, sitting after the
+        // real last block's own terminator. The forward scan this class
+        // actually uses finds the real terminator first and never looks
+        // past it; scanning backward from the end finds the appended one
+        // instead and returns "ABCDE".
+        var db = BuildDatabase(
+            ("h2s2n", [0x94], "Honda S2000"),
+            ("gv4rr", [0x52, 0x62], "Volkswagen Golf Rally Car"));
+
+        byte[] appendedCountedString = [0x05, (byte)'A', (byte)'B', (byte)'C', (byte)'D', (byte)'E', 0x00];
+        var withJunk = new byte[db.Length + appendedCountedString.Length];
+        db.CopyTo(withJunk, 0);
+        appendedCountedString.CopyTo(withJunk, db.Length);
+
+        var info = CarInfo.TryParse(withJunk);
+
+        Assert.NotNull(info);
+        Assert.Equal("Volkswagen Golf Rally Car", info!.DisplayName("gv4rr"));
+    }
+
+    // ---- Review Minor 4: the last record's start needs a floor too ----
+
+    [Fact]
+    public void The_last_record_has_no_name_when_its_start_points_before_the_previous_record()
+    {
+        var db = BuildDatabase(
+            ("a-a7r", [0xC5, 0x25, 0xA8], "Mazda RX-7 A-spec LM"),
+            ("h2s2n", [0x94], "Honda S2000"),
+            ("gv4rr", [0x52, 0x62], "Volkswagen Golf Rally Car"));
+
+        // Rewrite gv4rr's own record (the last one) so its declared start is
+        // a-a7r's start instead of its own. With no floor, the forward scan
+        // from there reaches a-a7r's own terminator first and silently
+        // returns "Mazda RX-7 A-spec LM" as gv4rr's name - another car's
+        // name, not "no name" - exactly the shape Important 3 of the
+        // previous round closed for every record except the last.
+        var image = db.ToArray();
+        ushort a7rStart = BitConverter.ToUInt16(db, 8 + 4);
+        int gv4rrRecordOffset = 8 + 2 * 8; // header(8) + record 0 + record 1
+        BitConverter.GetBytes(a7rStart).CopyTo(image, gv4rrRecordOffset + 4);
+
+        var info = CarInfo.TryParse(image);
+
+        Assert.NotNull(info);                                        // the database as a whole still parses
+        Assert.False(info!.TryName("gv4rr", out _));                 // not "Mazda RX-7 A-spec LM"
+        Assert.Equal("Mazda RX-7 A-spec LM", info.DisplayName("a-a7r")); // the untouched earlier record is unaffected
     }
 }

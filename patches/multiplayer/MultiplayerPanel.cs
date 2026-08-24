@@ -101,7 +101,14 @@ public sealed class MultiplayerPanel : IPanel
 
     public void Draw()
     {
-        ImGui.SetNextWindowSize(new Vector2(640, 420), ImGuiCond.FirstUseEver);
+        // 640x420 at the default 16px font this panel was designed against -
+        // expressed as a multiple of the live font size instead of that pixel
+        // constant, so the window's own size grows with the font the same
+        // way Theme.ScaleAllSizes already grows everything drawn inside it
+        // (review Important 1). FirstUseEver only: a player who has resized
+        // the window keeps whatever size they chose.
+        float fontSize = ImGui.GetFontSize();
+        ImGui.SetNextWindowSize(new Vector2(fontSize * 40f, fontSize * 26f), ImGuiCond.FirstUseEver);
         bool open = IsOpen;
         if (!ImGui.Begin("Multiplayer", ref open))
         {
@@ -157,6 +164,34 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.PopStyleColor();
     }
 
+    /// <summary>
+    /// Cuts <paramref name="text"/> down to whatever fits in
+    /// <paramref name="maxWidth"/>, ellipsis included, measured with the live
+    /// font rather than assumed - the same "measured, not assumed to fit"
+    /// rule <see cref="DrawCarGroupSelector"/> already follows (review Minor
+    /// 5). Returns the text unchanged when it already fits or
+    /// <paramref name="maxWidth"/> is non-positive is handled by simply
+    /// returning the empty ellipsis-only cut, never throwing or going negative.
+    /// </summary>
+    static string Truncate(string text, float maxWidth)
+    {
+        if (maxWidth <= 0f) return "";
+        if (ImGui.CalcTextSize(text).X <= maxWidth) return text;
+
+        const string ellipsis = "...";
+        float ellipsisWidth = ImGui.CalcTextSize(ellipsis).X;
+
+        int lo = 0, hi = text.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi + 1) / 2;
+            if (ImGui.CalcTextSize(text[..mid]).X + ellipsisWidth <= maxWidth) lo = mid;
+            else hi = mid - 1;
+        }
+
+        return lo == 0 ? ellipsis : text[..lo] + ellipsis;
+    }
+
     void DrawRoomList()
     {
         if (ImGui.InputText("Your name", ref _playerName, 32))
@@ -185,12 +220,24 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.PushID(room.Id.ToString());
             var host = room.Players.Count > 0 ? room.Players[0].Name : "";
             var carClass = _carCatalogue.TryFind(room.CarGroup, out var carGroup) ? carGroup.Name : room.CarGroup;
-            ImGui.TextUnformatted($"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}   {carClass}");
-            ImGui.SameLine();
+            var label = $"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}   {carClass}";
 
             bool full = room.Players.Count >= room.MaxPlayers;
+            string buttonText = full ? "Full" : "Join";
+
+            // Neither the group's name (only its id has a length check) nor a
+            // room/host name at 150% display scale has a bound on this row's
+            // width, and the window has no horizontal scrollbar - truncate
+            // to what is actually left after the button so Join/Full always
+            // has its place, the same "control you cannot reach" shape
+            // Important 6 fixed for the group selector above it (Minor 5).
+            float buttonWidth = ImGui.CalcTextSize(buttonText).X + ImGui.GetStyle().FramePadding.X * 2f;
+            float available = ImGui.GetContentRegionAvail().X - buttonWidth - ImGui.GetStyle().ItemSpacing.X;
+            ImGui.TextUnformatted(Truncate(label, available));
+            ImGui.SameLine();
+
             ImGui.BeginDisabled(full);
-            if (ImGui.Button(full ? "Full" : "Join")) _session.Join(room);
+            if (ImGui.Button(buttonText)) _session.Join(room);
             ImGui.EndDisabled();
             ImGui.PopID();
         }
@@ -393,7 +440,18 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.TextUnformatted($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
 
         ImGui.Separator();
-        DrawCarList(room);
+
+        // What Ready/Not ready, the separator below the list, Start race/
+        // Leave, and the "Waiting for..." hint line need, reserved whether
+        // or not the hint actually shows this frame - so the list's height
+        // does not jump between frames depending on _session.CanStart, and
+        // the row below it is never a guess (review Important 1).
+        float frameRow = ImGui.GetFrameHeightWithSpacing();
+        float hintRow = ImGui.GetTextLineHeightWithSpacing();
+        float separatorHeight = ImGui.GetStyle().ItemSpacing.Y * 2f + 1f;
+        float reservedBelowList = frameRow + separatorHeight + frameRow + hintRow;
+
+        DrawCarList(room, reservedBelowList);
 
         if (ImGui.Button("Ready")) _session.SetReady(_session.PlayerName, true);
         ImGui.SameLine();
@@ -411,11 +469,10 @@ public sealed class MultiplayerPanel : IPanel
         if (ImGui.Button("Leave")) LeaveRoom();
     }
 
-    // A sensible cap on how many rows the car list reserves before it starts
-    // scrolling instead of growing further - Class A's eight cars should not
-    // reserve the same dead space Rally's 24 need to scroll through (review
-    // Important 7).
-    const int MaxVisibleCarRows = 8;
+    // However little room is left, the list keeps at least this many rows
+    // rather than collapsing to a sliver - the floor half of review
+    // Important 1.
+    const int MinVisibleCarRows = 3;
 
     /// <summary>
     /// The car picker for the room's own group. The group comes from the
@@ -425,7 +482,19 @@ public sealed class MultiplayerPanel : IPanel
     /// the raw id and offers no cars rather than throwing or guessing at a
     /// substitute group.
     /// </summary>
-    void DrawCarList(Room room)
+    /// <param name="reservedBelow">
+    /// Live-measured height the rows drawn after this list need - Ready/Not
+    /// ready, Start race/Leave, and the hint line between them. The list
+    /// takes what is left after that, not a row count sized to any one
+    /// group: a fixed <c>Math.Min(group.Cars.Count, 8)</c> cap was a no-op
+    /// for every shipped group (Special/A/B/C/Rally all hold eight cars or
+    /// more), so it reserved the same height whether or not it "capped"
+    /// anything, and the buttons below it fell off the window at 150%
+    /// display scale with six players in the room (review Important 1).
+    /// Floored at <see cref="MinVisibleCarRows"/> so it never collapses to
+    /// nothing; the list scrolls past that floor instead.
+    /// </param>
+    void DrawCarList(Room room, float reservedBelow)
     {
         ImGui.TextUnformatted("Car");
 
@@ -437,15 +506,9 @@ public sealed class MultiplayerPanel : IPanel
 
         string currentCar = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Car ?? "";
 
-        // Sized to the group, up to MaxVisibleCarRows - sized from the live
-        // line height and frame padding rather than a pixel constant, the
-        // same lesson the course grid had to relearn at 150% display scale.
-        // A hard eight rows regardless of group size left no room below for
-        // Ready / Not ready / Start race / Leave once the window's content
-        // scaled up but its own size did not.
-        int rows = Math.Min(group.Cars.Count, MaxVisibleCarRows);
         float rowHeight = ImGui.GetTextLineHeightWithSpacing();
-        float listHeight = rowHeight * rows + ImGui.GetStyle().FramePadding.Y * 2f;
+        float floorHeight = rowHeight * MinVisibleCarRows + ImGui.GetStyle().FramePadding.Y * 2f;
+        float listHeight = Math.Max(ImGui.GetContentRegionAvail().Y - reservedBelow, floorHeight);
         ImGui.BeginChild("CarList", new Vector2(0f, listHeight), ImGuiChildFlags.Border);
         foreach (var code in group.Cars)
         {

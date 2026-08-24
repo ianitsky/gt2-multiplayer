@@ -248,22 +248,29 @@ public class CarCatalogueTests
     }
 
     [Fact]
-    public void Load_does_not_throw_when_the_path_is_a_directory()
+    public void Load_falls_back_to_the_built_in_groups_when_the_file_cannot_be_read()
     {
-        var catalogue = CarCatalogue.Load(Database(), Path.GetTempPath());
+        // Review Minor 6: File.Exists on a directory returns false, so a
+        // directory path takes the same "does not exist" branch the test
+        // above already covers and never reaches Load's try/catch at all.
+        // Hold an exclusive lock instead, so File.Exists is true but
+        // File.ReadAllText throws - the one branch neither existing test
+        // reaches.
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, """[{ "id": "kei", "name": "Kei cars", "cars": ["x2a8n"] }]""");
 
-        Assert.Equal(
-            CarTable.Arcade.Select(g => g.Id),
-            catalogue.Groups.Select(g => g.Id));
-    }
+            using var _ = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            var catalogue = CarCatalogue.Load(Database(), path);
 
-    [Fact]
-    public void Load_with_no_config_path_is_the_built_in_groups()
-    {
-        var catalogue = CarCatalogue.Load(Database(), null);
-
-        Assert.Equal(
-            CarTable.Arcade.Select(g => g.Id),
-            catalogue.Groups.Select(g => g.Id));
+            Assert.Equal(
+                CarTable.Arcade.Select(g => g.Id),
+                catalogue.Groups.Select(g => g.Id));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 }

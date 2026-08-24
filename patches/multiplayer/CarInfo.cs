@@ -75,7 +75,9 @@ public sealed class CarInfo
         for (int i = 0; i < n; i++)
         {
             int start = starts[i];
-            if (start < 0 || start > data.Length) continue; // this car's own offset is unusable - no name, nothing else affected
+            // start comes from TryU16, an unsigned read - it can never be
+            // negative, only out of range high (review Minor 8).
+            if (start > data.Length) continue; // this car's own offset is unusable - no name, nothing else affected
 
             if (i + 1 < n)
             {
@@ -90,7 +92,19 @@ public sealed class CarInfo
                 if (codes[i] is { } code && TryExtractName(data, start, end, out string name))
                     names[code] = name;
             }
-            else if (codes[i] is { } lastCode && TryFindLastBlockEnd(data, start, out string lastName))
+            // The last record has no next record to bound its own end, but
+            // its start still needs a floor: with none, a corrupted or
+            // forged offset here can land inside (or before) an earlier
+            // car's own block and TryFindLastBlockEnd will happily walk
+            // forward to that car's own terminator, silently attributing
+            // its name to this one instead - promoted from "this car has no
+            // name" (what a bad offset gets everywhere else, since Important
+            // 3 of the previous round) to "this car has someone else's
+            // name" (review Minor 4). Require it to land at or past the
+            // previous record's own start, same as any in-order block would.
+            else if (codes[i] is { } lastCode
+                && (i == 0 || start > starts[i - 1])
+                && TryFindLastBlockEnd(data, start, out string lastName))
             {
                 names[lastCode] = lastName;
             }
@@ -185,12 +199,22 @@ public sealed class CarInfo
     ///
     /// Tries each candidate end past <paramref name="start"/> in increasing
     /// order and takes the first that both lands on a trailing NUL and
-    /// yields a name via <see cref="TryExtractName"/>. That first candidate
-    /// is the block's own boundary: a well-formed length-counted name cannot
-    /// contain a false terminator of its own, so nothing before the real one
-    /// can satisfy both conditions. False if no such boundary exists at all
-    /// before the end of the file - this car simply has no name, exactly
-    /// like any other unresolvable block.
+    /// yields a name via <see cref="TryExtractName"/>. This is a heuristic,
+    /// not a guarantee: nothing stops a name's own bytes from containing a
+    /// NUL followed by something that also happens to parse as a valid
+    /// length-counted string, in which case this returns that false,
+    /// earlier block instead of the real one. Measured against the real
+    /// <c>.carinfoe</c>'s 1109 bounded blocks (the ones with a following
+    /// record to bound them, so the correct extraction is independently
+    /// known): 571 contain a NUL before their own terminator, and for 5 of
+    /// the full 1109 - a rate of about five in a thousand - running this
+    /// same scan over their bytes would return the wrong string. This scan
+    /// is only ever actually applied to the one record with no next record
+    /// to bound it; on this disc that record (car 1110) is not one of the
+    /// five, so today's output happens to be correct - by measurement, not
+    /// by an invariant this scan can rely on. False if no candidate boundary
+    /// exists at all before the end of the file - this car simply has no
+    /// name, exactly like any other unresolvable block.
     /// </summary>
     static bool TryFindLastBlockEnd(byte[] data, int start, out string name)
     {
