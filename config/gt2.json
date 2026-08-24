@@ -4,7 +4,7 @@
     "name": "GranTurismo2",
     "output": "../generated"
   },
-  "cue": "../disc/Gran Turismo 2 (USA) (Simulation Mode) (v1.2).cue",
+  "cue": "../disc/Gran Turismo 2 Combined Disc (USA).cue",
   "funcMap": "funcmaps/main.json",
   "linearSweep": false,
   "safepoints": true,
@@ -14,7 +14,7 @@
       "name": "gt2_01",
       "file": "GT2.OVL",
       "offset": 48,
-      "size": 144709,
+      "size": 144637,
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": true,
@@ -2361,8 +2361,8 @@
     {
       "name": "gt2_02",
       "file": "GT2.OVL",
-      "offset": 144760,
-      "size": 44333,
+      "offset": 144685,
+      "size": 45030,
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": true,
@@ -2381,8 +2381,8 @@
     {
       "name": "gt2_03",
       "file": "GT2.OVL",
-      "offset": 189096,
-      "size": 53389,
+      "offset": 189715,
+      "size": 53467,
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": true,
@@ -2391,7 +2391,7 @@
     {
       "name": "gt2_04",
       "file": "GT2.OVL",
-      "offset": 242488,
+      "offset": 243182,
       "size": 5195,
       "gzip": true,
       "base": "0x80010000",
@@ -2401,8 +2401,8 @@
     {
       "name": "gt2_05",
       "file": "GT2.OVL",
-      "offset": 247684,
-      "size": 38461,
+      "offset": 248377,
+      "size": 38518,
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": false,
@@ -2412,7 +2412,7 @@
     {
       "name": "gt2_06",
       "file": "GT2.OVL",
-      "offset": 286148,
+      "offset": 286895,
       "size": 3602,
       "gzip": true,
       "base": "0x80010000",
@@ -2430,6 +2430,11 @@
     {
       "function": "gt2_main_task201_reload_regs",
       "target": "GT2Port.SetJmp.LongJmp",
+      "mode": "replace"
+    },
+    {
+      "function": "gt2_ovr6_task10",
+      "target": "GT2Port.SkipIntro.PlayNothing",
       "mode": "replace"
     }
   ],
