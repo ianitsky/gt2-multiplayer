@@ -952,6 +952,10 @@
           "name": "entry_80016250"
         },
         {
+          "address": "0x80016258",
+          "name": "ptr_80016258"
+        },
+        {
           "address": "0x80016270",
           "name": "entry_80016270"
         },
@@ -1366,6 +1370,30 @@
         {
           "address": "0x80026F10",
           "name": "entry_80026F10"
+        },
+        {
+          "address": "0x80026F40",
+          "name": "entry_80026F40"
+        },
+        {
+          "address": "0x80026F70",
+          "name": "entry_80026F70"
+        },
+        {
+          "address": "0x80026F84",
+          "name": "entry_80026F84"
+        },
+        {
+          "address": "0x80026FB8",
+          "name": "entry_80026FB8"
+        },
+        {
+          "address": "0x80026FD8",
+          "name": "entry_80026FD8"
+        },
+        {
+          "address": "0x80026FEC",
+          "name": "entry_80026FEC"
         },
         {
           "address": "0x80027008",
@@ -2350,10 +2378,6 @@
         {
           "address": "0x80046824",
           "name": "entry_80046824"
-        },
-        {
-          "address": "0x80016258",
-          "name": "ptr_80016258"
         }
       ],
       "image": "ovl_patched/gt2_01.bin"
@@ -2658,6 +2682,30 @@
   ],
   "debug": false,
   "functions": [
+    {
+      "address": "0x8001173C",
+      "name": "entry_8001173C"
+    },
+    {
+      "address": "0x80011768",
+      "name": "entry_80011768"
+    },
+    {
+      "address": "0x80011780",
+      "name": "entry_80011780"
+    },
+    {
+      "address": "0x80011784",
+      "name": "entry_80011784"
+    },
+    {
+      "address": "0x80011794",
+      "name": "entry_80011794"
+    },
+    {
+      "address": "0x800117D0",
+      "name": "entry_800117D0"
+    },
     {
       "address": "0x8005D810",
       "name": "entry_8005D810"
