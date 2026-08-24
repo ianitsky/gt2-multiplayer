@@ -78,7 +78,7 @@ AppDomain.CurrentDomain.FirstChanceException += (_, e) =>
 {
     // Not a crash on its own - the setjmp path throws by design - but the last
     // one before a silent exit is usually the one that mattered.
-    if (e.Exception is GT2Port.LongJmpSignal) return;
+    if (e.Exception is RecompOne.Runtime.Dispatch.LongJmpSignal) return;
     try { File.AppendAllText("crash.log", $"{DateTime.Now:u} first-chance {e.Exception.GetType().Name}: {e.Exception.Message}{Environment.NewLine}"); } catch { }
 };
 // longjmp discards the frames between it and its setjmp, so it unwinds to
@@ -103,7 +103,7 @@ while (true)
         resumeAt = c.RA;
         continue;
     }
-    catch (GT2Port.LongJmpSignal)
+    catch (RecompOne.Runtime.Dispatch.LongJmpSignal)
     {
         resumeAt = c.RA;
     }

@@ -18,11 +18,6 @@ namespace GT2Port;
 /// models it directly. Program.cs catches this at the root and resumes at the
 /// restored RA.
 /// </summary>
-public sealed class LongJmpSignal : Exception
-{
-    public LongJmpSignal() : base("longjmp") { }
-}
-
 /// <summary>setjmp/longjmp, which GT2 uses to restart its main loop after loading an overlay.</summary>
 public static class SetJmp
 {
@@ -56,6 +51,6 @@ public static class SetJmp
         c.GP = m.ReadU32(env + 0x2Cu);
 
         c.V0 = value;
-        throw new LongJmpSignal();
+        throw new RecompOne.Runtime.Dispatch.LongJmpSignal(c.RA);
     }
 }

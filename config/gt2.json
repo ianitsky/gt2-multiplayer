@@ -2368,14 +2368,6 @@
       "linearSweep": true,
       "functions": [
         {
-          "address": "0x80015B6C",
-          "name": "entry_80015B6C"
-        },
-        {
-          "address": "0x80015BBC",
-          "name": "entry_80015BBC"
-        },
-        {
           "address": "0x80018574",
           "name": "ptr_80018574"
         },
@@ -2403,26 +2395,6 @@
         {
           "address": "0x80011514",
           "name": "entry_80011514"
-        },
-        {
-          "address": "0x800141B8",
-          "name": "entry_800141B8"
-        },
-        {
-          "address": "0x8001424C",
-          "name": "entry_8001424C"
-        },
-        {
-          "address": "0x80015AB4",
-          "name": "entry_80015AB4"
-        },
-        {
-          "address": "0x80015B6C",
-          "name": "entry_80015B6C"
-        },
-        {
-          "address": "0x80015BBC",
-          "name": "entry_80015BBC"
         }
       ]
     },
@@ -2483,22 +2455,6 @@
       "name": "setjmp_resume_8005DA04"
     },
     {
-      "address": "0x80080A24",
-      "name": "entry_80080A24"
-    },
-    {
-      "address": "0x80080AC4",
-      "name": "entry_80080AC4"
-    },
-    {
-      "address": "0x80083438",
-      "name": "entry_80083438"
-    },
-    {
-      "address": "0x80083458",
-      "name": "entry_80083458"
-    },
-    {
       "address": "0x80083B54",
       "name": "setjmp_resume_80083B54"
     },
@@ -2515,168 +2471,8 @@
       "name": "setjmp_resume_80083CCC"
     },
     {
-      "address": "0x800843D4",
-      "name": "entry_800843D4"
-    },
-    {
-      "address": "0x80084424",
-      "name": "entry_80084424"
-    },
-    {
-      "address": "0x800844CC",
-      "name": "entry_800844CC"
-    },
-    {
-      "address": "0x80084560",
-      "name": "entry_80084560"
-    },
-    {
-      "address": "0x80084600",
-      "name": "entry_80084600"
-    },
-    {
-      "address": "0x800846B8",
-      "name": "entry_800846B8"
-    },
-    {
-      "address": "0x80084744",
-      "name": "entry_80084744"
-    },
-    {
-      "address": "0x80084864",
-      "name": "entry_80084864"
-    },
-    {
-      "address": "0x800848D0",
-      "name": "entry_800848D0"
-    },
-    {
-      "address": "0x8008493C",
-      "name": "entry_8008493C"
-    },
-    {
-      "address": "0x800849A8",
-      "name": "entry_800849A8"
-    },
-    {
-      "address": "0x80084A14",
-      "name": "entry_80084A14"
-    },
-    {
-      "address": "0x80084A8C",
-      "name": "entry_80084A8C"
-    },
-    {
-      "address": "0x80084B18",
-      "name": "entry_80084B18"
-    },
-    {
-      "address": "0x80084B98",
-      "name": "entry_80084B98"
-    },
-    {
-      "address": "0x80084C0C",
-      "name": "entry_80084C0C"
-    },
-    {
-      "address": "0x80084C70",
-      "name": "entry_80084C70"
-    },
-    {
-      "address": "0x80084CDC",
-      "name": "entry_80084CDC"
-    },
-    {
-      "address": "0x80084D54",
-      "name": "entry_80084D54"
-    },
-    {
-      "address": "0x80084DCC",
-      "name": "entry_80084DCC"
-    },
-    {
-      "address": "0x80084E74",
-      "name": "entry_80084E74"
-    },
-    {
-      "address": "0x80084F24",
-      "name": "entry_80084F24"
-    },
-    {
-      "address": "0x80084F54",
-      "name": "entry_80084F54"
-    },
-    {
-      "address": "0x80085018",
-      "name": "entry_80085018"
-    },
-    {
-      "address": "0x800850C8",
-      "name": "entry_800850C8"
-    },
-    {
-      "address": "0x80085190",
-      "name": "entry_80085190"
-    },
-    {
-      "address": "0x80085244",
-      "name": "entry_80085244"
-    },
-    {
-      "address": "0x800852F8",
-      "name": "entry_800852F8"
-    },
-    {
-      "address": "0x80085364",
-      "name": "entry_80085364"
-    },
-    {
-      "address": "0x80085394",
-      "name": "entry_80085394"
-    },
-    {
-      "address": "0x8008544C",
-      "name": "entry_8008544C"
-    },
-    {
-      "address": "0x800854B8",
-      "name": "entry_800854B8"
-    },
-    {
-      "address": "0x8008552C",
-      "name": "entry_8008552C"
-    },
-    {
-      "address": "0x800855A0",
-      "name": "entry_800855A0"
-    },
-    {
-      "address": "0x800855FC",
-      "name": "entry_800855FC"
-    },
-    {
-      "address": "0x8008574C",
-      "name": "entry_8008574C"
-    },
-    {
-      "address": "0x80085794",
-      "name": "entry_80085794"
-    },
-    {
-      "address": "0x800857C4",
-      "name": "entry_800857C4"
-    },
-    {
-      "address": "0x80085800",
-      "name": "entry_80085800"
-    },
-    {
       "address": "0x8008BE74",
       "name": "setjmp_resume_8008BE74"
-    },
-    {
-      "address": "0x80084714",
-      "name": "entry_80084714"
     }
   ]
 }
