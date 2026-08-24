@@ -133,12 +133,12 @@ public class CarInfoTests
     }
 
     [Fact]
-    public void Refuses_a_truncated_database_without_throwing()
+    public void Refuses_a_database_truncated_before_its_own_record_table_fits()
     {
         var db = BuildDatabase(("h2s2n", [0x94], "Honda S2000"));
 
         Assert.NotNull(CarInfo.TryParse(db));                       // whole file parses
-        Assert.Null(CarInfo.TryParse(db[..(db.Length - 6)]));
+        Assert.Null(CarInfo.TryParse(db[..15]));                    // cuts into the one record itself
     }
 
     [Fact]
@@ -148,5 +148,118 @@ public class CarInfoTests
         image.AddRange(BitConverter.GetBytes(100000u));
 
         Assert.Null(CarInfo.TryParse(image.ToArray()));
+    }
+
+    // ---- Review Important 3: one bad field block must not cost every name ----
+
+    [Fact]
+    public void A_field_block_cut_off_before_its_own_trailing_NUL_loses_only_that_car()
+    {
+        // The record table is fully intact - only the field block itself is
+        // truncated, mid-name, with no trailing NUL anywhere left to find.
+        var db = BuildDatabase(("h2s2n", [0x94], "Honda S2000"));
+
+        var info = CarInfo.TryParse(db[..(db.Length - 6)]);
+
+        Assert.NotNull(info);                                        // no longer a whole-file rejection
+        Assert.False(info!.TryName("h2s2n", out _));                 // this car alone has no name
+    }
+
+    [Fact]
+    public void Two_records_pointing_at_the_same_block_lose_only_that_block_not_the_database()
+    {
+        var db = BuildDatabase(
+            ("a-a7r", [0xC5, 0x25, 0xA8], "Mazda RX-7 A-spec LM"),
+            ("h2s2n", [0x94], "Honda S2000"),
+            ("gv4rr", [0x52, 0x62], "Volkswagen Golf Rally Car"));
+
+        // Corrupt h2s2n's own record so it points at a-a7r's start instead of
+        // its own. a-a7r's own block now runs from its start to its own
+        // start - the "end == start" case - so a-a7r alone loses its name;
+        // gv4rr never shared a block with anyone and is untouched.
+        var image = db.ToArray();
+        int h2s2nRecordOffset = 8 + 1 * 8; // header(8) + record 0
+        ushort a7rStart = BitConverter.ToUInt16(db, 8 + 4);
+        BitConverter.GetBytes(a7rStart).CopyTo(image, h2s2nRecordOffset + 4);
+
+        var info = CarInfo.TryParse(image);
+
+        Assert.NotNull(info);                                        // the database as a whole still parses
+        Assert.False(info!.TryName("a-a7r", out _));                 // the corrupted record's own name is unreachable
+        Assert.Equal("Volkswagen Golf Rally Car", info.DisplayName("gv4rr"));
+    }
+
+    [Fact]
+    public void Records_out_of_ascending_order_lose_only_that_car()
+    {
+        var db = BuildDatabase(
+            ("a-a7r", [0xC5, 0x25, 0xA8], "Mazda RX-7 A-spec LM"),
+            ("h2s2n", [0x94], "Honda S2000"),
+            ("gv4rr", [0x52, 0x62], "Volkswagen Golf Rally Car"));
+
+        // Swap h2s2n's and a-a7r's declared offsets, so record 0 (a-a7r) now
+        // points past record 1's (h2s2n) start - descending, not ascending.
+        var image = db.ToArray();
+        ushort a7rStart = BitConverter.ToUInt16(db, 8 + 4);
+        ushort h2s2nStart = BitConverter.ToUInt16(db, 16 + 4);
+        BitConverter.GetBytes(h2s2nStart).CopyTo(image, 8 + 4);
+        BitConverter.GetBytes(a7rStart).CopyTo(image, 16 + 4);
+
+        var info = CarInfo.TryParse(image);
+
+        Assert.NotNull(info);
+        Assert.False(info!.TryName("a-a7r", out _));                // the corrupted record alone loses its name
+        Assert.Equal("Volkswagen Golf Rally Car", info.DisplayName("gv4rr"));
+    }
+
+    // ---- Review Important 4: the last block must not read past its own content ----
+
+    [Fact]
+    public void The_last_car_resolves_even_when_the_buffer_runs_on_past_it()
+    {
+        // VolArchive's raw reads overrun the real content (its own doc says
+        // so) - simulate that overrun with non-NUL bytes appended after a
+        // well-formed database, standing in for whatever the disc's next
+        // member happened to leave behind.
+        var db = BuildDatabase(
+            ("h2s2n", [0x94], "Honda S2000"),
+            ("gv4rr", [0x52, 0x62], "Volkswagen Golf Rally Car"));
+
+        var overrun = new byte[db.Length + 40];
+        db.CopyTo(overrun, 0);
+        var rng = new Random(1);
+        for (int i = db.Length; i < overrun.Length; i++)
+        {
+            byte b;
+            do { b = (byte)rng.Next(1, 256); } while (b == 0); // never a NUL - that's the point
+            overrun[i] = b;
+        }
+
+        var info = CarInfo.TryParse(overrun);
+
+        Assert.NotNull(info);
+        Assert.Equal("Volkswagen Golf Rally Car", info!.DisplayName("gv4rr"));
+    }
+
+    [Fact]
+    public void A_last_block_with_no_reachable_terminator_has_no_name_but_does_not_fail_the_file()
+    {
+        var db = BuildDatabase(
+            ("h2s2n", [0x94], "Honda S2000"),
+            ("gv4rr", [0x52, 0x62], "Volkswagen Golf Rally Car"));
+
+        // No trailing NUL anywhere left in the buffer at all.
+        var overrun = new byte[db.Length + 10];
+        db.CopyTo(overrun, 0);
+        for (int i = db.Length; i < overrun.Length; i++) overrun[i] = 0xFF;
+        // Also blank out gv4rr's own trailing NUL so nothing before the
+        // appended garbage can terminate it either.
+        overrun[db.Length - 1] = 0xFF;
+
+        var info = CarInfo.TryParse(overrun);
+
+        Assert.NotNull(info);
+        Assert.False(info!.TryName("gv4rr", out _));
+        Assert.Equal("Honda S2000", info.DisplayName("h2s2n"));      // an earlier car is unaffected
     }
 }

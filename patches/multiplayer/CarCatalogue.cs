@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -63,15 +64,21 @@ public sealed class CarCatalogue
     internal static CarCatalogue FromJson(CarInfo? info, string? json)
     {
         var groups = CarTable.Arcade.ToList();
-        var indexById = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // Case-insensitive so a config author writing "C" replaces the
+        // built-in "c" instead of sitting beside it as a sixth group - but
+        // the id actually stored (and later put on the wire) is always
+        // whichever one was already on file, kept below, so a replacement
+        // never changes what a room announces.
+        var indexById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < groups.Count; i++) indexById[groups[i].Id] = i;
 
         if (!string.IsNullOrWhiteSpace(json))
         {
-            List<GroupDto>? custom;
+            List<GroupDto?>? custom;
             try
             {
-                custom = JsonSerializer.Deserialize<List<GroupDto>>(json, JsonOptions);
+                custom = JsonSerializer.Deserialize<List<GroupDto?>>(json, JsonOptions);
             }
             catch (Exception e)
             {
@@ -83,10 +90,17 @@ public sealed class CarCatalogue
             {
                 foreach (var dto in custom)
                 {
+                    // A bare `null` where an object used to be is an ordinary
+                    // slip mid-edit, same as any other malformed entry - skip
+                    // it, don't let it take the whole file down with it.
+                    if (dto is null) continue;
                     if (!TryBuildGroup(info, dto, out var group)) continue;
 
                     if (indexById.TryGetValue(group.Id, out int at))
+                    {
+                        group = group with { Id = groups[at].Id };
                         groups[at] = group;
+                    }
                     else
                     {
                         indexById[group.Id] = groups.Count;
@@ -101,9 +115,12 @@ public sealed class CarCatalogue
 
     /// <summary>
     /// Builds one group from its DTO: drops cars the database does not know
-    /// about (unless there is no database to check against), then drops the
-    /// whole group if that leaves it with no cars, or if its id or name is
-    /// blank.
+    /// about (unless there is no database to check against) or that are
+    /// blank or missing outright, then drops the whole group if that leaves
+    /// it with no cars, if its id or name is blank, or if its id could never
+    /// survive <see cref="RoomState"/>'s wire limit - the same treatment a
+    /// blank id already gets, since a group every client silently truncates
+    /// to something else is no more usable than one with no id at all.
     /// </summary>
     static bool TryBuildGroup(CarInfo? info, GroupDto dto, out CarGroup group)
     {
@@ -113,10 +130,21 @@ public sealed class CarCatalogue
         string name = (dto.Name ?? "").Trim();
         if (id.Length == 0 || name.Length == 0) return false;
 
+        if (Encoding.UTF8.GetByteCount(id) > RoomState.MaxStringBytes)
+        {
+            Console.WriteLine($"[CarCatalogue] dropping group '{id}' - its id is longer than {RoomState.MaxStringBytes} bytes and would be truncated on the wire");
+            return false;
+        }
+
         var source = dto.Cars ?? [];
         var cars = new List<string>(source.Count);
         foreach (var code in source)
         {
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                Console.WriteLine($"[CarCatalogue] dropping a blank car code from group '{id}'");
+                continue;
+            }
             if (info is not null && !info.TryName(code, out _))
             {
                 Console.WriteLine($"[CarCatalogue] dropping unknown car '{code}' from group '{id}'");

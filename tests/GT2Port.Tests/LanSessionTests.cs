@@ -395,6 +395,7 @@ public class LanSessionTests
 
         var clientSession = new Session("guest", () => _now);
         Assert.True(clientSession.Join(hostSession.Current!));
+        Assert.Equal("special", clientSession.Current!.CarGroup);     // carried by Join itself
         using var client = LanSession.ForClient(hostPort, () => _now);
 
         // Finding 1: a value set on the host's own row, after the client
@@ -427,6 +428,11 @@ public class LanSessionTests
         Assert.Contains(hostSession.Current.Players, p => p.Name == "guest");
         Assert.Contains(clientSession.Current!.Players, p => p.Name == "ian");
         Assert.Contains(clientSession.Current.Players, p => p.Name == "guest");
+
+        // Carried by the actual wire round trip now, not merely by the local
+        // Join above: every HostTick reply the client has ingested by this
+        // point still says "special".
+        Assert.Equal("special", clientSession.Current.CarGroup);
 
         // CanStart needs every player ready, including the host. The host
         // readies itself locally - it owns its own row and there's no wire

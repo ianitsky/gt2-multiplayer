@@ -111,7 +111,7 @@ public sealed class MultiplayerPanel : IPanel
         }
 
         if (_session.StatusMessage is { } message)
-            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f), message);
+            DrawWarning(message);
 
         switch (_session.Phase)
         {
@@ -139,6 +139,24 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.End();
     }
 
+    /// <summary>
+    /// A warning-coloured line of text that may carry text off the wire or
+    /// off the disc - a room name, a player name, a group id. Neither
+    /// <c>ImGui.Text</c> nor <c>ImGui.TextColored</c> is safe for that: both
+    /// bind to a printf-style native function, so a stray '%' in untrusted
+    /// text would be read as a conversion specifier. Route through
+    /// <c>TextUnformatted</c> instead, which takes the string as data, and
+    /// apply the colour with a style push around it - the same thing the
+    /// runtime's own (internal, so unreachable from here) ImGuiEx helper
+    /// does for exactly this reason.
+    /// </summary>
+    static void DrawWarning(string text)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.6f, 0.2f, 1f));
+        ImGui.TextUnformatted(text);
+        ImGui.PopStyleColor();
+    }
+
     void DrawRoomList()
     {
         if (ImGui.InputText("Your name", ref _playerName, 32))
@@ -151,11 +169,9 @@ public sealed class MultiplayerPanel : IPanel
         // both share the same likely cause, a firewall blocking this app,
         // since binding either socket is what would have prompted for it.
         if (_discovery.LastSendFailure is { } discoveryFailure)
-            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
-                $"Broadcasting failed: {discoveryFailure.Message} - a firewall may be blocking this app.");
+            DrawWarning($"Broadcasting failed: {discoveryFailure.Message} - a firewall may be blocking this app.");
         else if (_lanSession()?.LastSendFailure is { } sessionFailure)
-            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
-                $"Sending failed: {sessionFailure.Message} - a firewall may be blocking this app.");
+            DrawWarning($"Sending failed: {sessionFailure.Message} - a firewall may be blocking this app.");
 
         ImGui.Text("Rooms on this network");
         ImGui.Separator();
@@ -168,7 +184,8 @@ public sealed class MultiplayerPanel : IPanel
         {
             ImGui.PushID(room.Id.ToString());
             var host = room.Players.Count > 0 ? room.Players[0].Name : "";
-            ImGui.Text($"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}");
+            var carClass = _carCatalogue.TryFind(room.CarGroup, out var carGroup) ? carGroup.Name : room.CarGroup;
+            ImGui.TextUnformatted($"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}   {carClass}");
             ImGui.SameLine();
 
             bool full = room.Players.Count >= room.MaxPlayers;
@@ -211,21 +228,38 @@ public sealed class MultiplayerPanel : IPanel
     }
 
     /// <summary>
-    /// One radio button per group, in catalogue order, on a single row - a
-    /// handful of groups at most (the arcade five plus whatever a config
-    /// file adds), so a grid like the course picker's would be overkill.
+    /// One radio button per group, in catalogue order, wrapped to the
+    /// window's width the way <see cref="DrawCourseGrid"/> wraps its cells -
+    /// measured, not assumed to fit. Adding groups is the entire point of
+    /// this feature, so a fixed-width window at a display scale above 100%,
+    /// or one custom group added at 150%, must not clip the trailing ones
+    /// past the right edge with no way to reach them (review Important 6).
     /// The radio dot itself is the "chosen one marked" the brief asks for.
     /// </summary>
     void DrawCarGroupSelector()
     {
         var groups = _carCatalogue.Groups;
+        float windowVisibleX = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X;
+        float spacing = ImGui.GetStyle().ItemSpacing.X;
+
         for (int i = 0; i < groups.Count; i++)
         {
-            if (i > 0) ImGui.SameLine();
+            ImGui.PushID(groups[i].Id);
             if (ImGui.RadioButton(groups[i].Name, _carGroup == groups[i].Id))
                 _carGroup = groups[i].Id;
+            ImGui.PopID();
+
+            if (i + 1 < groups.Count)
+            {
+                float thisEndX = ImGui.GetItemRectMax().X;
+                float nextEndX = thisEndX + spacing + RadioButtonWidth(groups[i + 1].Name);
+                if (nextEndX < windowVisibleX) ImGui.SameLine();
+            }
         }
     }
+
+    static float RadioButtonWidth(string label) =>
+        ImGui.GetFrameHeight() + ImGui.GetStyle().ItemInnerSpacing.X + ImGui.CalcTextSize(label).X;
 
     // 96x96 logical pixels to match the map pictures themselves at 100% DPI
     // and UI scale - scaled at draw time by the same factor the rest of the
@@ -352,11 +386,11 @@ public sealed class MultiplayerPanel : IPanel
     {
         var room = _session.Current!;
 
-        ImGui.Text($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
+        ImGui.TextUnformatted($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
         ImGui.Separator();
 
         foreach (var player in room.Players)
-            ImGui.Text($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
+            ImGui.TextUnformatted($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
 
         ImGui.Separator();
         DrawCarList(room);
@@ -377,6 +411,12 @@ public sealed class MultiplayerPanel : IPanel
         if (ImGui.Button("Leave")) LeaveRoom();
     }
 
+    // A sensible cap on how many rows the car list reserves before it starts
+    // scrolling instead of growing further - Class A's eight cars should not
+    // reserve the same dead space Rally's 24 need to scroll through (review
+    // Important 7).
+    const int MaxVisibleCarRows = 8;
+
     /// <summary>
     /// The car picker for the room's own group. The group comes from the
     /// room, not from whatever this player last had selected while hosting
@@ -391,23 +431,28 @@ public sealed class MultiplayerPanel : IPanel
 
         if (!_carCatalogue.TryFind(room.CarGroup, out var group))
         {
-            ImGui.TextColored(new Vector4(1f, 0.6f, 0.2f, 1f),
-                $"This build does not have car group \"{room.CarGroup}\".");
+            DrawWarning($"This build does not have car group \"{room.CarGroup}\".");
             return;
         }
 
         string currentCar = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Car ?? "";
 
-        // Eight rows tall, scrolling for the rest - sized from the live line
-        // height and frame padding rather than a pixel constant, the same
-        // lesson the course grid had to relearn at 150% display scale.
+        // Sized to the group, up to MaxVisibleCarRows - sized from the live
+        // line height and frame padding rather than a pixel constant, the
+        // same lesson the course grid had to relearn at 150% display scale.
+        // A hard eight rows regardless of group size left no room below for
+        // Ready / Not ready / Start race / Leave once the window's content
+        // scaled up but its own size did not.
+        int rows = Math.Min(group.Cars.Count, MaxVisibleCarRows);
         float rowHeight = ImGui.GetTextLineHeightWithSpacing();
-        float listHeight = rowHeight * 8f + ImGui.GetStyle().FramePadding.Y * 2f;
+        float listHeight = rowHeight * rows + ImGui.GetStyle().FramePadding.Y * 2f;
         ImGui.BeginChild("CarList", new Vector2(0f, listHeight), ImGuiChildFlags.Border);
         foreach (var code in group.Cars)
         {
+            ImGui.PushID(code);
             if (ImGui.Selectable(_carCatalogue.DisplayName(code), code == currentCar))
                 _session.SetCar(_session.PlayerName, code);
+            ImGui.PopID();
         }
         ImGui.EndChild();
     }

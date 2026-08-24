@@ -80,13 +80,19 @@ def read(data, run):
 def main():
     data = open(OVERLAY, 'rb').read()
     lo, hi = code_block(data)
-    runs = [r for r in runs_of_pointers(data, lo, hi) if len(r) > 1]
+    all_runs = runs_of_pointers(data, lo, hi)
 
-    sizes = [len(r) for r in runs]
+    # Report what was actually found, not the filtered view below - a run
+    # that got split into a lone pointer and the rest would otherwise be
+    # reported as if the lone pointer were never there at all.
+    sizes = [len(r) for r in all_runs if len(r) > 1]
     if sizes != EXPECTED_SIZES:
         raise SystemExit(
-            f'{OVERLAY}: expected five runs of {EXPECTED_SIZES}, found run sizes {sizes}. '
+            f'{OVERLAY}: expected five runs of {EXPECTED_SIZES}, found run sizes '
+            f'{[len(r) for r in all_runs]}. '
             'The overlay changed shape - read it before touching this script.')
+
+    runs = [r for r in all_runs if len(r) > 1]
 
     groups = [(gid, name, read(data, run)) for (gid, name), run in zip(GROUPS, runs)]
 

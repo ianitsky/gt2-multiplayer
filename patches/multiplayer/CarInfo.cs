@@ -75,22 +75,25 @@ public sealed class CarInfo
         for (int i = 0; i < n; i++)
         {
             int start = starts[i];
-            int end = i + 1 < n ? starts[i + 1] : data.Length;
+            if (start < 0 || start > data.Length) continue; // this car's own offset is unusable - no name, nothing else affected
 
-            // A field block runs to the next record's offset, or to end of
-            // file for the last one. Out of order or out of bounds is not a
-            // block this reader can trust - the whole database is suspect,
-            // not just this one car.
-            if (start < 0 || end < start || end > data.Length) return null;
+            if (i + 1 < n)
+            {
+                int end = starts[i + 1];
 
-            // A well-formed block always carries at least its own trailing
-            // NUL; a truncated file cuts a block off before that byte, which
-            // is how a cut-short database is told apart from a car that
-            // genuinely has no name.
-            if (end == start || data[end - 1] != 0) return null;
+                // A field block runs to the next record's offset. Two records
+                // sharing a block, offsets out of order, or a block cut off
+                // before its own trailing NUL each make just this one car's
+                // name unreadable - not a reason to distrust the other 1109.
+                if (end < start || end > data.Length || end == start || data[end - 1] != 0) continue;
 
-            if (codes[i] is { } code && TryExtractName(data, start, end, out string name))
-                names[code] = name;
+                if (codes[i] is { } code && TryExtractName(data, start, end, out string name))
+                    names[code] = name;
+            }
+            else if (codes[i] is { } lastCode && TryFindLastBlockEnd(data, start, out string lastName))
+            {
+                names[lastCode] = lastName;
+            }
         }
 
         return new CarInfo(n, names);
@@ -166,6 +169,37 @@ public sealed class CarInfo
             return true;
         }
 
+        return false;
+    }
+
+    /// <summary>
+    /// Finds the last record's field block on its own terms, since it has no
+    /// next record to bound it and <c>data.Length</c> is not trustworthy for
+    /// that job: a raw <see cref="VolArchive"/> read runs past the file's
+    /// real content by up to a sector of whatever the disc happened to have
+    /// there, and folding that into the search lets leftover bytes further
+    /// out mask the real name or masquerade as one - confirmed against the
+    /// real disc, where car 1110's declared block runs 1.6KB into a stretch
+    /// of unrelated data and the wrong "name" comes back before the reader
+    /// ever reaches the real one at the front.
+    ///
+    /// Tries each candidate end past <paramref name="start"/> in increasing
+    /// order and takes the first that both lands on a trailing NUL and
+    /// yields a name via <see cref="TryExtractName"/>. That first candidate
+    /// is the block's own boundary: a well-formed length-counted name cannot
+    /// contain a false terminator of its own, so nothing before the real one
+    /// can satisfy both conditions. False if no such boundary exists at all
+    /// before the end of the file - this car simply has no name, exactly
+    /// like any other unresolvable block.
+    /// </summary>
+    static bool TryFindLastBlockEnd(byte[] data, int start, out string name)
+    {
+        for (int end = start + 1; end <= data.Length; end++)
+        {
+            if (data[end - 1] != 0) continue;
+            if (TryExtractName(data, start, end, out name)) return true;
+        }
+        name = "";
         return false;
     }
 

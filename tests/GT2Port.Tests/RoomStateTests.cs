@@ -189,6 +189,12 @@ public class RoomStateTests
     {
         var room = new Room(Guid.NewGuid(), "Room", "2p_mountain", "special", 6, []);
         var packet = RoomState.Serialise(room);
+
+        // Positive precondition: the untouched packet round-trips, so the
+        // rejection below is the forged version byte's doing, not a broken
+        // parser (Finding 1).
+        Assert.True(RoomState.TryDeserialise(packet, out _));
+
         packet[0] = 1;
 
         Assert.False(RoomState.TryDeserialise(packet, out _));

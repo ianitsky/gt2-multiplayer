@@ -30,6 +30,7 @@ public class SessionTests
 
         Assert.Equal(SessionPhase.Hosting, session.Phase);
         Assert.Equal("Ian's room", session.Current!.Name);
+        Assert.Equal("special", session.Current.CarGroup);
         Assert.Single(session.Current.Players);
         Assert.Equal("ian", session.Current.Players[0].Name);
     }
@@ -41,7 +42,8 @@ public class SessionTests
         Assert.True(session.Join(RoomWith(new Player("ian", "", false))));
 
         Assert.Equal(SessionPhase.Joined, session.Phase);
-        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
+        Assert.Equal("special", session.Current!.CarGroup);           // RoomWith's group, adopted wholesale
+        Assert.Contains(session.Current.Players, p => p.Name == "guest");
     }
 
     [Fact]
