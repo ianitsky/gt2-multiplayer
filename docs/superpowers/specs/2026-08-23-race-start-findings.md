@@ -68,12 +68,13 @@ overlay — which is what a race context base should look like.
 into it and letting the demo carry on put "Replay - Aston Martin V8 VANTAGE" on
 the HUD, which is `ldvan`, the first entrant written. The game did not crash and
 the race logic ran: lap 1/2, 1st place, lap times counting. So the block is not
-a staged copy; it is what the race reads. The demo that
-produced it stalled before putting a car on track: it opened
-`/font/racefont.dat`, `/engine/ene_n.es`, `/engine/ene_t.es` and
-`/engine/20403.es` — engine samples for one specific car — and then stopped,
-loading no course or car geometry. So the block may be a staged race that never
-launched.
+a staged copy; it is what the race reads.
+
+What the demo does *not* do is load course or car geometry — it opened
+`/font/racefont.dat` and the engine samples `/engine/20403.es`, `ene_n.es`,
+`ene_t.es`, and nothing else. The screen showed the HUD over an empty
+background. So the block drives the race's bookkeeping; whether it also drives
+what gets loaded and drawn is not yet shown.
 
 ## Race definitions live in a GTDT container
 
