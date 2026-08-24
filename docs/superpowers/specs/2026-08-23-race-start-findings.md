@@ -234,9 +234,24 @@ The same disc plays fine in an emulator, so this is a gap in the port, not in
 the image: streaming playback is a subsystem GT2's Simulation disc never needed
 and this port therefore never exercised.
 
-So arcade mode is one working FMV path away. That is its own cycle, and until
-it exists the project stays on the Simulation disc — which is where
-`config/gt2.json` was returned to.
+**The intro turned out to be skippable.** `gt2_ovr6_entrypoint0` is two steps:
+play the video, then `gt2_load_overlay_default(1)` — the front-end that offers
+Arcade and GT mode. Replacing the first with a no-op (`patches/SkipIntro.cs`,
+a `replace` patch on `gt2_ovr6_task10`) leaves the second intact, and the port
+then walks `gt2_06` -> `gt2_02` -> `gt2_01`: the same overlay sequence the
+Simulation disc takes. The project now runs on the Combined Disc.
+
+**Caveat, recorded because it is not proven.** That the overlays load says the
+code advances, not that anything is drawn. Whether the mode selector actually
+appears has not been seen by anyone yet.
+
+**And a probe that lied.** A screenshot facility reading `Runtime.Gpu.Vram` at
+`DisplayX/DisplayY` reported a black screen — but run against the Simulation
+disc, which demonstrably renders, it reported *identical* numbers: display at
+0,0, content at x >= 353, 167502 lit pixels. The backend is `Gl45`, so the
+VramShadow is not what reaches the screen. Any future screenshot has to come
+from the GL backend's own framebuffer, and every conclusion drawn from that
+probe's black images was worthless.
 
 ## The probe kit, for whoever picks this up
 
