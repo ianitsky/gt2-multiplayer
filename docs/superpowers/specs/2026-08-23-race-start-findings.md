@@ -253,6 +253,45 @@ VramShadow is not what reaches the screen. Any future screenshot has to come
 from the GL backend's own framebuffer, and every conclusion drawn from that
 probe's black images was worthless.
 
+## One place installs every race
+
+`gt2_main_func21` is called from exactly two places in the whole game: once in
+`main`, and once in the menu overlay `gt2_02`. Arcade and GT mode alike get
+their race through it. That makes it the single seam phase 2 needs — one hook
+sees, and can substitute, whatever race is about to run.
+
+Watching it while the attract demo ran gave the record's head:
+
+```
++0x00  14 bytes of flags and parameters
++0x10  "MSC0002"                       the race key
++0x20  "Seattle Circuit Full Course"   the course, as shown on screen
++0x40  AE 62 D7 A2                     a u32 sitting between the two
++0x44  entrant 0
+```
+
+`+0x44` is exactly `0x801D58A0 - 0x801D585C`, which settles it: the installed
+block *is* the record, based at `0x801D585C`.
+
+The u32 at `+0x40` is the obvious candidate for a course identifier, wedged
+between the course's name and the grid. It is **not** a plain hash: crc32, djb2,
+fnv1a, sdbm and the game's own five-character packing were all tried against
+`seattle`, `2p_seattle`, the display name and the race key, and none produce
+`0xA2D762AE`. Whatever names the course is still open.
+
+### The demo's races come from the replay file
+
+Hooking `func_80020E14(blob, dest, index)` showed `blob = 0x800E15C0`,
+`dest = 0x801055C0`, `index = 0`. Dumped and decoded, the blob begins `'SC'`
+followed by Shift-JIS — it is the `.gmr` replay the attract demo plays, and its
+"races" are named `Demo 01` through `Demo 06`, each carrying its own entrant
+list. So the demo does not read the game's race table at all, which is why
+watching it never revealed one.
+
+Finding the arcade race table needs the arcade menus driven by hand with the
+`func21` watch armed. That is the next step, and it is the first one in a while
+that cannot be done without someone at the keyboard.
+
 ## The probe kit, for whoever picks this up
 
 Three probes were used and then removed; they are cheap to rebuild:
