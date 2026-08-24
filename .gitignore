@@ -15,3 +15,6 @@ __pycache__/
 ovl_patched/
 test_output*.txt
 ram-*.bin
+crash.log
+run.log
+trace.log

@@ -35,6 +35,13 @@ public static class SetJmp
         uint env = c.A0;
         uint value = c.A1;
 
+        // The value is the game's own reason for giving up, and the resume
+        // point switches on it. Anything the resume point does not recognise
+        // falls straight through and returns - which, with this model, means
+        // returning out of the game entirely. Worth naming when it happens.
+        Console.Error.WriteLine(
+            $"[longjmp] env=0x{env:X8} value={value} resuming at 0x{m.ReadU32(env):X8}");
+
         c.RA = m.ReadU32(env);
         c.SP = m.ReadU32(env + 0x04u);
         c.FP = m.ReadU32(env + 0x08u);

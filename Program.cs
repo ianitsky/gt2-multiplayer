@@ -57,6 +57,30 @@ c.RA = 0u;
 
 RecompOne.Runtime.Runtime.SetContext(c, m);
 BiosKernel.Init(m);
+
+// A crash that reaches the console can be lost - a closed window, a swallowed
+// stream - and this port has already wasted time on a death that looked
+// silent. Everything that kills the process gets written down.
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+{
+    var text = $"{DateTime.Now:u}{Environment.NewLine}{e.ExceptionObject}{Environment.NewLine}";
+    try { File.AppendAllText("crash.log", text); } catch { }
+    Console.Error.WriteLine(text);
+    Console.Error.Flush();
+};
+AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+{
+    // Fires on a deliberate exit and not on a stack overflow or a native
+    // crash, which is exactly the distinction a silent death needs.
+    try { File.AppendAllText("crash.log", $"{DateTime.Now:u} process exit{Environment.NewLine}"); } catch { }
+};
+AppDomain.CurrentDomain.FirstChanceException += (_, e) =>
+{
+    // Not a crash on its own - the setjmp path throws by design - but the last
+    // one before a silent exit is usually the one that mattered.
+    if (e.Exception is GT2Port.LongJmpSignal) return;
+    try { File.AppendAllText("crash.log", $"{DateTime.Now:u} first-chance {e.Exception.GetType().Name}: {e.Exception.Message}{Environment.NewLine}"); } catch { }
+};
 // longjmp discards the frames between it and its setjmp, so it unwinds to
 // here and execution resumes at the RA the jmp_buf restored.
 uint resumeAt = EntryPC;
@@ -65,10 +89,31 @@ while (true)
     try
     {
         Dispatcher.Call(c, m, resumeAt);
-        break;
+
+        // A resume point returning is not the end of the game. longjmp is
+        // modelled as an unwind to here, so the frames below the matching
+        // setjmp are gone, and the continuation returns with nowhere to go -
+        // on hardware it would return into the setjmp's caller. That address
+        // is still in RA, so carry on there instead of falling out of the
+        // game. An RA the recompiler never emitted an entry for surfaces as
+        // "unmapped call" naming the address, which is how this port has
+        // always found the ones the sweep missed.
+        if (c.RA == 0u || c.RA == resumeAt) break;
+        Console.Error.WriteLine($"[Boot] resume point returned; continuing at 0x{c.RA:X8}");
+        resumeAt = c.RA;
+        continue;
     }
     catch (GT2Port.LongJmpSignal)
     {
         resumeAt = c.RA;
     }
+}
+
+// The game's entry never returns on hardware: it drives the console until the
+// power goes off. Reaching here means the recompiled call stack unwound, which
+// looks from outside like the process quietly closing.
+{
+    var text = "[Boot] the game's entry point returned - the call stack unwound out of the game";
+    Console.Error.WriteLine(text);
+    try { File.AppendAllText("crash.log", $"{DateTime.Now:u} {text}{Environment.NewLine}"); } catch { }
 }
