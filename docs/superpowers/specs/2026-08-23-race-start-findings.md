@@ -140,6 +140,66 @@ requested is still open.
    whether fewer is allowed, is untested — it happens to match the lobby's own
    six-player cap.
 
+## Two ways of starting a race that do not work
+
+Both were tried, and both fail for reasons worth keeping.
+
+**Calling the race overlay's entry point from a panel freezes the process.** A
+panel's `Draw` runs inside `PumpHost`, which runs inside interrupt delivery, so
+calling back into the game from there leaves delivery blocked and the overlay's
+own wait loops never advance. The window stops responding and only a kill ends
+it.
+
+**Calling it from the lobby hook crashes on a text address.** From the game's own
+call path the freeze goes away, but `Dispatcher.Call(c, m, 0x80011F64)` reuses
+the live `CpuContext` of `gt2_load_overlay`'s frame, whose registers belong to
+that function. The result was `unmapped call: 0x53206174` — ASCII `"ta S"`, a
+string being used as a jump target — and then a second failure in
+`gt2_load_overlay_Impl` once the wrecked context unwound. **An overlay entry
+point cannot be jumped into with an arbitrary register state.**
+
+The block was also empty at that moment: the race key read as blank, because the
+menu had not installed a race yet. Writing six entrants into an otherwise zeroed
+1420-byte record leaves no course, no lap count and no flags.
+
+## Where the record is built, and by whom
+
+The menu task `func_80011384` in `gt2_02` is a state machine. Its demo branch
+does:
+
+```
+func_80020DCC(...)                     -> the data blob
+func_80020E14(blob, 0x801055C0, index) -> builds the race record
+gt2_main_func21(0x801055C0, 0)         -> installs it at 0x801D585C
+```
+
+`0x801055C0` is the fixed buffer a race record is assembled in, and `index` is
+incremented and wrapped on each pass — which is how the demo cycles races.
+
+Inside `func_80020E14(blob, dest, index)`:
+
+```
+race record   = blob + 0x988 + index * 92
+entrants      = blob + 0x1580 + entrantIndex * 128
+entrant chain = 16-bit next-index list at blob + 0x204
+count / first = i16 at raceRecord + 0x52 and + 0x50
+```
+
+So a race is a 92-byte definition naming a linked list of 128-byte entrants, and
+`func21` turns that into the installed block.
+
+**This is the seam to use.** Nothing has to be synthesized: let the game build a
+real race, then substitute. Patching the installed block already works — that is
+what put our car on the HUD. A `post` hook on `gt2_main_func21` writing the
+room's six car ids into the block is a far smaller change than assembling 1420
+bytes by hand, and it leaves the course, laps and flags of a race the game
+itself considered valid.
+
+What is still missing is not the record but the **trigger**: on the Simulation
+disc, a player reaches a race by navigating GT mode. The demo reaches one on its
+own. Finding the state in `func_80011384` that begins a race, and entering it
+deliberately, is the next thing to reverse.
+
 ## The probe kit, for whoever picks this up
 
 Three probes were used and then removed; they are cheap to rebuild:
@@ -149,7 +209,11 @@ Three probes were used and then removed; they are cheap to rebuild:
 - a `pre` hook on `gt2_main_vol_get_file_data_sector_offset` logging `A0`, fed
   through `tools/vol_index.py` to get filenames during play;
 - a panel that writes the 2 MB of RAM to a file, on a timer so it needs nobody
-  at the keyboard.
+  at the keyboard;
+- a screenshot: the runtime has none, and reading `Runtime.Gpu`'s VRAM through
+  `DisplayX/Y/Width/Height` into a hand-rolled PNG takes about fifty lines. Run
+  it on **its own thread** — once the game thread is inside a race it may never
+  come back, and that is exactly when a picture is worth having.
 
 `ModeHook` also needed a temporary escape — an environment variable that made
 the lobby hook stand aside — because with the lobby installed there is no way to
