@@ -64,8 +64,11 @@ taken 30 seconds apart is identical, so this is configuration, not live state.
 `0x801D585C` is referenced from about thirty places in `gt2_01` — the race
 overlay — which is what a race context base should look like.
 
-**The honest caveat:** this is where a race is *assembled*. It has not been
-proven that writing it and calling something makes a race run. The demo that
+**The caveat is now closed — the block is live.** Writing six different car ids
+into it and letting the demo carry on put "Replay - Aston Martin V8 VANTAGE" on
+the HUD, which is `ldvan`, the first entrant written. The game did not crash and
+the race logic ran: lap 1/2, 1st place, lap times counting. So the block is not
+a staged copy; it is what the race reads. The demo that
 produced it stalled before putting a car on track: it opened
 `/font/racefont.dat`, `/engine/ene_n.es`, `/engine/ene_t.es` and
 `/engine/20403.es` — engine samples for one specific car — and then stopped,
@@ -118,8 +121,14 @@ requested is still open.
 
 ## What is still unknown
 
-1. **The start.** Which function consumes the block at `0x801D5850` and puts
-   cars on track. Nothing yet proves the block is sufficient.
+1. **The start.** `gt2_main_func21` installs a race: it copies a **1420-byte
+   (0x58C) race definition** from its `A0` into `0x801D585C`. The menu overlay
+   reaches it through `func_80011384` -> `func_80020E14` -> `gt2_main_func21` ->
+   `gt2_main_func210` -> `memcpy`, found with a write watchpoint on the block.
+   So a race is one 1420-byte record, and installing it is one call. What is
+   still unproven is whether calling `func21` ourselves, outside the menu's
+   flow, is enough to launch - the experiment above rode the demo's own entry
+   into the race overlay rather than starting one cold.
 2. **The course.** The block names the course in words (`Seattle Circuit Full
    Course`) and by race key (`MSC0002`), but the asset code (`seattle`) is not in
    it. Something maps one to the other; RAM holds a table of all 120 course codes
@@ -150,9 +159,8 @@ observation will need that again.
 
 Not a design, a direction, and it rests on the block above being sufficient:
 
-1. Prove the block. Set it up from the lobby with a known course and six known
-   cars and see whether a race runs. Until that works, nothing else is worth
-   building.
+1. ~~Prove the block.~~ Done - see above. The remaining unknown is starting a
+   race cold rather than riding the demo into one.
 2. Fill it from the room. The car ids are already the right identifiers; the
    course needs its asset code resolved to whatever the block wants.
 3. Start together. The host sends a start message naming the entrants and a
