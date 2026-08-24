@@ -84,9 +84,6 @@ AppDomain.CurrentDomain.FirstChanceException += (_, e) =>
 // longjmp discards the frames between it and its setjmp, so it unwinds to
 // here and execution resumes at the RA the jmp_buf restored.
 uint resumeAt = EntryPC;
-// Where the game's own loop resumes, kept so the boot loop can return to it
-// when a chain of dead frames runs out instead of leaving the game.
-uint lastResume = 0u;
 while (true)
 {
     try
@@ -101,29 +98,14 @@ while (true)
         // game. An RA the recompiler never emitted an entry for surfaces as
         // "unmapped call" naming the address, which is how this port has
         // always found the ones the sweep missed.
-        // A return address of zero is not the end of the game. The chain
-        // being followed here belongs to frames longjmp already destroyed, so
-        // an epilogue among them eventually restores RA from a stack slot its
-        // own prologue never wrote - and reads nothing. On hardware that code
-        // never runs at all: the game resumes where setjmp left off and its
-        // main loop carries on. So carry on there too, rather than falling out
-        // of a game whose loop has not finished.
-        if (c.RA != 0u && c.RA != resumeAt)
-        {
-            Console.Error.WriteLine($"[Boot] resume point returned; continuing at 0x{c.RA:X8}");
-            resumeAt = c.RA;
-            continue;
-        }
-
-        if (lastResume == 0u) break;
-        Console.Error.WriteLine($"[Boot] return chain ran out; re-entering the loop at 0x{lastResume:X8}");
-        resumeAt = lastResume;
+        if (c.RA == 0u || c.RA == resumeAt) break;
+        Console.Error.WriteLine($"[Boot] resume point returned; continuing at 0x{c.RA:X8}");
+        resumeAt = c.RA;
         continue;
     }
     catch (RecompOne.Runtime.Dispatch.LongJmpSignal)
     {
         resumeAt = c.RA;
-        lastResume = c.RA;
     }
 }
 
