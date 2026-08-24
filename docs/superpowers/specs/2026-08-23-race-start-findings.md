@@ -200,6 +200,44 @@ disc, a player reaches a race by navigating GT mode. The demo reaches one on its
 own. Finding the state in `func_80011384` that begins a race, and entering it
 deliberately, is the next thing to reverse.
 
+## The Combined Disc: one byte away, blocked by video
+
+The Combined Disc exposes arcade mode, which is the front-end phase 2 wants —
+a race you reach by choosing a course and a car, rather than by navigating GT
+mode. Switching to it costs almost nothing on paper:
+
+- **The boot executable differs by exactly one byte.** `SCUS_944.88` is the same
+  628736 bytes on both discs, and the only difference is at `0x8005D704`:
+  `addiu a0, zero, 1` becomes `addiu a0, zero, 5`. That is the argument to the
+  first `gt2_load_overlay_default` — which overlay the game starts in. Every
+  function map, patch and entry point stays valid.
+- **The overlays barely move.** `gt2_04`, `gt2_05` and `gt2_06` are byte for
+  byte identical; `gt2_01` differs in 6 bytes across 3 places; `gt2_02` differs
+  in 288 and grows 124 bytes at its tail; `gt2_03` differs in one 1943-byte run
+  at `0x800267F7`. Nothing shifts an address.
+- All 45 bytes we patch into `ovl_patched` apply to the Combined images
+  unchanged, and `tools/gen_course_table.py` and `gen_car_table.py` produce
+  byte-identical output from the Combined `gt2_03`.
+
+`tools/extract_overlays.py` does the whole switch in one command, in either
+direction, and carries the patches across.
+
+**And then it black-screens.** The Combined Disc boots into `gt2_06`, which is
+the video overlay — its symbols are `DecDCT_inout_caller`,
+`dctout_callback_task0`, `decdctout_user0`. It plays an intro from
+`STREAM.DAT`, a 335 MB file only the Combined Disc carries, before reaching the
+mode selector. Traced, it is not stuck on one wait: it reads sectors and polls
+callbacks in a tight loop — `CdGetSector` 24084 times, `CheckCallback` 70323 —
+and never advances. The display switches to 320x240 and stays black.
+
+The same disc plays fine in an emulator, so this is a gap in the port, not in
+the image: streaming playback is a subsystem GT2's Simulation disc never needed
+and this port therefore never exercised.
+
+So arcade mode is one working FMV path away. That is its own cycle, and until
+it exists the project stays on the Simulation disc — which is where
+`config/gt2.json` was returned to.
+
 ## The probe kit, for whoever picks this up
 
 Three probes were used and then removed; they are cheap to rebuild:
