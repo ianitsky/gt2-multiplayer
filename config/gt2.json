@@ -2678,6 +2678,11 @@
       "function": "gt2_main_task201_reload_regs",
       "target": "GT2Port.SetJmp.LongJmp",
       "mode": "replace"
+    },
+    {
+      "function": "gt2_main_saveregisters",
+      "target": "GT2Port.SetJmp.SaveJmp",
+      "mode": "pre"
     }
   ],
   "debug": false,

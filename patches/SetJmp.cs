@@ -22,6 +22,17 @@ namespace GT2Port;
 public static class SetJmp
 {
     /// <summary>
+    /// setjmp(env) - gt2_main_saveregisters at 0x8007AD58, which runs as normal
+    /// after this. Filling a jmp_buf is also what decides where a later longjmp
+    /// has to stop, so the dispatcher notes how deep the call stack was here:
+    /// the frame that called setjmp is the frame the unwind must not pass.
+    /// </summary>
+    public static void SaveJmp(CpuContext c, IMemory m)
+    {
+        RecompOne.Runtime.Dispatch.Dispatcher.RecordSetJmp(c.A0);
+    }
+
+    /// <summary>
     /// longjmp(env, value) — gt2_main_task201_reload_regs at 0x8007AD90.
     /// Restores the callee-saved set the matching setjmp stored, then unwinds.
     /// </summary>
@@ -34,8 +45,10 @@ public static class SetJmp
         // point switches on it. Anything the resume point does not recognise
         // falls straight through and returns - which, with this model, means
         // returning out of the game entirely. Worth naming when it happens.
+        var (recorded, now) = RecompOne.Runtime.Dispatch.Dispatcher.Depths(env);
         Console.Error.WriteLine(
-            $"[longjmp] env=0x{env:X8} value={value} resuming at 0x{m.ReadU32(env):X8}");
+            $"[longjmp] env=0x{env:X8} value={value} resuming at 0x{m.ReadU32(env):X8}"
+            + $" (setjmp depth {recorded}, now {now})");
 
         c.RA = m.ReadU32(env);
         c.SP = m.ReadU32(env + 0x04u);
@@ -51,6 +64,6 @@ public static class SetJmp
         c.GP = m.ReadU32(env + 0x2Cu);
 
         c.V0 = value;
-        throw new RecompOne.Runtime.Dispatch.LongJmpSignal(c.RA, c.SP);
+        throw new RecompOne.Runtime.Dispatch.LongJmpSignal(c.RA, env);
     }
 }
