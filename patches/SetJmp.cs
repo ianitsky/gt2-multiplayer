@@ -64,6 +64,6 @@ public static class SetJmp
         c.GP = m.ReadU32(env + 0x2Cu);
 
         c.V0 = value;
-        throw new RecompOne.Runtime.Dispatch.LongJmpSignal(c.RA, env);
+        throw new RecompOne.Runtime.Dispatch.LongJmpSignal(c.RA, env, RecompOne.Runtime.Dispatch.Dispatcher.CurrentDepth);
     }
 }
