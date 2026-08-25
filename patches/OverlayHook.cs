@@ -33,7 +33,10 @@ public static partial class OverlayHook
         // finishes, the overlay loads exactly as it always has and the game
         // carries on unaware. The pre-hook cannot skip the load below: it
         // only marks which overlay is arriving, so the load always follows.
-        Multiplayer.ModeHook.TryEnterLobby(entry);
+        // The lobby can redirect this load, so read the entry point back out
+        // afterwards rather than trusting the one that arrived.
+        Multiplayer.ModeHook.TryEnterLobby(c, m, entry);
+        entry = c.A1;
 
         // The race overlay arriving is the moment the race is settled: the menu
         // has stopped rewriting the block and nothing has read it yet.

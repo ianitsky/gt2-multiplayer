@@ -199,29 +199,13 @@ public sealed class LanSession : IDisposable
         foreach (var player in _atTheLine) Send([StartMagic, Go], player);
     }
 
-    /// <summary>Whether the host has said to start. Drains the socket to find out.</summary>
-    public bool HeardGo()
-    {
-        if (_disposed) return false;
-
-        bool go = false;
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
-        {
-            IPEndPoint? from = null;
-            byte[] data;
-            try
-            {
-                data = _socket.Receive(ref from);
-            }
-            catch (SocketException)
-            {
-                return go;
-            }
-
-            if (data.Length >= 2 && data[0] == StartMagic && data[1] == Go) go = true;
-        }
-        return go;
-    }
+    /// <summary>
+    /// Whether the host has said to start. Set by <see cref="ClientTick"/>
+    /// rather than by draining the socket here: during the lobby the client
+    /// needs every room announcement it is sent, and a second reader would
+    /// swallow them.
+    /// </summary>
+    public bool HostSaidGo { get; private set; }
 
     public void HostTick(Session session)
     {
@@ -276,6 +260,12 @@ public sealed class LanSession : IDisposable
             catch (SocketException)
             {
                 return;
+            }
+
+            if (data.Length >= 2 && data[0] == StartMagic && data[1] == Go)
+            {
+                HostSaidGo = true;
+                continue;
             }
 
             if (!RoomState.TryDeserialise(data, out var room)) continue;

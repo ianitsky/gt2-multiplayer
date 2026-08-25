@@ -168,7 +168,7 @@ public static class ModeHook
             else if (_discovery!.TryGetHostAddress(room.Id, out var host))
             {
                 _lanSession.ReportAtTheLine(host);
-                if (_lanSession.HeardGo())
+                if (_lanSession.HostSaidGo)
                 {
                     Console.Error.WriteLine("[start] the host said go");
                     return;
@@ -181,7 +181,9 @@ public static class ModeHook
         Console.Error.WriteLine("[start] gave up waiting - starting anyway");
     }
 
-    public static bool TryEnterLobby(uint entryPoint)
+    public static bool TryEnterLobby(RecompOne.Runtime.Context.CpuContext c,
+                                     RecompOne.Runtime.Memory.IMemory m,
+                                     uint entryPoint)
     {
         if (entryPoint != SimulationEntryPoint) return false;
 
@@ -226,7 +228,19 @@ public static class ModeHook
         }
         _panel.IsOpen = true;
 
-        RunLobby();
+        bool racing = RunLobby();
+        if (!racing) return true;
+
+        // The game is one instruction from loading Simulation. Point it at the
+        // race overlay instead and it walks into a race it never built - which
+        // is what turns Start into a race rather than into a menu tour.
+        var room = _session.Current;
+        if (room != null && RaceLauncher.TryPrepare(m, room.Players, _session.PlayerName, _carCatalogue))
+        {
+            Console.Error.WriteLine("[launch] starting the race straight from the lobby");
+            c.A1 = RaceLauncher.RaceOverlayEntry;
+        }
+
         return true;
     }
 
@@ -237,7 +251,8 @@ public static class ModeHook
     /// one while this loop owns the thread. Pumping the host keeps the window
     /// alive and the screens drawing.
     /// </summary>
-    static void RunLobby()
+    /// <summary>True when the lobby ended in a race rather than in the player closing it.</summary>
+    static bool RunLobby()
     {
         var lastAnnounce = DateTime.UtcNow;
         bool started = false;
@@ -249,7 +264,12 @@ public static class ModeHook
             // closing the panel leaves no visible UI but keeps pumping
             // forever, freezing the game behind a window that can never be
             // dismissed.
-            while (_panel!.IsOpen && !(started = _panel.TryConsumeStartRequest()))
+            // A client's lobby has no Start button, so it leaves when the host
+            // says the race is on - and it has to leave holding the room, or
+            // there is nothing left to build the race from.
+            while (_panel!.IsOpen
+                   && !(started = _panel.TryConsumeStartRequest()
+                        || (_session!.Phase == SessionPhase.Joined && _lanSession?.HostSaidGo == true)))
             {
                 RecompOne.Runtime.Runtime.PumpHost();
                 _discovery!.Tick();
@@ -337,17 +357,28 @@ public static class ModeHook
 
             _panel.IsOpen = false;
 
+            // Told repeatedly: the players are about to leave the lobby, and a
+            // single lost datagram would strand one of them in it.
+            if (started && _session!.Phase == SessionPhase.Hosting)
+                for (int i = 0; i < 8; i++)
+                {
+                    _lanSession?.CollectAtTheLine();
+                    _lanSession?.SendGo();
+                    Thread.Sleep(16);
+                }
+
             // Leaving the room is right when the player closed the lobby, and
             // wrong when they started a race: the race is about to be built
             // from the room, so the room has to outlive the lobby that made
             // it. LeaveRoom also discards any pending start request, which
             // would throw away the very thing just consumed.
-            if (started) return;
+            if (started) return true;
 
             // Leave whatever room this visit ended in so the next visit
             // reopens on the room list instead of the previous visit's
             // room, players and ready flags.
             _panel.LeaveRoom();
+            return false;
         }
         finally
         {
