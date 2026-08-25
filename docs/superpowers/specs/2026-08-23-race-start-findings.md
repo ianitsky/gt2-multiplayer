@@ -401,6 +401,37 @@ player in the same place however they number the entrants.
 For netcode this means a car has to be identified across machines by *player*,
 not by entrant index.
 
+## What the arcade prepares, and why a cold launch dies
+
+Supplying the block and pointing the game at the race overlay is not enough:
+the overlay runs and then reads through an object nobody built. Tracing every
+file the game reads - each one passes through
+`gt2_main_vol_get_file_data_sector_offset` with its index in A0 - shows what
+the arcade does between loading its own overlay and loading the race.
+
+195 reads, almost all of them the menu's own furniture:
+
+```
+/sound/arcseq.ins
+/arcade/arc_carlogo      x190     the car logos, for the selection screen
+/carobj/ccrcn.cdo.gz              the player's car
+/carobj/ccrcn.cdp.gz
+/arcade/course_map                the map picture, for the selection screen
+/font/racefont.dat                the HUD font
+```
+
+Take the menu's furniture away and the preparation is tiny: **the player's own
+car, the race font, and a sound bank**. Nothing else.
+
+Note what is *not* there - the course geometry and the opponents' models. Those
+are loaded later, by gt2_04 and gt2_01, from the block itself. That is why
+rewriting the opponents' car ids works so cleanly: at that point they have not
+been loaded at all.
+
+So a race launched cold most likely dies for want of the player's car object,
+which matches the symptom exactly: the race overlay dereferences an object that
+was never built.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:
