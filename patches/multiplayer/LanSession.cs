@@ -139,6 +139,90 @@ public sealed class LanSession : IDisposable
     /// applying. A message for any other room id - including a well-formed
     /// one - is ignored outright: not applied, not replied to.
     /// </summary>
+    /// <summary>
+    /// Marks a datagram as belonging to the race start rather than the lobby.
+    ///
+    /// The two lobby formats both reject what they do not recognise, so a
+    /// start message passes through them untouched and theirs through this.
+    /// That keeps the start handshake off the wire format the lobby depends
+    /// on, which is already carrying rooms, players and ready flags.
+    /// </summary>
+    const byte StartMagic = 0xA5;
+
+    const byte AtTheLine = 1;   // a player has the race loaded and is waiting
+    const byte Go = 2;          // the host says everyone may start
+
+    /// <summary>Where each player that reported in came from, so Go can reach them.</summary>
+    readonly HashSet<IPEndPoint> _atTheLine = [];
+
+    /// <summary>How many players have reported in, the host included.</summary>
+    public int WaitingAtTheLine => _atTheLine.Count + 1;
+
+    /// <summary>Tells the host this machine has the race loaded and is holding.</summary>
+    public void ReportAtTheLine(IPAddress hostAddress)
+    {
+        if (_disposed) return;
+        Send([StartMagic, AtTheLine], new IPEndPoint(hostAddress, _hostPort));
+    }
+
+    /// <summary>
+    /// Drains the socket, noting who has reported in. Lobby traffic still
+    /// arriving is dropped: the room is settled by now, and answering it would
+    /// only reopen a negotiation that is over.
+    /// </summary>
+    public void CollectAtTheLine()
+    {
+        if (_disposed) return;
+
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        {
+            IPEndPoint? from = null;
+            byte[] data;
+            try
+            {
+                data = _socket.Receive(ref from);
+            }
+            catch (SocketException)
+            {
+                return;
+            }
+
+            if (data.Length >= 2 && data[0] == StartMagic && data[1] == AtTheLine && from != null)
+                _atTheLine.Add(from);
+        }
+    }
+
+    /// <summary>Releases everyone who reported in.</summary>
+    public void SendGo()
+    {
+        if (_disposed) return;
+        foreach (var player in _atTheLine) Send([StartMagic, Go], player);
+    }
+
+    /// <summary>Whether the host has said to start. Drains the socket to find out.</summary>
+    public bool HeardGo()
+    {
+        if (_disposed) return false;
+
+        bool go = false;
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        {
+            IPEndPoint? from = null;
+            byte[] data;
+            try
+            {
+                data = _socket.Receive(ref from);
+            }
+            catch (SocketException)
+            {
+                return go;
+            }
+
+            if (data.Length >= 2 && data[0] == StartMagic && data[1] == Go) go = true;
+        }
+        return go;
+    }
+
     public void HostTick(Session session)
     {
         if (_disposed) return;

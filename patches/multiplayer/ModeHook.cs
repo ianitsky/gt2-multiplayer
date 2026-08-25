@@ -116,6 +116,69 @@ public static class ModeHook
 
         Console.Error.WriteLine(
             $"[grid] {room.Players.Count} player(s) put on the grid, {_session.PlayerName} driving");
+
+        HoldForTheStart(room);
+    }
+
+    /// <summary>How long to wait for everyone before starting anyway.</summary>
+    static readonly TimeSpan StartPatience = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// Holds the race here until everyone is ready to begin.
+    ///
+    /// The race overlay has loaded and nothing has drawn yet, so every machine
+    /// reaches this point in the same state - which makes it the place to line
+    /// them up. Players report in and the host releases them together, rather
+    /// than agreeing on a clock: nobody's clock has to match anybody else's for
+    /// a message to say "now".
+    ///
+    /// A player who never reports in cannot hold the rest forever. After
+    /// <see cref="StartPatience"/> the race begins without them, which is worse
+    /// for that player than for the five who were waiting.
+    /// </summary>
+    static void HoldForTheStart(Room room)
+    {
+        if (_lanSession == null || room.Players.Count < 2) return;
+
+        bool hosting = _session!.Phase == SessionPhase.Hosting;
+        var until = DateTime.UtcNow + StartPatience;
+        Console.Error.WriteLine($"[start] holding for {room.Players.Count} players");
+
+        while (DateTime.UtcNow < until)
+        {
+            RecompOne.Runtime.Runtime.PumpHost();
+
+            if (hosting)
+            {
+                _lanSession.CollectAtTheLine();
+                if (_lanSession.WaitingAtTheLine >= room.Players.Count)
+                {
+                    // Sent more than once: a lost Go would leave that player
+                    // holding until their patience runs out, racing a start
+                    // everyone else has already had.
+                    for (int i = 0; i < 5; i++)
+                    {
+                        _lanSession.SendGo();
+                        Thread.Sleep(16);
+                    }
+                    Console.Error.WriteLine("[start] everyone is at the line - go");
+                    return;
+                }
+            }
+            else if (_discovery!.TryGetHostAddress(room.Id, out var host))
+            {
+                _lanSession.ReportAtTheLine(host);
+                if (_lanSession.HeardGo())
+                {
+                    Console.Error.WriteLine("[start] the host said go");
+                    return;
+                }
+            }
+
+            Thread.Sleep(16);
+        }
+
+        Console.Error.WriteLine("[start] gave up waiting - starting anyway");
     }
 
     public static bool TryEnterLobby(uint entryPoint)
@@ -177,6 +240,7 @@ public static class ModeHook
     static void RunLobby()
     {
         var lastAnnounce = DateTime.UtcNow;
+        bool started = false;
 
         try
         {
@@ -185,7 +249,6 @@ public static class ModeHook
             // closing the panel leaves no visible UI but keeps pumping
             // forever, freezing the game behind a window that can never be
             // dismissed.
-            bool started = false;
             while (_panel!.IsOpen && !(started = _panel.TryConsumeStartRequest()))
             {
                 RecompOne.Runtime.Runtime.PumpHost();
@@ -288,18 +351,27 @@ public static class ModeHook
         }
         finally
         {
-            // Finding 5: unconditional. LeaveRoom above runs after the loop
-            // has already stopped calling DecideSocketAction, so nothing
-            // else drops whatever socket this visit was using (e.g. closing
-            // the panel while Hosting) - and without a finally, any
-            // exception escaping the loop would skip this and leave 34719
-            // bound for the rest of the process, which on one machine means
-            // the other instance can never host again. Freeing it here
-            // means another instance on this machine can host or join as
-            // soon as this call returns, exception or not.
-            _lanSession?.Dispose();
-            _lanSession = null;
-            _lanSessionRole = null;
+            // Everything except a race keeps the old rule, and for the old
+            // reason: LeaveRoom above runs after the loop has stopped calling
+            // DecideSocketAction, so nothing else drops the socket this visit
+            // was using, and an exception escaping the loop would otherwise
+            // leave 34719 bound for the life of the process - which on one
+            // machine means no other instance can ever host again.
+            //
+            // A race is the exception. The players are about to need the
+            // channel more than ever: it is how they agree on when to start.
+            // Closing it here would mean rebuilding it mid-race, and the host's
+            // port might not be free by then. Since `started` is only ever set
+            // on the clean path out of the loop, an exception still frees it.
+            if (!started) DropSession();
         }
+    }
+
+    /// <summary>Frees the session socket, so another instance here can host or join.</summary>
+    static void DropSession()
+    {
+        _lanSession?.Dispose();
+        _lanSession = null;
+        _lanSessionRole = null;
     }
 }
