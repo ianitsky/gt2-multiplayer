@@ -38,7 +38,6 @@ GT2Port.RuntimePatches.Load("patches/runtime");
 RecompOne.Runtime.Runtime.FramePatch = m =>
 {
     GT2Port.RuntimePatches.Apply(m);
-    GT2Port.Multiplayer.ModeHook.ApplyRaceGrid(m);
     GT2Port.RaceWatch.Tick(m);
 };
 

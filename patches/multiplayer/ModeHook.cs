@@ -95,27 +95,27 @@ public static class ModeHook
     static bool _gridApplied;
 
     /// <summary>
-    /// Called once a frame. The lobby has finished by the time a race is being
-    /// built, so this is what carries the room into it: the arcade menu builds
-    /// a race for six of its own drivers, and this replaces them with the
-    /// players who were in the room.
+    /// Carries the room into the race being loaded.
+    ///
+    /// Called as the race overlay arrives, which is the one moment the block is
+    /// both complete and final. Writing when it first looks complete is too
+    /// early: the menu fills it again for every track the player browses, so an
+    /// early write survives only in the fields the menu does not rewrite - a
+    /// race with the room's number of cars and the menu's drivers in them.
     /// </summary>
     public static void ApplyRaceGrid(RecompOne.Runtime.Memory.IMemory m)
     {
         var room = _session?.Current;
-        if (room == null || room.Players.Count == 0)
+        if (room == null || room.Players.Count == 0) return;
+
+        if (!RaceGrid.TryApply(m, room.Players, _session!.PlayerName, _carCatalogue))
         {
-            // Out of a room, so the next race is the game's own again.
-            _gridApplied = false;
+            Console.Error.WriteLine("[grid] the race is not built yet - the room was not applied");
             return;
         }
 
-        if (_gridApplied) return;
-        _gridApplied = RaceGrid.TryApply(m, room.Players, _session!.PlayerName, _carCatalogue);
-        if (_gridApplied)
-            Console.Error.WriteLine(
-                $"[grid] {room.Players.Count} player(s) put on the grid, "
-                + $"{_session.PlayerName} driving");
+        Console.Error.WriteLine(
+            $"[grid] {room.Players.Count} player(s) put on the grid, {_session.PlayerName} driving");
     }
 
     public static bool TryEnterLobby(uint entryPoint)

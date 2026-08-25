@@ -22,6 +22,9 @@ public static partial class OverlayHook
 
     static readonly HashSet<uint> Unknown = new();
 
+    /// <summary>gt2_01, the overlay that runs a race.</summary>
+    const uint RaceOverlayEntry = 0x80011F64u;
+
     public static void ActivateFromEntry(CpuContext c, IMemory m)
     {
         uint entry = c.A1;
@@ -31,6 +34,10 @@ public static partial class OverlayHook
         // carries on unaware. The pre-hook cannot skip the load below: it
         // only marks which overlay is arriving, so the load always follows.
         Multiplayer.ModeHook.TryEnterLobby(entry);
+
+        // The race overlay arriving is the moment the race is settled: the menu
+        // has stopped rewriting the block and nothing has read it yet.
+        if (entry == RaceOverlayEntry) Multiplayer.ModeHook.ApplyRaceGrid(m);
 
         if (ByEntryPoint.TryGetValue(entry, out var name))
         {
