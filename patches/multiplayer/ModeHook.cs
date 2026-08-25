@@ -235,7 +235,8 @@ public static class ModeHook
         // race overlay instead and it walks into a race it never built - which
         // is what turns Start into a race rather than into a menu tour.
         var room = _session.Current;
-        if (room != null && RaceLauncher.TryPrepare(m, room.Players, _session.PlayerName, _carCatalogue))
+        if (RaceLauncher.Enabled && room != null
+            && RaceLauncher.TryPrepare(m, room.Players, _session.PlayerName, _carCatalogue))
         {
             Console.Error.WriteLine("[launch] starting the race straight from the lobby");
             c.A1 = RaceLauncher.RaceOverlayEntry;

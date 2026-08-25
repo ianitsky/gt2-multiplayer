@@ -32,6 +32,20 @@ public static class RaceLauncher
     static byte[]? _template;
 
     /// <summary>
+    /// Whether to launch a race straight from the lobby, off unless
+    /// GT2_DIRECT_LAUNCH is set.
+    ///
+    /// It does not work yet. The block describes a race but does not prepare
+    /// one: the race overlay runs and then reads through an object the arcade
+    /// would have built on its way here, and the game dies with a black screen.
+    /// Until what the arcade prepares is known, the menus are the only route
+    /// that reaches a race at all, so this stays off rather than leaving no
+    /// working path.
+    /// </summary>
+    public static bool Enabled { get; } =
+        Environment.GetEnvironmentVariable("GT2_DIRECT_LAUNCH") is not (null or "");
+
+    /// <summary>
     /// Writes a race into the block, ready for the overlay to pick up. False
     /// when there is no template to write, which leaves the game's own flow
     /// alone rather than starting something half-built.

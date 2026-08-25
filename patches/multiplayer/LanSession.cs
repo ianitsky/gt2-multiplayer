@@ -155,6 +155,16 @@ public sealed class LanSession : IDisposable
     /// <summary>Where each player that reported in came from, so Go can reach them.</summary>
     readonly HashSet<IPEndPoint> _atTheLine = [];
 
+    /// <summary>
+    /// Everyone the host has heard from in the lobby.
+    ///
+    /// Go has to reach the clients before any of them has reported at the line
+    /// - that is the message telling them to leave the lobby and go to the
+    /// race - so it cannot be sent only to those who have. These are the
+    /// addresses the lobby itself learned.
+    /// </summary>
+    readonly HashSet<IPEndPoint> _known = [];
+
     /// <summary>How many players have reported in, the host included.</summary>
     public int WaitingAtTheLine => _atTheLine.Count + 1;
 
@@ -192,11 +202,11 @@ public sealed class LanSession : IDisposable
         }
     }
 
-    /// <summary>Releases everyone who reported in.</summary>
+    /// <summary>Releases everyone the host has heard from, at the line or not.</summary>
     public void SendGo()
     {
         if (_disposed) return;
-        foreach (var player in _atTheLine) Send([StartMagic, Go], player);
+        foreach (var player in _known.Union(_atTheLine)) Send([StartMagic, Go], player);
     }
 
     /// <summary>
@@ -228,6 +238,8 @@ public sealed class LanSession : IDisposable
 
             if (!TryDeserialise(data, out var intent)) continue;
             if (intent.RoomId != room.Id) continue;
+
+            if (from != null) _known.Add(from);
 
             if (intent.Leaving)
                 session.ApplyClientLeave(intent.Name);
