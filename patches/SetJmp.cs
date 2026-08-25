@@ -22,6 +22,13 @@ namespace GT2Port;
 public static class SetJmp
 {
     /// <summary>
+    /// Whether to narrate every jump. What it prints is how the task system was
+    /// worked out, so it stays available behind GT2_TASK_TRACE - but a working
+    /// game should not spend a line per frame saying so.
+    /// </summary>
+    static readonly bool Trace = Environment.GetEnvironmentVariable("GT2_TASK_TRACE") is not (null or "");
+
+    /// <summary>
     /// setjmp(env) - gt2_main_saveregisters at 0x8007AD58, which runs as normal
     /// after this. Filling a jmp_buf is also what decides where a later longjmp
     /// has to stop, so the dispatcher notes how deep the call stack was here:
@@ -30,9 +37,10 @@ public static class SetJmp
     public static void SaveJmp(CpuContext c, IMemory m)
     {
         RecompOne.Runtime.Dispatch.Dispatcher.RecordSetJmp(c.A0);
-        Console.Error.WriteLine(
-            $"[setjmp] env=0x{c.A0:X8} ra=0x{c.RA:X8} sp=0x{c.SP:X8} s0=0x{c.S0:X8}"
-            + $" depth {RecompOne.Runtime.Dispatch.Dispatcher.CurrentDepth - 1}");
+        if (Trace)
+            Console.Error.WriteLine(
+                $"[setjmp] env=0x{c.A0:X8} ra=0x{c.RA:X8} sp=0x{c.SP:X8} s0=0x{c.S0:X8}"
+                + $" depth {RecompOne.Runtime.Dispatch.Dispatcher.CurrentDepth - 1}");
     }
 
     /// <summary>
@@ -48,10 +56,13 @@ public static class SetJmp
         // point switches on it. Anything the resume point does not recognise
         // falls straight through and returns - which, with this model, means
         // returning out of the game entirely. Worth naming when it happens.
-        var (recorded, now) = RecompOne.Runtime.Dispatch.Dispatcher.Depths(env);
-        Console.Error.WriteLine(
-            $"[longjmp] env=0x{env:X8} value={value} resuming at 0x{m.ReadU32(env):X8}"
-            + $" (setjmp depth {recorded}, now {now})");
+        if (Trace)
+        {
+            var (recorded, now) = RecompOne.Runtime.Dispatch.Dispatcher.Depths(env);
+            Console.Error.WriteLine(
+                $"[longjmp] env=0x{env:X8} value={value} resuming at 0x{m.ReadU32(env):X8}"
+                + $" (setjmp depth {recorded}, now {now})");
+        }
 
         c.RA = m.ReadU32(env);
         c.SP = m.ReadU32(env + 0x04u);
