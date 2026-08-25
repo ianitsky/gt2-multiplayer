@@ -54,8 +54,6 @@ public static class RaceWatch
         if (!Watching) return;
 
         MaybeWriteGrid(m);
-        MaybeSwapPlayer(m);
-        MaybeMoveMarker(m);
         MaybePlace(m);
 
         string now = Describe(m, Context);
@@ -85,50 +83,6 @@ public static class RaceWatch
     static bool _gridWritten;
 
     /// <summary>
-    /// Which slot to move the player's entrant into, when GT2_RACE_SWAP names
-    /// one. The whole 208-byte record is exchanged with whatever is there.
-    ///
-    /// This settles how the game decides which car is the player's. If the
-    /// player still drives slot 0 after the swap, the player is whoever is in
-    /// slot 0 and a multiplayer grid cannot simply give each machine its own
-    /// slot. If the player follows their record to its new slot, something in
-    /// the record marks them - the driver-name field, filled with "0" for the
-    /// player and left empty for the opponents, is the candidate - and each
-    /// machine can take a different slot, which is what puts six players in six
-    /// different places on the grid.
-    /// </summary>
-    static readonly int Swap =
-        int.TryParse(Environment.GetEnvironmentVariable("GT2_RACE_SWAP"), out int slot) ? slot : -1;
-
-    static bool _swapped;
-
-    /// <summary>
-    /// Which slot to move the player's driver-name marker to, when
-    /// GT2_RACE_MARKER names one. Nothing else is touched.
-    ///
-    /// Swapping whole records breaks the race - a record carries state that
-    /// belongs to the slot, not to the entrant, and the car vanishes. So move
-    /// the one field that distinguishes the player from the opponents: slot 0
-    /// carries "0" in its driver-name field and the rest are empty. If the
-    /// player ends up driving another car, that field is the marker and each
-    /// machine can nominate a different slot as its own.
-    /// </summary>
-    static readonly int Marker =
-        int.TryParse(Environment.GetEnvironmentVariable("GT2_RACE_MARKER"), out int slot) ? slot : -1;
-
-    static bool _markerMoved;
-
-    /// <summary>
-    /// What to write into the player's byte at entrant +0x16, when
-    /// GT2_RACE_START names a value.
-    ///
-    /// The player's entrant carries 6 there and starts 6th; every opponent
-    /// carries 0. The race overlay reads exactly this byte - block + 0x5A is
-    /// entrant 0 + 0x16 - and branches on whether it is zero. If it is the
-    /// starting position, a multiplayer grid is six machines each writing a
-    /// different value, which is the lever this whole hunt is for.
-    /// </summary>
-    /// <summary>
     /// A place for each entrant in turn, when GT2_RACE_PLACES lists them -
     /// "1,2,3,4,5,6" gives the player pole and lines the opponents up behind.
     /// A single number still works and applies to the player alone.
@@ -142,12 +96,7 @@ public static class RaceWatch
 
     /// <summary>
     /// Where an entrant carries its place on the grid, counted from zero.
-    ///
-    /// Across the six entrants this field holds a complete permutation of 0..5,
-    /// and the player - who starts sixth - holds 5. Two neighbours look like
-    /// what they would have to be for a multiplayer race: +0x82 is 0 for the
-    /// player and 1 for every opponent, and +0x42 is 0 for the player and 100
-    /// for the rest, which is the shape of an AI skill.
+    /// Across the six it is a complete permutation of 0..5.
     /// </summary>
     const int EntrantPlace = 0x8D;
 
@@ -185,47 +134,7 @@ public static class RaceWatch
         Console.Error.WriteLine($"[race] grid places now read: {places}   (* is the human's)");
     }
 
-    static void MaybeMoveMarker(IMemory m)
-    {
-        if (Marker <= 0 || Marker >= Entrants || _markerMoved) return;
 
-        for (int i = 0; i < Entrants; i++)
-            if (m.ReadU32(Context + (uint)(FirstEntrant + i * EntrantSize) + EntrantCarId) == 0) return;
-
-        // What this used to copy was the header, not an entrant: the entrant
-        // records begin at 0x5C, and the "name" that only entrant 0 appeared to
-        // have was the header's own text at 0x44. Kept, with the offsets
-        // corrected, since a per-entrant field is still where a player marker
-        // would live.
-        uint from = Context + FirstEntrant;
-        uint to = Context + (uint)(FirstEntrant + Marker * EntrantSize);
-        for (uint i = 0; i < 24; i++)
-            m.WriteU8(to + i, m.ReadU8(from + i));
-
-        _markerMoved = true;
-        Console.Error.WriteLine(
-            $"[race] driver name copied from 0 to {Marker}:{Environment.NewLine}{Report(m, Context)}");
-    }
-
-    static void MaybeSwapPlayer(IMemory m)
-    {
-        if (Swap <= 0 || Swap >= Entrants || _swapped) return;
-
-        for (int i = 0; i < Entrants; i++)
-            if (m.ReadU32(Context + (uint)(FirstEntrant + i * EntrantSize) + EntrantCarId) == 0) return;
-
-        uint a = Context + FirstEntrant;
-        uint b = Context + (uint)(FirstEntrant + Swap * EntrantSize);
-        for (uint i = 0; i < EntrantSize; i++)
-        {
-            byte left = m.ReadU8(a + i), right = m.ReadU8(b + i);
-            m.WriteU8(a + i, right);
-            m.WriteU8(b + i, left);
-        }
-        _swapped = true;
-        Console.Error.WriteLine(
-            $"[race] entrant 0 swapped with {Swap}:{Environment.NewLine}{Report(m, Context)}");
-    }
 
     static void MaybeWriteGrid(IMemory m)
     {

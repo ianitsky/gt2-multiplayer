@@ -385,6 +385,22 @@ because those bytes are the header, and one of them is the entrant count -
 a race of one car, which looks exactly like the opponents failing to spawn. And
 the "driver name" that seemed to mark the player was the header's text.
 
+### The human drives entrant 0, whatever is marked
+
+`+0x82` is 0 for the player's entrant and 1 for the rest, which looked like it
+nominated the car the human drives. It does not. Putting the local player in
+entrant 1 and marking that entrant as the human's leaves them driving entrant
+0's car: the game takes the human's car by position, and `+0x82` governs
+something else - AI behaviour, most likely.
+
+So each machine leads with its own player, and the entrant order differs
+between machines by that rotation. The grid place at `+0x8D` comes from the
+room's own order instead, which every machine shares, so all of them put each
+player in the same place however they number the entrants.
+
+For netcode this means a car has to be identified across machines by *player*,
+not by entrant index.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:

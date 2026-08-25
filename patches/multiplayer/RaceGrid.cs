@@ -55,9 +55,23 @@ public static class RaceGrid
         int racing = Math.Min(players.Count, Slots);
         m.WriteU8(Block + Count, (byte)racing);
 
+        // The human always drives entrant 0 - proven by putting the local
+        // player anywhere else and watching them drive entrant 0's car
+        // regardless of which entrant was marked. So each machine leads with
+        // its own player, and the entrant order differs from machine to
+        // machine by exactly that rotation.
+        var order = players.Take(racing).ToList();
+        int mine = order.FindIndex(p => p.Name == me);
+        if (mine > 0)
+        {
+            var self = order[mine];
+            order.RemoveAt(mine);
+            order.Insert(0, self);
+        }
+
         for (int i = 0; i < racing; i++)
         {
-            var player = players[i];
+            var player = order[i];
             uint entrant = Block + (uint)(FirstEntrant + i * EntrantSize);
 
             if (CarInfo.TryEncodeCode(player.Car, out uint packed))
@@ -68,14 +82,16 @@ public static class RaceGrid
             // on the track.
             WriteText(m, entrant + CarName, cars?.DisplayName(player.Car) ?? player.Car, CarNameRoom);
 
-            bool mine = player.Name == me;
-            m.WriteU8(entrant + IsAi, (byte)(mine ? 0 : 1));
-            m.WriteU8(entrant + AiSkill, (byte)(mine ? 0 : 100));
+            bool human = i == 0;
+            m.WriteU8(entrant + IsAi, (byte)(human ? 0 : 1));
+            m.WriteU8(entrant + AiSkill, (byte)(human ? 0 : 100));
 
-            // Room order is grid order: the first player in the room starts on
-            // pole. Every machine deals the same places, which is what makes
-            // them agree about the grid.
-            m.WriteU8(entrant + GridPlace, (byte)i);
+            // The place comes from the room, not from the entrant slot. Slots
+            // are rotated so each machine drives its own car, but the room's
+            // order is the same everywhere - so every machine puts every
+            // player in the same place on the grid, however it numbers them.
+            int place = players.Take(racing).ToList().FindIndex(p => p.Name == player.Name);
+            m.WriteU8(entrant + GridPlace, (byte)(place < 0 ? i : place));
         }
 
         return true;
