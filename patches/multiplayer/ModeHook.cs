@@ -87,6 +87,37 @@ public static class ModeHook
         return currentRole is null ? SocketAction.Keep : SocketAction.Drop;
     }
 
+    /// <summary>
+    /// Whether the grid has been written for the race now being set up, so it
+    /// is written once rather than every frame - and so a second race gets its
+    /// own write.
+    /// </summary>
+    static bool _gridApplied;
+
+    /// <summary>
+    /// Called once a frame. The lobby has finished by the time a race is being
+    /// built, so this is what carries the room into it: the arcade menu builds
+    /// a race for six of its own drivers, and this replaces them with the
+    /// players who were in the room.
+    /// </summary>
+    public static void ApplyRaceGrid(RecompOne.Runtime.Memory.IMemory m)
+    {
+        var room = _session?.Current;
+        if (room == null || room.Players.Count == 0)
+        {
+            // Out of a room, so the next race is the game's own again.
+            _gridApplied = false;
+            return;
+        }
+
+        if (_gridApplied) return;
+        _gridApplied = RaceGrid.TryApply(m, room.Players, _session!.PlayerName, _carCatalogue);
+        if (_gridApplied)
+            Console.Error.WriteLine(
+                $"[grid] {room.Players.Count} player(s) put on the grid, "
+                + $"{_session.PlayerName} driving");
+    }
+
     public static bool TryEnterLobby(uint entryPoint)
     {
         if (entryPoint != SimulationEntryPoint) return false;
@@ -154,7 +185,8 @@ public static class ModeHook
             // closing the panel leaves no visible UI but keeps pumping
             // forever, freezing the game behind a window that can never be
             // dismissed.
-            while (_panel!.IsOpen && !_panel.TryConsumeStartRequest())
+            bool started = false;
+            while (_panel!.IsOpen && !(started = _panel.TryConsumeStartRequest()))
             {
                 RecompOne.Runtime.Runtime.PumpHost();
                 _discovery!.Tick();
@@ -242,11 +274,16 @@ public static class ModeHook
 
             _panel.IsOpen = false;
 
+            // Leaving the room is right when the player closed the lobby, and
+            // wrong when they started a race: the race is about to be built
+            // from the room, so the room has to outlive the lobby that made
+            // it. LeaveRoom also discards any pending start request, which
+            // would throw away the very thing just consumed.
+            if (started) return;
+
             // Leave whatever room this visit ended in so the next visit
             // reopens on the room list instead of the previous visit's
-            // room, players and ready flags. LeaveRoom also discards any
-            // pending start request, so re-entering can't immediately fall
-            // straight back out.
+            // room, players and ready flags.
             _panel.LeaveRoom();
         }
         finally

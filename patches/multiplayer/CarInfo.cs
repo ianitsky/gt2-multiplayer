@@ -28,6 +28,27 @@ public sealed class CarInfo
     }
 
     /// <summary>
+    /// A five-character code back into the packed word the game stores it as -
+    /// the inverse of <see cref="TryDecodeCode"/>, and it lives beside it so
+    /// the two cannot drift apart. False for anything the format cannot carry:
+    /// a code of the wrong length, or a character outside the alphabet.
+    /// </summary>
+    public static bool TryEncodeCode(string code, out uint packed)
+    {
+        packed = 0;
+        if (code.Length != 5) return false;
+
+        int[] shifts = [24, 18, 12, 6, 0];
+        for (int i = 0; i < 5; i++)
+        {
+            int index = Alphabet.IndexOf(code[i]);
+            if (index < 0) return false;
+            packed |= (uint)index << shifts[i];
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Loads the car database from the disc archive. Null when there is no
     /// archive, it has no .carinfoe, or the file will not parse - never throws.
     /// </summary>
