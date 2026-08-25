@@ -25,11 +25,27 @@ public static class LoadTrace
         Environment.GetEnvironmentVariable("GT2_LOAD_TRACE") is not (null or "");
 
     static int _reads;
+    static uint _lastIndex = uint.MaxValue;
+    static uint _lastCaller;
 
-    /// <summary>Pre-hook on gt2_main_vol_get_file_data_sector_offset.</summary>
+    /// <summary>
+    /// Pre-hook on gt2_main_vol_get_file_data_sector_offset.
+    ///
+    /// The return address matters as much as the index: knowing which file a
+    /// race needs is not the same as knowing how to ask for it, and the caller
+    /// is where that question is answered. Repeats of the same file from the
+    /// same place are collapsed - the selection screen asks for its car logos
+    /// nearly two hundred times, and that is not the interesting part.
+    /// </summary>
     public static void Reading(CpuContext c, IMemory m)
     {
         if (!Tracing) return;
-        Console.Error.WriteLine($"[load] {++_reads,4}: file index {c.A0}");
+
+        _reads++;
+        if (c.A0 == _lastIndex && c.RA == _lastCaller) return;
+        _lastIndex = c.A0;
+        _lastCaller = c.RA;
+
+        Console.Error.WriteLine($"[load] {_reads,4}: file index {c.A0} asked for from 0x{c.RA:X8}");
     }
 }

@@ -432,6 +432,31 @@ So a race launched cold most likely dies for want of the player's car object,
 which matches the symptom exactly: the race overlay dereferences an object that
 was never built.
 
+### How the player's car is asked for
+
+Logging the return address alongside each file index says who asks. The two
+carobj reads come from gt2_03, at 0x80016768 and 0x80016820, and both follow
+the same shape:
+
+```
+A0 = [S1 + 0x04]          the file's index, out of a request record
+call 0x8005D74C           -> where the file starts
+call 0x8005D79C           -> how big it is
+A0 = destination, A1 = [S1 + 0x48], A2 = start, A3 = size
+call 0x80015840           reads and inflates it
+```
+
+So loading is a queue: S1 walks an array of request records, each carrying a
+file index at +0x04. That matches what `gt2_ovr0_task0b02_carobj_loader`
+actually does - despite the name it loads no car, it walks the carobj directory
+and builds the table of every car's file index, eight bytes an entry with the
+index at +0x04.
+
+What remains for a cold launch is to put a request for the player's car on that
+queue rather than to call a loader directly. The file index comes from the
+table the loader built, keyed by the car's five-character code, which the room
+already knows.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:
