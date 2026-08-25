@@ -35,7 +35,11 @@ Dispatcher.Register("gt2_05", new Recompiled.Gt2_05DispatchTable());
 Dispatcher.Register("gt2_06", new Recompiled.Gt2_06DispatchTable());
 RecompOne.Runtime.Modding.ModLoader.LoadAll();
 GT2Port.RuntimePatches.Load("patches/runtime");
-RecompOne.Runtime.Runtime.FramePatch = GT2Port.RuntimePatches.Apply;
+RecompOne.Runtime.Runtime.FramePatch = m =>
+{
+    GT2Port.RuntimePatches.Apply(m);
+    GT2Port.RaceWatch.Tick(m);
+};
 
 cd.LoadToMemory(BootExe, LoadAddr, ExeOffset, ExeSize);
 Dispatcher.Load("main");

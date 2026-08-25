@@ -312,6 +312,39 @@ the lobby hook stand aside — because with the lobby installed there is no way 
 reach the game's own race screens. Anything that drives the game into a race for
 observation will need that again.
 
+## Settled by watching a real arcade race (2026-08-25)
+
+The port now plays a full arcade race, so the questions above stopped being
+guesses. Watching the race context at `0x801D585C` while choosing a car and a
+track, with `GT2_RACE_WATCH=1`, shows this:
+
+**The menu fills the block as you choose.** It is not installed in one call:
+the course name changes while you browse tracks, and the entrants appear as the
+choice is made. `gt2_main_func21` is never called - that route belongs to the
+attract demo, not the arcade.
+
+**Six entrants, and the player is entrant 0.** The player's chosen car sits in
+slot 0 and is the only one whose driver-name field is filled (with `"0"`); the
+five opponents have it empty. The race key for an arcade race is `A0A`.
+
+**Entrant order is not grid order.** The player, entrant 0, starts *last* - the
+HUD reads 6th on the grid. The opponents fill the places ahead.
+
+**The block drives what is on track, not just the paperwork.** Writing
+`n24vn` into the five opponent slots after the menu had finished, with
+`GT2_RACE_GRID`, put five identical Skyline R34s on the grid. This is the
+finding phase 2 rests on: a multiplayer race is this block with the other
+players' cars written into it.
+
+**The car name is a separate field and is not derived from the id.** After
+overwriting the ids, the names at `+0xA8` still read the cars the menu had
+chosen, while the models on track were the new ones. Anything writing entrants
+has to write the name too, or the HUD and the track disagree.
+
+Left open: how the course name maps to the asset code, and how to start a race
+without going through the menu - though for the alpha the host can go through
+it, and the block can be written just before the start.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:

@@ -2683,6 +2683,11 @@
       "function": "gt2_main_saveregisters",
       "target": "GT2Port.SetJmp.SaveJmp",
       "mode": "pre"
+    },
+    {
+      "function": "gt2_main_func21",
+      "target": "GT2Port.RaceWatch.Installing",
+      "mode": "pre"
     }
   ],
   "debug": false,
