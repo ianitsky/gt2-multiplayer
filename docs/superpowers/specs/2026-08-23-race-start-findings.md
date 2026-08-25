@@ -345,6 +345,46 @@ Left open: how the course name maps to the asset code, and how to start a race
 without going through the menu - though for the alpha the host can go through
 it, and the block can be written just before the start.
 
+## The block's real layout, and the two fields phase 2 needs
+
+An earlier reading of this block had the entrant records starting at `+0x44`
+with the car id at `+0x18`. They do not. The ids sit at `0x5C`, `0x12C`,
+`0x1FC` and so on - a stride of `0xD0` - so a record **begins** at `+0x5C` with
+the id at its own `+0x00`. Everything below `0x5C` is header, which is why only
+"entrant 0" ever appeared to carry a name: the `"0"` at `+0x44` is the header's,
+not an entrant's.
+
+```
+header
+  +0x10  race key, text            "A0A" for an arcade race
+  +0x20  course, text              "Tahiti Road"
+  +0x40  u32                       changes with every race; looks like a seed
+  +0x5A  u8   how many entrants    6; setting it to 1 runs a one-car race
+
+entrant, 0xD0 bytes, six of them from +0x5C
+  +0x00  u32  packed car id
+  +0x42  u8   0 for the human, 100 for the rest - an AI skill
+  +0x82  u8   0 for the human, 1 for every opponent
+  +0x8D  u8   place on the grid, from zero
+  +0x90  car name, text            as shown on screen
+```
+
+**`+0x8D` is the grid.** Across the six entrants it holds a complete
+permutation of 0..5, and the player - who starts sixth - holds 5. Swapping the
+player's value with whichever entrant holds 0 starts the player on pole with
+all six cars present. Assigning rather than swapping does not work: two
+entrants holding the same place is not a grid the game can build.
+
+**`+0x82` says who the human drives.** Which is the other half of a
+multiplayer grid: six machines racing the same six cars, each marking a
+different entrant as its own.
+
+Two earlier conclusions were wrong and are worth naming, since both were drawn
+on the bad offsets. Writing to "the entrant's first 24 bytes" broke the race
+because those bytes are the header, and one of them is the entrant count -
+a race of one car, which looks exactly like the opponents failing to spawn. And
+the "driver name" that seemed to mark the player was the header's text.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:
