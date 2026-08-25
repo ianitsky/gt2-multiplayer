@@ -45,6 +45,9 @@ Dispatcher.Load("main");
 // game sits in a busy-wait, and the wall clock decides when a VBlank happens.
 Irq.Deliver = RecompOne.Runtime.Runtime.DispatchIrq;
 Irq.PumpHost = RecompOne.Runtime.Runtime.PumpHost;
+// The window belongs to this thread, and the game's tasks run on threads of
+// their own, so this one has to keep answering the desktop while it waits.
+RecompOne.Runtime.Dispatch.TaskStacks.PumpWhileParked = RecompOne.Runtime.Runtime.PumpHost;
 
 var vblank = new WallClockVBlankSource();
 vblank.Start(() => InterruptController.Raise());

@@ -30,6 +30,9 @@ public static class SetJmp
     public static void SaveJmp(CpuContext c, IMemory m)
     {
         RecompOne.Runtime.Dispatch.Dispatcher.RecordSetJmp(c.A0);
+        Console.Error.WriteLine(
+            $"[setjmp] env=0x{c.A0:X8} ra=0x{c.RA:X8} sp=0x{c.SP:X8} s0=0x{c.S0:X8}"
+            + $" depth {RecompOne.Runtime.Dispatch.Dispatcher.CurrentDepth - 1}");
     }
 
     /// <summary>
@@ -64,6 +67,18 @@ public static class SetJmp
         c.GP = m.ReadU32(env + 0x2Cu);
 
         c.V0 = value;
+
+        // A jmp_buf holding a stack pointer from somewhere else belongs to
+        // another task, and resuming it is a context switch, not an unwind:
+        // the frames between here and there are on a different thread and have
+        // to stay standing. Only a jump within this task unwinds.
+        if (RecompOne.Runtime.Dispatch.TaskStacks.IsElsewhere(c.SP))
+        {
+            RecompOne.Runtime.Dispatch.TaskStacks.SwitchTo(
+                RecompOne.Runtime.Dispatch.TaskStacks.RegionOf(c.SP), env, c.RA);
+            return;
+        }
+
         throw new RecompOne.Runtime.Dispatch.LongJmpSignal(c.RA, env, RecompOne.Runtime.Dispatch.Dispatcher.CurrentDepth);
     }
 }
