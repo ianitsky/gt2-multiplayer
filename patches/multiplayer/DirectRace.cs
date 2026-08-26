@@ -84,8 +84,11 @@ public static class DirectRace
 
         // The same method is what ticks the car loader, so letting it run is
         // how the car gets loaded at all. Ending the screen before the car is
-        // in memory is the failure this whole exercise is about.
-        bool ready = CarLoad.DoneIn(m, 0) && !CarLoad.WantsTheRoomsCar(m);
+        // in memory is the failure this whole exercise is about - and asking
+        // DoneIn is how that failure happened, since it answers true for a
+        // request nobody has set going yet. On the very first pass that is
+        // every request there is.
+        bool ready = CarLoad.TheRoomsCarIsLoaded(m);
         if (!ready && DateTime.UtcNow - _armedAt < CarPatience)
         {
             if (_said) return true;

@@ -185,4 +185,77 @@ public class CarLoadTests
 
         Assert.False(CarLoad.WantsTheRoomsCar(m));
     }
+
+    // ---- "the room's car is loaded" is not "nothing is loading" ----
+
+    [Fact]
+    public void A_request_never_set_going_does_not_count_as_loaded()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        // Step zero with nothing asked for, which is every request on the
+        // first pass - and which DoneIn calls finished.
+        m.WriteU8(Request + Step, 0);
+
+        Assert.True(CarLoad.DoneIn(m, 0));
+        Assert.False(CarLoad.TheRoomsCarIsLoaded(m));
+    }
+
+    [Fact]
+    public void The_wrong_car_finished_does_not_count_as_loaded()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        m.WriteU16(Request + FileIndex, SomeOtherCar);
+        m.WriteU8(Request + Step, 9);
+
+        Assert.False(CarLoad.TheRoomsCarIsLoaded(m));
+    }
+
+    [Fact]
+    public void The_right_car_still_loading_does_not_count_as_loaded()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        m.WriteU16(Request + FileIndex, TheRoomsCar);
+        m.WriteU8(Request + Step, 3);
+
+        Assert.False(CarLoad.TheRoomsCarIsLoaded(m));
+    }
+
+    [Fact]
+    public void The_right_car_out_of_steps_counts_as_loaded()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        m.WriteU16(Request + FileIndex, TheRoomsCar);
+        m.WriteU8(Request + Step, 9);
+
+        Assert.True(CarLoad.TheRoomsCarIsLoaded(m));
+    }
+
+    [Fact]
+    public void Nothing_is_loaded_when_no_room_has_named_a_car()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+
+        m.WriteU16(Request + FileIndex, SomeOtherCar);
+        m.WriteU8(Request + Step, 9);
+
+        Assert.False(CarLoad.TheRoomsCarIsLoaded(m));
+    }
 }

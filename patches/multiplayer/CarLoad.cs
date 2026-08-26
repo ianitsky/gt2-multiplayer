@@ -181,6 +181,30 @@ public static class CarLoad
         return _insisted < Insistence;
     }
 
+    /// <summary>
+    /// Whether the car the room agreed on is in memory.
+    ///
+    /// Deliberately not <see cref="DoneIn"/>, which answers true for a request
+    /// that has never been set going - right where it is used, since a slot
+    /// nobody asked anything of is not something to wait on, and wrong here,
+    /// where "not started yet" and "finished" are the two things that must not
+    /// be confused. A launch that took the first for the second ended the
+    /// arcade's screen before the car had even been asked for, and the race
+    /// loaded without it.
+    ///
+    /// Both halves are required: the right file, and the loader out of steps.
+    /// </summary>
+    public static bool TheRoomsCarIsLoaded(IMemory m)
+    {
+        if (_drivingIndex < 0) return false;
+
+        uint request = RequestIn(m, 0);
+        if (request == 0u) return false;
+        if (m.ReadU16(request + FileIndex) != _drivingIndex) return false;
+
+        return m.ReadU8(request + Step) >= Finished;
+    }
+
     /// <summary>The one tick on which giving up is worth saying out loud.</summary>
     static bool GaveUp(IMemory m)
     {
