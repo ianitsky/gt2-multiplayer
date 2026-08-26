@@ -132,25 +132,14 @@ public static class DirectRace
         // be retried on the next visit to the arcade with half its work done.
         _waiting = null;
 
-        try
-        {
-            Run(c, m, race);
-            return false;
-        }
-        catch (LongJmpSignal)
-        {
-            // A task switch out of a game function called from here belongs to
-            // the game, not to this, and swallowing it would strand a task.
-            throw;
-        }
-        catch (Exception e)
-        {
-            // Better to hand the player the menus than a black screen: the
-            // arcade's own body has not run yet, so letting it run is still a
-            // way into a race.
-            Console.Error.WriteLine($"[direct] the direct launch failed, falling back to the menus: {e.Message}");
-            return true;
-        }
+        // No falling back. Running the arcade's own body after this has failed
+        // partway looked like the kind thing to do and is not: the body starts
+        // by initialising everything this has already initialised, and doing
+        // that twice hangs the game with the window unable to answer. A failure
+        // that stops here says what went wrong; one that falls back says it and
+        // then hangs, which reads as a different fault entirely.
+        Run(c, m, race);
+        return false;
     }
 
     static void Run(CpuContext c, IMemory m, Pending race)
@@ -179,6 +168,11 @@ public static class DirectRace
 
             c.A0 = screen;
             Call(c, m, InstallCarRequestRecords);
+
+            // Told before the slots are read rather than when the car is asked
+            // for: RequestIn answers zero when it has no owner, so checking
+            // first would report an empty slot whatever the install did.
+            CarLoad.UseOwner(screen);
             RefuseAnImpossibleRequest(m);
 
             // Here the arcade would run its first screen and then switch on the
