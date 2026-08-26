@@ -119,6 +119,32 @@ public static class DirectRace
         c.V0 = 0u;
     }
 
+    /// <summary>
+    /// Post-hook on the pre-race screen's own "should I keep going?" method,
+    /// answering zero the first time it is asked.
+    ///
+    /// That screen is what kills a launched race. It renders, and a pointer it
+    /// renders through is wrong on this path - the writes land on a VBlank
+    /// callback node at 0x801C949C, and the handler then calls whatever a
+    /// primitive left where the callback was. Finding the pointer means reading
+    /// the GTE-heavy drawing code, which is a long way past anything else here.
+    ///
+    /// It is also skippable. It lives half a second in a walked run, and the
+    /// 720-byte block it appears to sit between is byte for byte identical
+    /// either side of it - so it decides nothing a race needs. Ending it at
+    /// once is the same trick that worked on the first screen, and it never
+    /// draws a frame to go wrong in.
+    /// </summary>
+    public static void PreRaceScreenAnswered(CpuContext c, IMemory m)
+    {
+        if (!EndedTheScreen || _preRaceEnded) return;
+        _preRaceEnded = true;
+        c.V0 = 0u;
+        Console.Error.WriteLine("[direct] the pre-race screen is ended before it draws");
+    }
+
+    static bool _preRaceEnded;
+
     static byte[]? _parameters;
 
     /// <summary>

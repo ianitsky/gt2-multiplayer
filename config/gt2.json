@@ -2663,6 +2663,10 @@
         {
           "address": "0x80013BE4",
           "name": "gt2_ovr3_arcade_screen_first_pass_installs_car_requests"
+        },
+        {
+          "address": "0x80014B88",
+          "name": "gt2_ovr3_prerace_screen_say_whether_to_continue"
         }
       ]
     },
@@ -2805,6 +2809,12 @@
       "address": "0x80068708",
       "target": "GT2Port.Multiplayer.VblankList.Unregistered",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80014B88",
+      "target": "GT2Port.Multiplayer.DirectRace.PreRaceScreenAnswered",
+      "mode": "post"
     }
   ],
   "debug": false,
