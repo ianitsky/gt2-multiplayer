@@ -98,6 +98,8 @@ public static class RaceStartLine
         int reads = LoadTrace.Reads;
 
         var gc = Collector();
+        string? whereItWas = StallWatch.WhereItWas();
+        StallWatch.FrameBegins();
 
         if (_frames++ > 0)
         {
@@ -114,7 +116,8 @@ public static class RaceStartLine
                     + $" costing {(RecompOne.Runtime.Dispatch.TaskStacks.Waited - _waitedAtFrameStart).TotalMilliseconds:F0}ms,"
                     + $" longest one {RecompOne.Runtime.Dispatch.TaskStacks.TakeLongest().TotalMilliseconds:F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
-                    + $" {++_stalls} so far)");
+                    + $" {++_stalls} so far)"
+                    + (whereItWas is null ? "" : Environment.NewLine + $"[stall]     {whereItWas}"));
         }
 
         _frameBegan = now;
