@@ -125,6 +125,12 @@ public static class ModeHook
         HoldForTheStart(room);
     }
 
+    /// <summary>
+    /// The host's address as it was while the lobby was still running, which
+    /// is the only time anything answers for it.
+    /// </summary>
+    static System.Net.IPAddress? _raceHost;
+
     /// <summary>How long to wait for everyone before starting anyway.</summary>
     static readonly TimeSpan StartPatience = TimeSpan.FromSeconds(20);
 
@@ -164,6 +170,13 @@ public static class ModeHook
             $"[start] {began:HH:mm:ss.fff} holding for {room.Players.Count} players"
             + $" as {(hosting ? "host" : "client")}");
 
+        if (!hosting && _raceHost is null)
+        {
+            Console.Error.WriteLine(
+                "[start] no host address was kept from the lobby - nothing to report to");
+            return;
+        }
+
         while (DateTime.UtcNow < until)
         {
             RecompOne.Runtime.Runtime.PumpHost();
@@ -187,7 +200,7 @@ public static class ModeHook
                     return;
                 }
             }
-            else if (_discovery!.TryGetHostAddress(room.Id, out var host))
+            else if (_raceHost is { } host)
             {
                 _lanSession.ReportAtTheLine(host);
                 _lanSession.CollectGo();
@@ -400,6 +413,13 @@ public static class ModeHook
                 else if (_session.Phase == SessionPhase.Joined &&
                          _discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
                 {
+                    // Kept for after the lobby. Discovery forgets a host three
+                    // seconds after its last announcement, and the host only
+                    // announces from this loop - so by the time the race
+                    // overlay has loaded and the start barrier begins, the
+                    // address is already gone and a client that looked it up
+                    // there would find nothing and say nothing.
+                    _raceHost = hostAddress;
                     _lanSession?.ClientTick(_session, hostAddress);
                 }
 
