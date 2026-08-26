@@ -192,7 +192,13 @@ public static class CarLoad
     /// arcade's screen before the car had even been asked for, and the race
     /// loaded without it.
     ///
-    /// Both halves are required: the right file, and the loader out of steps.
+    /// Both halves are required, and the file is the half that carries the
+    /// weight. A finished request does not stop on a step past the last one -
+    /// watching a real load showed it run 1, 2, 3, 4, 5, 8 and then reset to
+    /// zero, which is the same zero an untouched request holds. What tells the
+    /// two apart is the file: an untouched record's is zero, and a record
+    /// holding the room's car can only have got it from an ask, since the
+    /// enqueue writes the file and the step together.
     /// </summary>
     public static bool TheRoomsCarIsLoaded(IMemory m)
     {
@@ -202,7 +208,8 @@ public static class CarLoad
         if (request == 0u) return false;
         if (m.ReadU16(request + FileIndex) != _drivingIndex) return false;
 
-        return m.ReadU8(request + Step) >= Finished;
+        byte step = m.ReadU8(request + Step);
+        return step == 0 || step >= Finished;
     }
 
     /// <summary>The one tick on which giving up is worth saying out loud.</summary>

@@ -258,4 +258,21 @@ public class CarLoadTests
 
         Assert.False(CarLoad.TheRoomsCarIsLoaded(m));
     }
+
+    [Fact]
+    public void The_right_car_back_at_step_zero_counts_as_loaded()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        // How a real load ends: the steps run 1, 2, 3, 4, 5, 8 and the request
+        // resets to zero. The file is what says this zero is not the zero of a
+        // request nobody ever asked anything of.
+        m.WriteU16(Request + FileIndex, TheRoomsCar);
+        m.WriteU8(Request + Step, 0);
+
+        Assert.True(CarLoad.TheRoomsCarIsLoaded(m));
+    }
 }
