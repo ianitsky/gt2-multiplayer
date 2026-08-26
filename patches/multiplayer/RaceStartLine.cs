@@ -62,6 +62,11 @@ public static class RaceStartLine
             _lastMoved = now;
             _readsWhenQuiet = reads;
 
+            // Again here, because the roster was empty when the block was
+            // built and the question is whether it is ever filled at all or
+            // only filled by menus a launch walks past.
+            CourseRoster.Say(m, "at the race's first frame");
+
             if (HoldsHere)
             {
                 _held = true;

@@ -260,7 +260,7 @@ public static class DirectRace
     /// </summary>
     static void PutTheRoomsCourseIn(IMemory m)
     {
-        CourseRoster.Say(m);
+        CourseRoster.Say(m, "as the block is built");
 
         string wanted = CourseWanted.Length > 0
             ? CourseWanted

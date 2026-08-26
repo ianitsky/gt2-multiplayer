@@ -75,25 +75,38 @@ public static class CourseRoster
         return false;
     }
 
-    /// <summary>Prints the roster once, which is what says what a room may ask for.</summary>
-    public static void Say(IMemory m)
+    /// <summary>
+    /// Prints the roster, and the header raw when there is no roster to print.
+    ///
+    /// The first version said "no roster yet" for a count of zero and for a
+    /// count of two hundred alike, so a run that found the table in a shape
+    /// this did not expect was indistinguishable from one that found nothing.
+    /// What the header actually holds is the thing worth reporting.
+    /// </summary>
+    public static void Say(IMemory m, string when)
     {
-        if (_said) return;
-        _said = true;
+        if (!_said.Add(when)) return;
 
+        int count = m.ReadU16(Table + Count);
         var courses = Read(m);
+
         if (courses.Count == 0)
         {
-            Console.Error.WriteLine($"[course] no roster at 0x{Table:X8} yet");
+            var head = new System.Text.StringBuilder();
+            for (uint i = 0; i < 0x20; i++) head.Append($"{m.ReadU8(Table + i):X2} ");
+            Console.Error.WriteLine(
+                $"[course] {when}: the roster at 0x{Table:X8} says {count} entries"
+                + $" - {(count == 0 ? "not built" : count > TooMany ? "more than this will trust" : "unreadable")}");
+            Console.Error.WriteLine($"[course]   0x{Table:X8}: {head.ToString().TrimEnd()}");
             return;
         }
 
-        Console.Error.WriteLine($"[course] the game has {courses.Count} course(s) ready:");
+        Console.Error.WriteLine($"[course] {when}: the game has {courses.Count} course(s) ready:");
         foreach (var course in courses)
             Console.Error.WriteLine($"[course]   {course.Index,2}. 0x{course.Id:X8}  {course.Name}");
     }
 
-    static bool _said;
+    static readonly HashSet<string> _said = [];
 
     /// <summary>How long a course name is allowed to be before this stops reading.</summary>
     const int LongestName = 64;
@@ -113,5 +126,5 @@ public static class CourseRoster
     }
 
     /// <summary>Forgets what has been said, for a test that must not inherit it.</summary>
-    internal static void Forget() => _said = false;
+    internal static void Forget() => _said.Clear();
 }
