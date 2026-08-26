@@ -982,3 +982,98 @@ modes, and took the fall-through - no record lookup, no fill, no car.
 
 **Any hook that runs game code must snapshot and restore the context.** The
 function it precedes has not read its arguments yet.
+
+## Where the course lives
+
+Not in the parameter block as text. The block's "Tahiti Road" at +0xB8 is a
+copy for display; the course itself is the u32 at **+0x1B8**.
+
+The builder hands it to `0x8005E590(race, id)`, which:
+
+1. stores the id raw at `[race+0x40]`
+2. resolves it with `0x80060EB4(id)` to an index
+3. copies the name it finds into `[race+0x20]`
+
+`0x80060EB4` is a linear search over a roster the game builds in RAM at
+**0x801E18E0**:
+
+| offset | meaning |
+|--------|---------|
+| +0x06 | u16 count |
+| +0x08 | first entry, stride 0x18 |
+| entry +0x00 | pointer to the display name |
+| entry +0x04 | the u32 the parameter block carries |
+
+So a race is set to a course by naming a roster entry's number. Reading the
+roster at launch is what lets a room pick a track without a captured parameter
+block per course.
+
+The disc's static course tables are separate and live in gt2_03 as 32-byte
+records (`+0x10` asset code, `+0x14` display name), in nine arrays:
+
+| address | entries | what |
+|---------|---------|------|
+| 0x800508F4 | 19 | one-player forward |
+| 0x80050BB4 | 19 | one-player reverse |
+| 0x80050E74 | 20 | arcade forward |
+| 0x800510F4 | 3 | arcade forward, extra |
+| 0x80051174 | 20 | arcade reverse |
+| 0x800513F4 | 3 | arcade reverse, extra |
+| 0x80051474 | 9 | dirt |
+| **0x800515B4** | **21** | **two-player tarmac** |
+| **0x80051874** | **6** | **two-player dirt** |
+
+Nothing points at them statically; they are reached by a base and an index
+computed at runtime. `tools/gen_course_table.py` reads the two-player pair into
+`CourseTable.cs`.
+
+## The arcade event table
+
+The builder's mode-4 path picks an event, not a course:
+
+```
+[0x80027470 + block[+0x00]*0x10 + block[+0x01]*4]   ->  "A0S" "A0A" "A0B" "A0C"
+                                                        "A1S" ... through "A3C"
+0x8007830C(global, that)  ->  the event descriptor the fill is handed as A2
+```
+
+Four classes of four. The capture is `A0A` (`+0x00=0`, `+0x01=1`).
+
+## Class names the game carries
+
+Each vtable is followed by its own mangled class name, which is how
+`ArcadeRaceLoop` was identified at 0x8002F000. The full set:
+
+- **gt2_01**: `ArcadeRaceLoop`, `GranTurismoRaceLoop`, `RaceMenuLoop`,
+  `RaceViewLoop`, `RaceDevelopment`, `QuickMenu`, `PreQuickMenuIO`
+- **gt2_02**: `BaseMenu`
+- **gt2_03**: `ArcadeMenu`, `ArcadeRacingMenu`
+- **gt2_05**: `GTMenu`, `GTBattleMenu`, `GTLoadingMenu`
+- **gt2_06**: `psxMovieLoop`
+
+`RaceMenuLoop`'s vtable is **0x8002EF98**: slot +0x10 is the per-frame step
+(0x8001584C), +0x1C the teardown, +0x24 the continue check, +0x44 the view loop
+the race phase calls. The base race-loop vtable sits at 0x8002EF58 and
+`ArcadeRaceLoop` overrides its +0x18, +0x20, +0x28, +0x30 and +0x3C.
+
+No two-player class exists in any overlay, so GT2's split-screen is a flag
+inside `ArcadeRaceLoop` - which is where a multiplayer that drives cars from
+pads has to live.
+
+## The arcade menu's vocabulary
+
+The first screen's step method asks the current page what the player wants:
+slot 1 of `[screen+0x1D0 + depth*4]`, and the answer indexes 0x80026F98.
+
+| answer | action |
+|--------|--------|
+| 0 | stay on this page |
+| 1 | push a sub-page |
+| 2 | pop a page - **calls slot 0 with 1, which stops the music** |
+| 3 | leave, exit byte 1 - the race |
+| 4 | leave, exit byte 0 |
+| 5 | leave, exit byte 2 |
+| 6 | leave, exit byte 3 |
+
+The race answer does not stop the music because a player has already popped a
+page to reach it. A launch that walks no pages must make that call itself.
