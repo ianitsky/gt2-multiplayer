@@ -2769,15 +2769,27 @@
     },
     {
       "overlay": "gt2_03",
-      "address": "0x800141B8",
-      "target": "GT2Port.Multiplayer.DirectRace.ScreenAsksWhetherToContinue",
+      "address": "0x80014898",
+      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.PreRaceScreen",
       "mode": "pre"
     },
     {
       "overlay": "gt2_03",
-      "address": "0x80014898",
-      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.PreRaceScreen",
+      "address": "0x800141B8",
+      "target": "GT2Port.Multiplayer.DirectRace.ScreenAsks",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x800141B8",
+      "target": "GT2Port.Multiplayer.DirectRace.ScreenAnswered",
+      "mode": "post"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80010C84",
+      "target": "GT2Port.Multiplayer.DirectRace.ParametersBuilt",
+      "mode": "post"
     }
   ],
   "debug": false,

@@ -4,64 +4,48 @@ using RecompOne.Runtime.Memory;
 namespace GT2Port.Multiplayer;
 
 /// <summary>
-/// Ends the arcade's first screen early, so a race starts without the menus.
+/// Starts a race from the lobby without the player walking the arcade's menus.
 ///
-/// This began as a replacement for the arcade's entry point: skip its body and
-/// replay the sequence a race needs. Five attempts, each correct in itself and
-/// each revealing a new dependency somewhere else, said the approach was wrong
-/// rather than unfinished. Everything the arcade does is driven by its own
-/// frame loop with longjmp task switching, and replaying that synchronously
-/// from a hook kept running into things that need the loop.
+/// Everything tried here that reached past the arcade and did the work itself
+/// has failed, each time on a subsystem left in a state the game never puts it
+/// in. What works is the opposite: let the arcade do all of it, and change only
+/// two answers.
 ///
-/// So nothing is replayed. The arcade runs exactly as it always has, and the
-/// only intervention is to tell its first screen that it is finished:
+///   - The arcade's first screen is a loop that asks slot 0x24 of the screen's
+///     vtable every pass whether to keep going. That same method is what ticks
+///     the car loader, so the game loads the room's car through its own frame
+///     loop. Once the car is in memory the answer becomes zero, and the loop
+///     ends the way it ends for a player: its own last pass, its own teardown,
+///     back into the arcade's race case.
 ///
-///   - a screen is a loop in 0x80083418 which calls slot 0x24 of the screen's
-///     vtable every pass and stops when it answers zero;
-///   - for the first screen that slot is
-///     gt2_ovr3_arcade_screen_tick_car_requests_and_say_whether_to_continue,
-///     which is also what ticks the car loader - so the game loads the room's
-///     car through its own loop and nothing here has to drive it;
-///   - the byte at 0x801EF5F4 chooses which of five exits the arcade takes
-///     afterwards, and 1 is the race.
+///   - That race case builds a 720-byte parameter block describing the race.
+///     Built without the menus it comes out all zeroes, since it is assembled
+///     from what the screens decided - the course is in it as plain text. So a
+///     captured one is written over the top after the game builds it.
 ///
-/// Answering zero once the car is loaded, with the exit byte set, is the whole
-/// of it. The arcade then seeds, builds its parameter block, copies it out and
-/// loads the race overlay by itself - the sequence this used to replay.
+/// Everything else - the seeds, the pre-race screen, the copy, gt2_04, the race
+/// overlay - is the arcade's own, untouched.
 /// </summary>
 public static class DirectRace
 {
-    // ---- what the arcade's race case does, in the order it does it ----
+    /// <summary>The byte the arcade switches on when its first screen ends.</summary>
+    const uint ExitByte = 0x801EF5F4u;
 
+    /// <summary>The exit that is the race, read out of the table at 0x800267DC.</summary>
+    const byte TheRace = 1;
+
+    /// <summary>Where the arcade builds its race parameters, and how many.</summary>
     const uint Parameters = 0x801C3350u;
     const int ParametersSize = 0x2D0;
 
-    /// <summary>Where the arcade copies the parameters on its way into the race.</summary>
-    const uint ParametersGoTo = 0x801D5FA0u;
+    static readonly string ParametersPath = Path.Combine("config", "race-params.bin");
 
-    /// <summary>Two flags the arcade raises just before the copy.</summary>
-    const uint Flags = 0x801EF5F0u;
-
-    const uint LoadOverlayDefault = 0x8005DA3Cu;
-    const uint LoadOverlay = 0x8005DA7Cu;
-
-    /// <summary>gt2_01, both as the table at 0x80091174 numbers it and by entry.</summary>
-    const uint RaceOverlayIndex = 0u;
-    const uint RaceOverlayEntry = 0x80011F64u;
-
-    /// <summary>
-    /// How long to let the car load before starting anyway.
-    ///
-    /// Starting without it is bad, but so is a lobby that never reaches a race:
-    /// the arcade would sit on its first screen for ever with nothing on screen
-    /// saying why.
-    /// </summary>
+    /// <summary>How long to let the car load before starting anyway.</summary>
     static readonly TimeSpan CarPatience = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Off unless GT2_DIRECT_LAUNCH is set. Ending a screen early is a great
-    /// deal smaller than replacing the arcade, but it is still untried against
-    /// a path that works.
+    /// Off unless GT2_DIRECT_LAUNCH is set. It is still untried against a path
+    /// that works.
     /// </summary>
     public static bool Enabled { get; } =
         Environment.GetEnvironmentVariable("GT2_DIRECT_LAUNCH") is not (null or "");
@@ -71,6 +55,9 @@ public static class DirectRace
 
     static bool _armed;
     static DateTime _armedAt;
+    static bool _endNow;
+    static byte _step;
+    static DateTime _lastSaid;
     static bool _said;
 
     /// <summary>Called by the lobby when a race has been agreed and is to start.</summary>
@@ -88,162 +75,93 @@ public static class DirectRace
         Console.Error.WriteLine($"[direct] a race is waiting: {players} player(s), {me} in {car}");
     }
 
-    static byte _step;
-    static DateTime _lastSaid;
+    /// <summary>
+    /// Pre-hook on the first screen's "should I keep going?" method. Always
+    /// lets it run: it is what ticks the car loader, and it is also what winds
+    /// the screen down on its last pass. Only the answer changes, and that is
+    /// ScreenAnswered's job.
+    /// </summary>
+    public static void ScreenAsks(CpuContext c, IMemory m)
+    {
+        if (!_armed) return;
+
+        bool ready = CarLoad.TheRoomsCarIsLoaded(m);
+        if (!ready && DateTime.UtcNow - _armedAt < CarPatience)
+        {
+            Waiting(m);
+            return;
+        }
+
+        _armed = false;
+        _endNow = true;
+        EndedTheScreen = true;
+        m.WriteU8(ExitByte, TheRace);
+
+        Console.Error.WriteLine(ready
+            ? "[direct] the car is loaded - letting the arcade screen finish"
+            : $"[direct] the car did not load in {CarPatience.TotalSeconds:F0}s - going anyway"
+              + $" (the loader stopped on step {CarLoad.StepIn(m, 0)})");
+    }
 
     /// <summary>
-    /// Says how the wait is going, when it changes and once a second besides.
+    /// Post-hook on the same method. The screen has just done everything a
+    /// normal last pass does; all that is left is to answer zero, which is what
+    /// the loop reads to know it is over.
     ///
-    /// A car that does not arrive is a loader step that stops advancing, and
-    /// the step separates the two things this could be: the load never starts,
-    /// or it starts and stalls somewhere. Saying it only once - which is what
-    /// this did - describes neither.
+    /// Skipping the body instead, which an earlier version did, ends the screen
+    /// without its last pass ever running - and the race then followed a
+    /// display list nobody had wound down.
+    /// </summary>
+    public static void ScreenAnswered(CpuContext c, IMemory m)
+    {
+        if (!_endNow) return;
+        _endNow = false;
+        c.V0 = 0u;
+    }
+
+    static byte[]? _parameters;
+
+    /// <summary>
+    /// Post-hook on the arcade parameter builder. Built without the menus the
+    /// block comes out all zeroes, since it is assembled from what the screens
+    /// decided - the course reads out of it as text at +0xB8. So a captured one
+    /// is written over the top, and the arcade copies that out as its own.
+    ///
+    /// The cost is worth stating plainly: every launched race runs the course
+    /// the capture was taken on, whatever the room says.
+    /// </summary>
+    public static void ParametersBuilt(CpuContext c, IMemory m)
+    {
+        if (!EndedTheScreen) return;
+
+        _parameters ??= File.Exists(ParametersPath) ? File.ReadAllBytes(ParametersPath) : null;
+        if (_parameters is not { Length: >= ParametersSize })
+        {
+            Console.Error.WriteLine($"[direct] no race parameters at {ParametersPath}");
+            return;
+        }
+
+        for (int i = 0; i < ParametersSize; i++)
+            m.WriteU8(Parameters + (uint)i, _parameters[i]);
+        Console.Error.WriteLine("[direct] the race parameters are supplied from a captured race");
+    }
+
+    /// <summary>
+    /// Says how the wait is going, when it changes and once a second besides. A
+    /// car that does not arrive is a loader step that stops advancing, and the
+    /// step separates a load that never starts from one that stalls.
     /// </summary>
     static void Waiting(IMemory m)
     {
         byte step = CarLoad.StepIn(m, 0);
         var now = DateTime.UtcNow;
-
         if (_said && step == _step && now - _lastSaid < TimeSpan.FromSeconds(1)) return;
 
         _said = true;
         _step = step;
         _lastSaid = now;
         Console.Error.WriteLine(
-            $"[direct] holding the arcade's screen: the loader is on step {step}"
+            $"[direct] holding the arcade screen: the loader is on step {step}"
             + $" after {(now - _armedAt).TotalSeconds:F1}s");
     }
-
-    /// <summary>
-    /// Pre-hook on the first screen's "should I keep going?" method. Returns
-    /// true to let the screen answer for itself, false to answer zero for it,
-    /// which is how the screen is told it is finished.
-    /// </summary>
-    public static bool ScreenAsksWhetherToContinue(CpuContext c, IMemory m)
-    {
-        if (!_armed) return true;
-
-        // The same method is what ticks the car loader, so letting it run is
-        // how the car gets loaded at all. Ending the screen before the car is
-        // in memory is the failure this whole exercise is about - and asking
-        // DoneIn is how that failure happened, since it answers true for a
-        // request nobody has set going yet. On the very first pass that is
-        // every request there is.
-        bool ready = CarLoad.TheRoomsCarIsLoaded(m);
-        if (!ready && DateTime.UtcNow - _armedAt < CarPatience)
-        {
-            Waiting(m);
-            return true;
-        }
-
-        _armed = false;
-        EndedTheScreen = true;
-
-        Console.Error.WriteLine(ready
-            ? "[direct] the car is loaded - starting the race"
-            : $"[direct] the car did not load in {CarPatience.TotalSeconds:F0}s - starting anyway"
-              + $" (the loader stopped on step {CarLoad.StepIn(m, 0)})");
-
-        StartTheRace(c, m, c.A0);
-
-        // Not reached: loading an overlay jumps to its entry point rather than
-        // returning, which is how the arcade's own race case ends too.
-        return false;
-    }
-
-    /// <summary>
-    /// Does what the arcade's race case does, without its screen.
-    ///
-    /// The arcade builds a block of race parameters, runs a screen over the
-    /// object, copies the block out and loads the race overlay. Only the last
-    /// three of those prepare anything: the parameters were shown to be byte
-    /// for byte identical before and after the screen, so the screen decides
-    /// nothing a race needs.
-    ///
-    /// Letting the arcade run its own race case instead is what does not work.
-    /// Its screen expects a record of the navigation that brought the player
-    /// there, six menu nodes deep, and a launch that never navigated leaves
-    /// that as whatever the stack held - which the screen follows into a DMA
-    /// with an address that is not memory.
-    ///
-    /// So the preparation happens here and the race is loaded from here. This
-    /// is the point the whole exercise was aiming at: one call, with everything
-    /// it needs already in memory.
-    /// </summary>
-    /// <summary>
-    /// Where a screen's vtable keeps the method the loop calls once it has
-    /// stopped - the one that puts back whatever the screen took.
-    /// </summary>
-    const int TeardownSlot = 0x1C;
-
-    static void StartTheRace(CpuContext c, IMemory m, uint screen)
-    {
-        // The loop calls this after its last pass. Never returning to the loop
-        // means never reaching it, and it is where a screen gives up what it
-        // holds - display state among it, which is what a VBlank DMA follows
-        // into an address that is not memory.
-        uint vtable = m.ReadU32(screen);
-        uint teardown = m.ReadU32(vtable + TeardownSlot);
-        if (teardown != 0u)
-        {
-            c.A0 = screen;
-            Call(c, m, teardown);
-        }
-
-        if (!TryWriteParameters(m)) return;
-
-        // The two flags the arcade raises just before its copy.
-        m.WriteU8(Flags + 1u, 1);
-        m.WriteU8(Flags + 2u, 1);
-
-        // Sixteen bytes at a time and then one word more, which is 0x2D4
-        // rather than the 0x2D0 the loop bound suggests.
-        for (uint i = 0; i < ParametersSize + 4; i += 4)
-            m.WriteU32(ParametersGoTo + i, m.ReadU32(Parameters + i));
-
-        c.A0 = 3u;
-        Call(c, m, LoadOverlayDefault);
-
-        Console.Error.WriteLine("[direct] loading the race overlay");
-        c.A0 = RaceOverlayIndex;
-        c.A1 = RaceOverlayEntry;
-        c.A2 = 0u;
-        Call(c, m, LoadOverlay);
-    }
-
-    static readonly string ParametersPath = Path.Combine("config", "race-params.bin");
-
-    static byte[]? _parameters;
-
-    /// <summary>
-    /// Writes the race parameters from a captured race.
-    ///
-    /// The game builds these with 0x80010C84, and calling it here produces 720
-    /// zero bytes: the block is assembled from what the arcade's first screen
-    /// decided, and a launch that ends that screen early decided none of it.
-    /// The block holds the course - "Tahiti Road" reads out of it in plain text
-    /// at +0xB8 - so there is nothing to compute from what the room knows until
-    /// the room's track can be resolved to whatever this wants.
-    ///
-    /// So it is supplied rather than built, the same way the race block at
-    /// 0x801D585C already is. The cost is honest and worth stating: every
-    /// launched race runs the course the capture was taken on, whatever the
-    /// room says.
-    /// </summary>
-    static bool TryWriteParameters(IMemory m)
-    {
-        _parameters ??= File.Exists(ParametersPath) ? File.ReadAllBytes(ParametersPath) : null;
-        if (_parameters is not { Length: >= ParametersSize })
-        {
-            Console.Error.WriteLine($"[direct] no race parameters at {ParametersPath}");
-            return false;
-        }
-
-        for (int i = 0; i < ParametersSize; i++)
-            m.WriteU8(Parameters + (uint)i, _parameters[i]);
-        return true;
-    }
-
-    static void Call(CpuContext c, IMemory m, uint address) =>
-        RecompOne.Runtime.Dispatch.Dispatcher.Call(c, m, address);
 }
