@@ -2693,6 +2693,12 @@
       "function": "gt2_main_vol_get_file_data_sector_offset",
       "target": "GT2Port.LoadTrace.Reading",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80016640",
+      "target": "GT2Port.Multiplayer.CarLoad.Ticking",
+      "mode": "pre"
     }
   ],
   "debug": false,
