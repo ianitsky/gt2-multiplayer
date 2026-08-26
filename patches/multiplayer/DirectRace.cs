@@ -143,18 +143,18 @@ public static class DirectRace
     /// draws a frame to go wrong in.
     /// </summary>
     /// <summary>
-    /// Whether to skip the pre-race screen, off unless GT2_SKIP_PRERACE is set.
+    /// Whether to skip the pre-race screen. On unless GT2_KEEP_PRERACE says
+    /// otherwise.
     ///
-    /// It was skipped because it rendered through a wrong pointer and wrote
-    /// over a VBlank callback node. That was found before the race block turned
-    /// out not to be written at all, and a screen drawing a race out of an
-    /// empty block is exactly what a wrong pointer looks like - so the reason
-    /// for skipping may have gone with the cause. It is also the screen that
-    /// would stop the arcade's music, which a sequencer reading freed data
-    /// suggests nobody did.
+    /// Letting it run was worth one try: it was first skipped for rendering
+    /// through a wrong pointer, and that was found before the race block turned
+    /// out not to be written at all - a screen drawing a race out of an empty
+    /// block is what a wrong pointer looks like. With the block written it
+    /// still dies, earlier than before and before the engine sounds load, so
+    /// the fault is its own and skipping it is the better of the two.
     /// </summary>
     static readonly bool SkipPreRace =
-        Environment.GetEnvironmentVariable("GT2_SKIP_PRERACE") is not (null or "");
+        Environment.GetEnvironmentVariable("GT2_KEEP_PRERACE") is (null or "");
 
     public static void PreRaceScreenAnswered(CpuContext c, IMemory m)
     {
@@ -165,6 +165,31 @@ public static class DirectRace
     }
 
     static bool _preRaceEnded;
+
+    /// <summary>The pair that puts the sound sequencer on and off the VBlank list.</summary>
+    const uint UnregisterSoundCallback = 0x80068708u;
+
+    /// <summary>
+    /// Takes the sound sequencer off the VBlank list before the race loads.
+    ///
+    /// The sequencer walks a byte stream, and once the race overlay has landed
+    /// on top of the arcade's the stream is gone - it then reads a sequence
+    /// byte from an address that is not memory, out of an interrupt, which is
+    /// where a launched race died with everything else already right.
+    ///
+    /// Blunt, and worth saying so: the game has a way to stop its music that
+    /// this has not found, and the pre-race screen is probably where it lives.
+    /// Removing the callback stops the reading rather than stopping the music,
+    /// so a launched race may be quiet until that is found.
+    /// </summary>
+    static void SilenceTheArcade(CpuContext c, IMemory m)
+    {
+        Call(c, m, UnregisterSoundCallback);
+        Console.Error.WriteLine("[direct] the sound sequencer is taken off the VBlank list");
+    }
+
+    static void Call(CpuContext c, IMemory m, uint address) =>
+        RecompOne.Runtime.Dispatch.Dispatcher.Call(c, m, address);
 
     static byte[]? _parameters;
 
@@ -199,6 +224,8 @@ public static class DirectRace
         // memory. Both were captured from the same run.
         if (_race is { } race && !RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
             Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
+
+        SilenceTheArcade(c, m);
 
         // The VBlank callback list is sound here and nonsense a moment later,
         // so this is where a watch on it wants to start looking.
