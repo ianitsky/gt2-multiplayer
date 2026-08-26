@@ -76,6 +76,7 @@ public static class RaceStartLine
 
     static TimeSpan _waitedAtFrameStart;
     static long _waitsAtFrameStart;
+    static long _takesAtFrameStart;
 
     /// <summary>
     /// Pre-hook on the race screen's per-frame method, which is not the one the
@@ -108,8 +109,10 @@ public static class RaceStartLine
                     + $" gc {gc.Item1 - _gcAtFrameStart.Gen0}/{gc.Item2 - _gcAtFrameStart.Gen1}"
                     + $"/{gc.Item3 - _gcAtFrameStart.Gen2}"
                     + $" pausing {(gc.Item4 - _gcAtFrameStart.Paused).TotalMilliseconds:F0}ms,"
-                    + $" baton waits {RecompOne.Runtime.Dispatch.TaskStacks.Waits - _waitsAtFrameStart}"
+                    + $" baton asked {RecompOne.Runtime.Dispatch.TaskStacks.Takes - _takesAtFrameStart} times,"
+                    + $" waits {RecompOne.Runtime.Dispatch.TaskStacks.Waits - _waitsAtFrameStart}"
                     + $" costing {(RecompOne.Runtime.Dispatch.TaskStacks.Waited - _waitedAtFrameStart).TotalMilliseconds:F0}ms,"
+                    + $" longest one {RecompOne.Runtime.Dispatch.TaskStacks.Longest.TotalMilliseconds:F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)");
         }
@@ -119,6 +122,7 @@ public static class RaceStartLine
         _gcAtFrameStart = gc;
         _waitedAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Waited;
         _waitsAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Waits;
+        _takesAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Takes;
     }
 
     static int _frame;
