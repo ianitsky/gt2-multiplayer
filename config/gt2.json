@@ -2667,6 +2667,22 @@
         {
           "address": "0x80014B88",
           "name": "gt2_ovr3_prerace_screen_say_whether_to_continue"
+        },
+        {
+          "address": "0x80010000",
+          "name": "gt2_ovr3_find_car_record_by_packed_id_in_arcade_or_garage_table"
+        },
+        {
+          "address": "0x8001003C",
+          "name": "gt2_ovr3_read_signed_byte_from_decoded_car_info_at_offset"
+        },
+        {
+          "address": "0x80010074",
+          "name": "gt2_ovr3_clamp_signed_int_between_low_and_high"
+        },
+        {
+          "address": "0x80010554",
+          "name": "gt2_ovr3_build_race_block_and_fill_all_six_entrants"
         }
       ]
     },

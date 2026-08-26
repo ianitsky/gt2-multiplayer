@@ -188,12 +188,49 @@ public static class DirectRace
         Console.Error.WriteLine("[direct] the sound sequencer is taken off the VBlank list");
     }
 
-    static void Call(CpuContext c, IMemory m, uint address) =>
-        RecompOne.Runtime.Dispatch.Dispatcher.Call(c, m, address);
+    /// <summary>
+    /// Runs one of the game's own functions from inside a hook and puts every
+    /// register back, returning what the call left in V0.
+    ///
+    /// Restoring is the whole point, and leaving it out is what made a launched
+    /// race come out with no tyres. A pre-hook runs on the same context the
+    /// function it precedes is about to read its arguments from, and the
+    /// parameter builder's first instruction is FP = A2. Calling anything at
+    /// all from that hook without restoring leaves A2 holding whatever the call
+    /// used it for, so the builder took the block's mode byte from a garbage
+    /// address, matched none of its three modes, and fell straight through the
+    /// branch that resolves the player's car and fills the grid.
+    ///
+    /// The arguments go in here rather than at the call site so that setting
+    /// them cannot leak either: the snapshot is taken before they are written.
+    /// </summary>
+    static uint Call(CpuContext c, IMemory m, uint address, uint a0 = 0u, uint a1 = 0u)
+    {
+        var saved = c.Snapshot();
+        try
+        {
+            c.A0 = a0;
+            c.A1 = a1;
+            RecompOne.Runtime.Dispatch.Dispatcher.Call(c, m, address);
+            return c.V0;
+        }
+        finally
+        {
+            c.Restore(saved);
+        }
+    }
 
     static byte[]? _parameters;
 
-    /// <summary>Where the parameter block names the car that was chosen.</summary>
+    /// <summary>
+    /// Where the parameter block names the car that was chosen.
+    ///
+    /// The builder's mode-4 path reads the id at +0x10 three times over - once
+    /// for the colour byte at +0x16, once for the table select at +0x14, and
+    /// once to resolve the record - and never looks at +0x0C. The other modes
+    /// do, so both are written and they are kept equal, which is how a walked
+    /// race leaves them.
+    /// </summary>
     const uint ChosenCar = 0x0Cu;
     const uint ChosenCarAgain = 0x10u;
 
@@ -253,41 +290,17 @@ public static class DirectRace
         SilenceTheArcade(c, m);
     }
 
-    /// <summary>Where the race lives, and where its first entrant begins.</summary>
-    const uint RaceBlock = 0x801D585Cu;
-    const uint FirstEntrant = 0x5Cu;
 
     /// <summary>
-    /// Where inside an entrant the car's own data begins.
+    /// Post-hook on the builder: names the room's entrants in the race the
+    /// builder has just finished.
     ///
-    /// load_car_parts is handed the entrant plus eight, not the entrant -
-    /// watching a walked race fill the grid shows it aimed at 0x801D58C0 while
-    /// entrant 0 starts at 0x801D58B8. Handing it the base instead lands the
-    /// whole record eight bytes low, which is a car with no engine and no
-    /// tyres and therefore no throttle.
-    /// </summary>
-    const uint CarDataInEntrant = 0x8u;
-
-    /// <summary>Packed car id to the car's own record.</summary>
-    const uint FindCarRecord = 0x80010000u;
-
-    /// <summary>Clears an entrant and fills it from a car's record.</summary>
-    const uint LoadCarParts = 0x80076FC0u;
-
-    /// <summary>
-    /// Post-hook on the builder: supplies the race, then puts the room's car in
-    /// it through the game's own two calls.
-    ///
-    /// The builder alone does not produce a usable race - left to itself it
-    /// gives a block with no laps and an entrant whose engine resolves to
-    /// /engine/00000.es. The captured block does, so it goes in. But it
-    /// describes the car it was captured with, and writing the id over the top
-    /// leaves the fifty bytes beside it belonging to that car.
-    ///
-    /// So the game is asked instead: 0x80010000 turns a packed id into the
-    /// car's record and load_car_parts clears the entrant and fills it from
-    /// that record, field by field, through the descriptor it already has.
-    /// Nothing here has to know what any of those fields mean.
+    /// The car is not this method's business. The builder reads the chosen id
+    /// out of the block, resolves it through 0x80010000, builds the whole race
+    /// through func_80010554 and puts the player's car into the block at +0x1C
+    /// through load_car_parts - all of it from the id patched in beforehand. So
+    /// what is left here is the part the arcade has no idea about: who else is
+    /// on the grid.
     /// </summary>
     /// <summary>
     /// The head of the parameter block, which is what the builder branches on.
@@ -313,30 +326,16 @@ public static class DirectRace
         Say(m, "as the builder left it");
         if (_race is not { } race) return;
 
+        // Only the room's entrants. The car itself is the builder's work now:
+        // reading the arcade's race case end to end shows the block's mode byte
+        // sending it through 0x80010000 for the record, func_80010554 to build
+        // the race and fill all six entrants, and load_car_parts to put the
+        // player's car into the block at +0x1C. Doing any of that again here
+        // would only overwrite it - and load_car_parts aimed at the entrant
+        // writes 0x80 bytes from +0x08, which covers the AI skill at +0x42 and
+        // the AI flag at +0x82 that RaceLauncher has just set.
         if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
-        {
             Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
-            return;
-        }
-
-        if (!CarInfo.TryEncodeCode(race.Car, out uint packed)) return;
-
-        c.A0 = packed;
-        c.A1 = 0u;
-        Call(c, m, FindCarRecord);
-        uint record = c.V0;
-
-        if (record is < 0x80000000u or >= 0x80200000u)
-        {
-            Console.Error.WriteLine(
-                $"[direct] {race.Car} has no car record (got 0x{record:X8}) - its figures will be the capture's");
-            return;
-        }
-
-        c.A0 = record;
-        c.A1 = RaceBlock + FirstEntrant + CarDataInEntrant;
-        Call(c, m, LoadCarParts);
-        Console.Error.WriteLine($"[direct] the entrant is filled from {race.Car}'s own record at 0x{record:X8}");
 
         // The VBlank callback list is sound here and nonsense a moment later,
         // so this is where a watch on it wants to start looking.
