@@ -262,25 +262,26 @@ public static class DirectRace
     {
         CourseRoster.Say(m, "as the block is built");
 
-        string wanted = CourseWanted.Length > 0
-            ? CourseWanted
-            : CourseTable.DisplayName(_race?.Course ?? "");
-
-        if (wanted.Length == 0)
+        string code = CourseWanted.Length > 0 ? CourseWanted : _race?.Course ?? "";
+        if (code.Length == 0)
         {
             Console.Error.WriteLine("[course] the room names no course - the capture's will run");
             return;
         }
 
-        if (!CourseRoster.TryFind(m, wanted, out uint id))
-        {
-            Console.Error.WriteLine(
-                $"[course] the game has no course called \"{wanted}\" ready - the capture's will run");
-            return;
-        }
-
+        // The code is enough: the game's number for a course is a rotate-and-add
+        // hash of exactly this string. No roster lookup, and no matching by the
+        // name a player reads, which could never have worked - the disc has
+        // three courses called Tahiti Road.
+        uint id = CourseId.Of(code);
         m.WriteU32(Parameters + ChosenCourse, id);
-        Console.Error.WriteLine($"[course] the race is set to {wanted} (0x{id:X8})");
+
+        // And the name beside it, which is the capture's until it is written.
+        string name = CourseTable.DisplayName(code);
+        for (int i = 0; i < NameRoom; i++)
+            m.WriteU8(Parameters + CourseName + (uint)i, (byte)(i < name.Length ? name[i] : 0));
+
+        Console.Error.WriteLine($"[course] the race is set to {name} ({code}, 0x{id:X8})");
     }
 
     /// <summary>
@@ -339,6 +340,10 @@ public static class DirectRace
     /// code anywhere in it. See CourseRoster.
     /// </summary>
     const uint ChosenCourse = 0x1B8u;
+
+    /// <summary>Where it keeps the course's name as text, and how much room there is.</summary>
+    const uint CourseName = 0xB8u;
+    const int NameRoom = 0x20;
 
     /// <summary>
     /// A course to run instead of the room's, when GT2_COURSE names one the way
@@ -452,9 +457,39 @@ public static class DirectRace
         if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
             Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
 
+        SayTheRacesCourse(m);
+
         // The VBlank callback list is sound here and nonsense a moment later,
         // so this is where a watch on it wants to start looking.
         RecompOne.Runtime.Memory.MemoryWatch.Arm();
+    }
+
+    /// <summary>Where the race block keeps the course it was set to.</summary>
+    const uint RaceBlock = 0x801D585Cu;
+    const uint CourseNameInRace = 0x20u;
+    const uint CourseIdInRace = 0x40u;
+
+    /// <summary>
+    /// What the game decided the race's course is, in its own words.
+    ///
+    /// 0x8005E590 writes both of these: the number raw at +0x40 and the name it
+    /// looked that number up to get at +0x20. So this is the game answering the
+    /// question rather than the port assuming it, and it is what separates
+    /// "the write did not reach the race" from "it reached it and the race
+    /// loads its course from somewhere else entirely".
+    /// </summary>
+    static void SayTheRacesCourse(IMemory m)
+    {
+        var name = new System.Text.StringBuilder();
+        for (uint i = 0; i < 0x20; i++)
+        {
+            byte b = m.ReadU8(RaceBlock + CourseNameInRace + i);
+            if (b == 0) break;
+            name.Append((char)b);
+        }
+
+        Console.Error.WriteLine(
+            $"[course] the race block says 0x{m.ReadU32(RaceBlock + CourseIdInRace):X8} \"{name}\"");
     }
 
     /// <summary>

@@ -57,6 +57,22 @@ public static class RaceStartLine
     static int _readsAtFrameStart;
     static int _stalls;
     static int _frames;
+    static (int Gen0, int Gen1, int Gen2, TimeSpan Paused) _gcAtFrameStart;
+
+    /// <summary>
+    /// What the collector has done, so a stall can say whether it was the one
+    /// doing it.
+    ///
+    /// The first measurement showed stalls of two seconds and more with zero
+    /// files read during them, which rules out the disc and leaves the runtime.
+    /// A recompiled game allocates in places a game does not - a context
+    /// snapshot per call out of a hook, an errand per task switch - so the
+    /// collector is the first thing to ask about, and asking costs three
+    /// counters.
+    /// </summary>
+    static (int, int, int, TimeSpan) Collector() =>
+        (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2),
+         GC.GetTotalPauseDuration());
 
     /// <summary>
     /// Pre-hook on the race screen's per-frame method, which is not the one the
@@ -77,19 +93,25 @@ public static class RaceStartLine
         var now = DateTime.UtcNow;
         int reads = LoadTrace.Reads;
 
+        var gc = Collector();
+
         if (_frames++ > 0)
         {
             var took = now - _frameBegan;
             if (took > TooLong)
                 Console.Error.WriteLine(
                     $"[stall] {now:HH:mm:ss.fff} frame {_frames - 1} took {took.TotalMilliseconds:F0}ms"
-                    + $"  ({reads - _readsAtFrameStart} files read during it,"
+                    + $"  ({reads - _readsAtFrameStart} files read,"
+                    + $" gc {gc.Item1 - _gcAtFrameStart.Gen0}/{gc.Item2 - _gcAtFrameStart.Gen1}"
+                    + $"/{gc.Item3 - _gcAtFrameStart.Gen2}"
+                    + $" pausing {(gc.Item4 - _gcAtFrameStart.Paused).TotalMilliseconds:F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)");
         }
 
         _frameBegan = now;
         _readsAtFrameStart = reads;
+        _gcAtFrameStart = gc;
     }
 
     static int _frame;
