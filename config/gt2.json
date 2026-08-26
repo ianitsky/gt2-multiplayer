@@ -2430,7 +2430,7 @@
         },
         {
           "address": "0x800141B8",
-          "name": "entry_800141B8"
+          "name": "gt2_ovr3_arcade_screen_tick_car_requests_and_say_whether_to_continue"
         },
         {
           "address": "0x8001424C",
@@ -2662,7 +2662,7 @@
         },
         {
           "address": "0x80013BE4",
-          "name": "gt2_ovr3_arcade_screen_frame_installs_then_ticks_car_requests"
+          "name": "gt2_ovr3_arcade_screen_first_pass_installs_car_requests"
         }
       ]
     },
@@ -2769,8 +2769,8 @@
     },
     {
       "overlay": "gt2_03",
-      "address": "0x80011750",
-      "target": "GT2Port.Multiplayer.DirectRace.InsteadOfTheArcade",
+      "address": "0x800141B8",
+      "target": "GT2Port.Multiplayer.DirectRace.ScreenAsksWhetherToContinue",
       "mode": "pre"
     }
   ],

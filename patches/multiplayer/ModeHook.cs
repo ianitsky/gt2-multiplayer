@@ -306,7 +306,7 @@ public static class ModeHook
         if (DirectRace.Enabled && room != null
             && room.Players.FirstOrDefault(p => p.Name == _session.PlayerName) is { } mine)
         {
-            DirectRace.Expect(new DirectRace.Pending(room.Players, _session.PlayerName, mine.Car, _carCatalogue));
+            DirectRace.Expect(room.Players.Count, _session.PlayerName, mine.Car);
             c.A0 = ArcadeOverlayIndex;
             c.A1 = ArcadeEntryPoint;
         }
