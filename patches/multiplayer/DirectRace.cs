@@ -144,6 +144,10 @@ public static class DirectRace
         for (int i = 0; i < ParametersSize; i++)
             m.WriteU8(Parameters + (uint)i, _parameters[i]);
         Console.Error.WriteLine("[direct] the race parameters are supplied from a captured race");
+
+        // The VBlank callback list is sound here and nonsense a moment later,
+        // so this is where a watch on it wants to start looking.
+        RecompOne.Runtime.Memory.MemoryWatch.Arm();
     }
 
     /// <summary>
