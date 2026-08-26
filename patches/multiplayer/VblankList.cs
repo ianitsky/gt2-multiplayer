@@ -27,6 +27,38 @@ public static class VblankList
 
     static bool _said;
 
+    /// <summary>The node the register/unregister pair at 0x800686C8 owns.</summary>
+    const uint TheNode = 0x801C949Cu;
+
+    /// <summary>Pre-hook on the register. Says when, and what the node holds.</summary>
+    public static void Registered(CpuContext c, IMemory m) => Say(m, "registered");
+
+    /// <summary>Pre-hook on the unregister.</summary>
+    public static void Unregistered(CpuContext c, IMemory m) => Say(m, "unregistered");
+
+    static void Say(IMemory m, string what)
+    {
+        if (!Watching) return;
+        Console.Error.WriteLine(
+            $"[vblank] node 0x{TheNode:X8} {what}"
+            + $" (next 0x{m.ReadU32(TheNode + 0x4u):X8}, calls 0x{m.ReadU32(TheNode + 0x8u):X8})");
+    }
+
+    /// <summary>
+    /// Asks for the list to be reported on the next walk, whatever it holds.
+    ///
+    /// A bad list only says what went wrong; a good one from the same moment in
+    /// a run that works says what it should have been. Both paths reach the
+    /// arcade building its parameters, which makes that the moment to compare.
+    /// </summary>
+    public static void ReportOnce()
+    {
+        if (!Watching) return;
+        _report = true;
+    }
+
+    static bool _report;
+
     static string Where(uint address) => address switch
     {
         >= 0x801F0000u and < 0x80200000u => "the main stack",
@@ -40,7 +72,7 @@ public static class VblankList
     /// <summary>Pre-hook on the walker. Reads the list; changes nothing.</summary>
     public static void AboutToRun(CpuContext c, IMemory m)
     {
-        if (!Watching || _said) return;
+        if (!Watching || (_said && !_report)) return;
 
         uint head = c.A0;
         var lines = new List<string>();
@@ -61,9 +93,11 @@ public static class VblankList
             node = next;
         }
 
-        if (!bad) return;
+        if (!bad && !_report) return;
         _said = true;
-        Console.Error.WriteLine($"[vblank] the callback list from 0x{head:X8} holds something that is not code:");
+        _report = false;
+        Console.Error.WriteLine($"[vblank] the callback list from 0x{head:X8}"
+            + (bad ? " holds something that is not code:" : ":"));
         foreach (var line in lines) Console.Error.WriteLine(line);
     }
 }

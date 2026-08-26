@@ -54,6 +54,8 @@ public static class ArcadeSetupWatch
         // showing the screens leave it alone. The first screen is the one being
         // ended early, and whether the block depends on it is exactly what was
         // never tested.
+        VblankList.ReportOnce();
+
         string how = DirectRace.EndedTheScreen ? "launched" : "walked";
         Dump(m, Built, Copied, $"arcade-params-{how}.bin",
              $"the race parameters as built, {how}");

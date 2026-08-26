@@ -2795,6 +2795,16 @@
       "address": "0x80083134",
       "target": "GT2Port.Multiplayer.VblankList.AboutToRun",
       "mode": "pre"
+    },
+    {
+      "address": "0x800686C8",
+      "target": "GT2Port.Multiplayer.VblankList.Registered",
+      "mode": "pre"
+    },
+    {
+      "address": "0x80068708",
+      "target": "GT2Port.Multiplayer.VblankList.Unregistered",
+      "mode": "pre"
     }
   ],
   "debug": false,
@@ -3646,6 +3656,14 @@
     {
       "address": "0x80083134",
       "name": "gt2_main_vblank_run_callback_list"
+    },
+    {
+      "address": "0x800686C8",
+      "name": "gt2_main_vblank_register_task02_callback"
+    },
+    {
+      "address": "0x80068708",
+      "name": "gt2_main_vblank_unregister_task02_callback"
     }
   ]
 }
