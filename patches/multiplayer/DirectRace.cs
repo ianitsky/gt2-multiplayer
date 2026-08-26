@@ -1,0 +1,265 @@
+using RecompOne.Runtime.Context;
+using RecompOne.Runtime.Dispatch;
+using RecompOne.Runtime.Memory;
+
+namespace GT2Port.Multiplayer;
+
+/// <summary>
+/// Starts a race without the player walking the arcade's menus.
+///
+/// The arcade overlay's entry point is the whole arcade: it initialises a
+/// screen object, runs a screen over it, reads one byte to choose among five
+/// exits, and - for exit 1 - builds a block of race parameters, runs a second
+/// screen, copies the block out and loads the race. Everything a race needs is
+/// in that sequence, and every step of it has been read.
+///
+/// What cannot be done is faking a screen's result. A screen does not return a
+/// value the loop inspects; it runs as a task and longjmps, and the loop falls
+/// through only when the screen is genuinely finished. So getting past a screen
+/// means never entering it, which means replacing the entry point rather than
+/// steering it.
+///
+/// That is what this does: when a lobby has settled a race, the arcade's body
+/// is skipped and the same sequence runs here with the two screens left out.
+/// Three findings make it safe to leave them out:
+///
+///   - the loader's owner is built by the initialisation, four milliseconds
+///     into the entry point and long before any screen;
+///   - the 720-byte parameter block is byte for byte identical before and
+///     after the screens, so they contribute nothing to it;
+///   - what the player chooses in a screen lands in the race block at
+///     0x801D585C, which the room supplies instead.
+///
+/// One thing the screens did have to be replaced: they are what ticks the car
+/// loader. With them gone this ticks it, which is why the car is loaded here
+/// rather than left to the frame loop.
+///
+/// The layout and the evidence are in
+/// docs/superpowers/specs/2026-08-23-race-start-findings.md.
+/// </summary>
+public static class DirectRace
+{
+    // ---- the arcade's own addresses, in the order the race case uses them ----
+
+    /// <summary>How much stack the arcade's entry point claims.</summary>
+    const uint Frame = 0x4D8;
+
+    /// <summary>Where in that frame the screen object lives.</summary>
+    const uint ScreenObject = 0x10;
+
+    /// <summary>Scratch the race case uses for the two values it seeds from.</summary>
+    const uint Scratch = 0x4C8;
+
+    const uint Initialise = 0x80011954u;
+    const uint PrepareScreenObject = 0x80013B7Cu;
+    const uint ConstructFirstScreen = 0x80013BD8u;
+    const uint FirstScreenVtable = 0x800521C0u;
+
+    const uint Seed = 0x8007D23Cu;
+    const uint SeedStep = 0x80083AE0u;
+    const uint BuildParameters = 0x80010C84u;
+    const uint Parameters = 0x801C3350u;
+    const int ParametersSize = 0x2D0;
+
+    /// <summary>Where the arcade copies the parameters on its way into the race.</summary>
+    const uint ParametersGoTo = 0x801D5FA0u;
+
+    const uint ConstructPreRaceScreen = 0x80014898u;
+    const uint LeavePreRaceScreen = 0x800148CCu;
+
+    /// <summary>Two flags the arcade raises just before the copy.</summary>
+    const uint Flags = 0x801EF5F0u;
+
+    const uint LoadOverlayDefault = 0x8005DA3Cu;
+    const uint LoadOverlay = 0x8005DA7Cu;
+    const uint RaceOverlayEntry = 0x80011F64u;
+
+    /// <summary>How long to keep ticking the loader before giving up on the car.</summary>
+    static readonly TimeSpan CarPatience = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// Off unless GT2_DIRECT_LAUNCH is set. Skipping the arcade replaces a
+    /// path that works with one that has never run, so it stays behind a
+    /// switch until it has.
+    /// </summary>
+    public static bool Enabled { get; } =
+        Environment.GetEnvironmentVariable("GT2_DIRECT_LAUNCH") is not (null or "");
+
+    /// <summary>What the lobby settled, or null when nothing is waiting to start.</summary>
+    public sealed record Pending(IReadOnlyList<Player> Players, string Me, string Car, CarCatalogue? Cars);
+
+    static Pending? _waiting;
+
+    /// <summary>Called by the lobby when a race has been agreed and is to start.</summary>
+    public static void Expect(Pending race)
+    {
+        if (!Enabled)
+        {
+            Console.Error.WriteLine("[direct] a race is ready but GT2_DIRECT_LAUNCH is not set - using the menus");
+            return;
+        }
+        _waiting = race;
+        Console.Error.WriteLine($"[direct] a race is waiting: {race.Players.Count} players, {race.Me} in {race.Car}");
+    }
+
+    /// <summary>
+    /// Pre-hook on the arcade's entry point. Returns true to let the arcade
+    /// run as it always has, false to skip it because the race has been run
+    /// here instead.
+    /// </summary>
+    public static bool InsteadOfTheArcade(CpuContext c, IMemory m)
+    {
+        if (_waiting is not { } race) return true;
+
+        // Taken before anything can fail: a launch that throws halfway must not
+        // be retried on the next visit to the arcade with half its work done.
+        _waiting = null;
+
+        try
+        {
+            Run(c, m, race);
+            return false;
+        }
+        catch (LongJmpSignal)
+        {
+            // A task switch out of a game function called from here belongs to
+            // the game, not to this, and swallowing it would strand a task.
+            throw;
+        }
+        catch (Exception e)
+        {
+            // Better to hand the player the menus than a black screen: the
+            // arcade's own body has not run yet, so letting it run is still a
+            // way into a race.
+            Console.Error.WriteLine($"[direct] the direct launch failed, falling back to the menus: {e.Message}");
+            return true;
+        }
+    }
+
+    static void Run(CpuContext c, IMemory m, Pending race)
+    {
+        Console.Error.WriteLine("[direct] starting a race without the menus");
+
+        // The arcade's prologue, because everything below is written in terms
+        // of its frame - the screen object at +0x10 above all.
+        uint caller = c.SP;
+        c.SP = caller - Frame;
+        uint frame = c.SP;
+
+        try
+        {
+            uint screen = frame + ScreenObject;
+
+            // Initialisation. This is what builds the screen object and, inside
+            // it, installs the two car request records - which is why skipping
+            // the screens does not cost the car loader its owner.
+            Call(c, m, Initialise);
+            c.A0 = screen;
+            Call(c, m, PrepareScreenObject);
+            c.A0 = screen;
+            c.A1 = FirstScreenVtable;
+            Call(c, m, ConstructFirstScreen);
+
+            // Here the arcade would run its first screen and then switch on the
+            // exit byte. Exit 1 is the race, and what follows is exit 1.
+
+            c.A0 = 0u;
+            Call(c, m, Seed);
+            m.WriteU32(frame + Scratch, c.V0);
+
+            c.A0 = frame + Scratch;
+            Call(c, m, SeedStep);
+            uint first = c.V0;
+
+            c.A0 = frame + Scratch;
+            Call(c, m, SeedStep);
+
+            c.A0 = first;
+            c.A1 = c.V0;
+            c.A2 = Parameters;
+            Call(c, m, BuildParameters);
+
+            // The room's race, written where the arcade's screens would have
+            // written the player's.
+            if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
+                throw new InvalidOperationException("the race block could not be prepared");
+
+            LoadTheCar(c, m, screen, race.Car);
+
+            c.A0 = screen;
+            Call(c, m, ConstructPreRaceScreen);
+            c.A0 = screen;
+            c.A1 = 2u;
+            Call(c, m, LeavePreRaceScreen);
+
+            m.WriteU8(Flags + 1u, 1);
+            m.WriteU8(Flags + 2u, 1);
+
+            // The arcade copies its parameters out in sixteen-byte steps and
+            // then one word more, which is 0x2D4 bytes rather than the 0x2D0
+            // the loop bound suggests.
+            for (uint i = 0; i < ParametersSize + 4; i += 4)
+                m.WriteU32(ParametersGoTo + i, m.ReadU32(Parameters + i));
+
+            c.A0 = 3u;
+            Call(c, m, LoadOverlayDefault);
+
+            c.A0 = 0u;
+            c.A1 = RaceOverlayEntry;
+            c.A2 = 0u;
+            Call(c, m, LoadOverlay);
+
+            Console.Error.WriteLine("[direct] the race overlay is loaded");
+        }
+        finally
+        {
+            c.SP = caller;
+        }
+    }
+
+    /// <summary>
+    /// Loads the player's car, ticking the loader here because the screens that
+    /// would normally tick it are not running.
+    /// </summary>
+    static void LoadTheCar(CpuContext c, IMemory m, uint owner, string car)
+    {
+        CarLoad.UseOwner(owner);
+        if (!CarLoad.TryAsk(c, m, 0, car))
+        {
+            Console.Error.WriteLine($"[direct] could not ask for {car} - the race will use whatever is loaded");
+            return;
+        }
+
+        uint request = CarLoad.RequestIn(m, 0);
+        var until = DateTime.UtcNow + CarPatience;
+
+        while (!CarLoad.DoneIn(m, 0))
+        {
+            if (DateTime.UtcNow > until)
+            {
+                Console.Error.WriteLine($"[direct] {car} did not finish loading in time");
+                return;
+            }
+
+            c.A0 = request;
+            c.A1 = owner;
+            Call(c, m, CarLoad.AdvanceOneStep);
+
+            // The steps wait on the drive, and nothing else is advancing it.
+            RecompOne.Runtime.Runtime.PumpHost();
+        }
+
+        Console.Error.WriteLine($"[direct] {car} is loaded");
+    }
+
+    /// <summary>
+    /// Calls one of the game's functions.
+    ///
+    /// The return address is left alone. Nothing here reads it: a function that
+    /// returns normally comes back through the dispatcher, and one that longjmps
+    /// takes its destination from the jmp_buf and overwrites RA on the way. What
+    /// would matter is clearing it, since the port's boot loop treats RA as
+    /// where to carry on when a resume point returns.
+    /// </summary>
+    static void Call(CpuContext c, IMemory m, uint address) => Dispatcher.Call(c, m, address);
+}

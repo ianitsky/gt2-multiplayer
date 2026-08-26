@@ -3,47 +3,29 @@ using RecompOne.Runtime.Memory;
 namespace GT2Port.Multiplayer;
 
 /// <summary>
-/// Starts a race without the menu.
+/// Supplies the race block instead of letting the menus build it.
 ///
-/// The arcade menu builds a race by filling the block at 0x801D585C over
-/// several screens, and until now multiplayer has ridden along with it: the
-/// host picked a car and a track by hand, and the room was written over the
-/// result. That works and is unbearable to play - the players have to agree on
-/// a track out loud, and every one of them walks the same menus after pressing
-/// Start.
+/// The arcade builds a race by filling the block at 0x801D585C over several
+/// screens, and multiplayer used to ride along with that: the host picked a car
+/// and a track by hand and the room was written over the result. A real race
+/// captured from a real run is the template instead, and the room's cars are
+/// written into it.
 ///
-/// So the block is supplied instead of built. A real race captured from a real
-/// run is the template, the room's cars are written into it, and the game is
-/// pointed at the race overlay. What the template carries beyond the fields
-/// that are understood is unknown, which is the risk: it may hold something
-/// belonging to the track it was captured on, and changing tracks may need
-/// more than changing the name.
+/// What the template carries beyond the fields that are understood is unknown,
+/// which is the risk: it may hold something belonging to the track it was
+/// captured on, so changing tracks may need more than changing the name.
+///
+/// Getting the game to a race is <see cref="DirectRace"/>'s job. This only
+/// decides what the race says.
 /// </summary>
 public static class RaceLauncher
 {
     const uint Block = 0x801D585Cu;
     const int BlockSize = 0x58C;
 
-    /// <summary>gt2_01, the overlay that runs a race.</summary>
-    public const uint RaceOverlayEntry = 0x80011F64u;
-
     static readonly string TemplatePath = Path.Combine("config", "race-template.bin");
 
     static byte[]? _template;
-
-    /// <summary>
-    /// Whether to launch a race straight from the lobby, off unless
-    /// GT2_DIRECT_LAUNCH is set.
-    ///
-    /// It does not work yet. The block describes a race but does not prepare
-    /// one: the race overlay runs and then reads through an object the arcade
-    /// would have built on its way here, and the game dies with a black screen.
-    /// Until what the arcade prepares is known, the menus are the only route
-    /// that reaches a race at all, so this stays off rather than leaving no
-    /// working path.
-    /// </summary>
-    public static bool Enabled { get; } =
-        Environment.GetEnvironmentVariable("GT2_DIRECT_LAUNCH") is not (null or "");
 
     /// <summary>
     /// Writes a race into the block, ready for the overlay to pick up. False

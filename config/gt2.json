@@ -2766,6 +2766,12 @@
       "address": "0x80010C84",
       "target": "GT2Port.Multiplayer.ArcadeOrder.ParametersBuilt",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80011750",
+      "target": "GT2Port.Multiplayer.DirectRace.InsteadOfTheArcade",
+      "mode": "pre"
     }
   ],
   "debug": false,

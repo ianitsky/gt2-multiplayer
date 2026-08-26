@@ -190,6 +190,19 @@ public static class CarLoad
         return request != 0u && m.ReadU16(request + FileIndex) != _drivingIndex;
     }
 
+    /// <summary>
+    /// Names the owner without waiting for a tick.
+    ///
+    /// A tick is the usual way to learn it, but a launch that skips the
+    /// arcade's screens has no ticks - the screens are what run the loader -
+    /// so it has to tick the loader itself, and it knows the owner because it
+    /// just initialised it.
+    /// </summary>
+    public static void UseOwner(uint owner) => _owner = owner;
+
+    /// <summary>The address of the one call that advances a request by one step.</summary>
+    public const uint AdvanceOneStep = 0x80016640u;
+
     /// <summary>Whether a tick has been seen, which is what knowing the owner takes.</summary>
     public static bool Ready => _owner != 0u;
 

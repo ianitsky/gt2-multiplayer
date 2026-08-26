@@ -16,6 +16,9 @@ public static class ModeHook
     /// <summary>Verified by running the game, not assumed - see the plan's Task 5.</summary>
     const uint SimulationEntryPoint = 0x80013628u;   // gt2_ovr5_entrypoint0
 
+    /// <summary>gt2_03's entry point - the arcade, which is where a race starts from.</summary>
+    const uint ArcadeEntryPoint = 0x80011750u;
+
     const int DiscoveryPort = 34718;
     const int SessionPort = 34719;
 
@@ -277,11 +280,18 @@ public static class ModeHook
         var room = _session.Current;
         if (room != null) DriveTheRoomsCar(room);
 
-        if (RaceLauncher.Enabled && room != null
-            && RaceLauncher.TryPrepare(m, room.Players, _session.PlayerName, _carCatalogue))
+        // The game is one instruction from loading Simulation. Point it at the
+        // arcade instead and tell DirectRace what was agreed: the arcade's
+        // entry point is hooked, so it skips its own menus and runs the race.
+        //
+        // Pointing straight at the race overlay, which is what this used to do,
+        // is what does not work - the race then runs with none of the state the
+        // arcade's initialisation builds, the car loader's owner among it.
+        if (DirectRace.Enabled && room != null
+            && room.Players.FirstOrDefault(p => p.Name == _session.PlayerName) is { } mine)
         {
-            Console.Error.WriteLine("[launch] starting the race straight from the lobby");
-            c.A1 = RaceLauncher.RaceOverlayEntry;
+            DirectRace.Expect(new DirectRace.Pending(room.Players, _session.PlayerName, mine.Car, _carCatalogue));
+            c.A1 = ArcadeEntryPoint;
         }
 
         return true;
