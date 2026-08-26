@@ -48,7 +48,12 @@ public static partial class OverlayHook
 
         if (ByEntryPoint.TryGetValue(entry, out var name))
         {
-            Console.WriteLine($"[Overlay] load {name} (entry 0x{entry:X8})");
+            // The index is worth printing beside the name: they are two
+            // separate arguments naming the same overlay, and when they
+            // disagree the game decompresses one overlay's bytes while the
+            // port switches to another's code, which reads as data corruption
+            // rather than as a mismatch.
+            Console.WriteLine($"[Overlay] load {name} (entry 0x{entry:X8}, index {c.A0})");
             Dispatcher.Load(name);
             return;
         }

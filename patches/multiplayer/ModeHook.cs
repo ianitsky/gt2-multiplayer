@@ -19,6 +19,22 @@ public static class ModeHook
     /// <summary>gt2_03's entry point - the arcade, which is where a race starts from.</summary>
     const uint ArcadeEntryPoint = 0x80011750u;
 
+    /// <summary>
+    /// Which overlay the arcade is, as gt2_load_overlay counts them.
+    ///
+    /// Its first argument is an index into the table of entry points at
+    /// 0x80091174, and its second is the entry point itself. Redirecting one
+    /// without the other is what a first attempt at this did: the game
+    /// decompressed Simulation's bytes because the index still said Simulation,
+    /// while the port switched its function map to the arcade because that is
+    /// what the entry point said. The arcade's code then read Simulation's data
+    /// and followed a pointer out of RAM.
+    ///
+    /// Read from the executable: index 2 holds 0x80011750, and index 4 holds
+    /// Simulation's 0x80013628.
+    /// </summary>
+    const uint ArcadeOverlayIndex = 2u;
+
     const int DiscoveryPort = 34718;
     const int SessionPort = 34719;
 
@@ -291,6 +307,7 @@ public static class ModeHook
             && room.Players.FirstOrDefault(p => p.Name == _session.PlayerName) is { } mine)
         {
             DirectRace.Expect(new DirectRace.Pending(room.Players, _session.PlayerName, mine.Car, _carCatalogue));
+            c.A0 = ArcadeOverlayIndex;
             c.A1 = ArcadeEntryPoint;
         }
 

@@ -731,6 +731,33 @@ six seconds between steps 3 and 4.
 It is now named for what is certain about it: the screen the race case
 constructs, with vtable 0x80027010, just before loading the race.
 
+### Loading an overlay takes two arguments that must agree
+
+`gt2_load_overlay(index, entryPoint, ...)` is told the same overlay twice.
+The index picks the bytes to decompress; the entry point is where to jump
+afterwards, and it is also what the port keys its own function map on.
+
+The table of entry points is at 0x80091174, a flat array of words, read out of
+SCUS_944.88:
+
+```
+[0] 0x80012254  gt2_01     [3] 0x80012C00  gt2_04
+[1] 0x80011384  gt2_02     [4] 0x80013628  gt2_05   Simulation
+[2] 0x80011750  gt2_03     [5] 0x800114B8  gt2_06
+                Arcade
+```
+
+Redirecting one without the other is what the first direct launch did: it set
+the entry point to the arcade and left the index at Simulation's. The game
+decompressed Simulation's bytes; the port switched its function map to the
+arcade; the arcade's code then read Simulation's data and followed a pointer to
+0x7ED37C30, which is not RAM.
+
+It surfaced as data corruption inside gzip rather than as a mismatch, and it
+took the arcade's own body down as well as the direct launch - which is how it
+was found: a fallback that dies where the thing it replaces died is not a
+failure of the replacement.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.
