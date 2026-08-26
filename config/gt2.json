@@ -2683,6 +2683,22 @@
         {
           "address": "0x80010554",
           "name": "gt2_ovr3_build_race_block_and_fill_all_six_entrants"
+        },
+        {
+          "address": "0x8001D5F8",
+          "name": "gt2_ovr3_arcade_page_say_what_the_player_chose"
+        },
+        {
+          "address": "0x8001D568",
+          "name": "gt2_ovr3_arcade_page_enter_or_leave_starts_or_stops_the_music"
+        },
+        {
+          "address": "0x80025878",
+          "name": "gt2_ovr3_stop_the_menu_music"
+        },
+        {
+          "address": "0x80025850",
+          "name": "gt2_ovr3_start_the_menu_music"
         }
       ]
     },

@@ -28,11 +28,43 @@ namespace GT2Port.Multiplayer;
 /// </summary>
 public static class DirectRace
 {
-    /// <summary>The byte the arcade switches on when its first screen ends.</summary>
+    /// <summary>
+    /// What the arcade's own menu answers when the player starts a race.
+    ///
+    /// The screen's step method asks the current page what the player wants:
+    /// it reads the page's table at [screen+0x1D0 + depth*4], calls slot 1, and
+    /// uses the answer to index the table at 0x80026F98. Seven answers, and
+    /// they are the whole vocabulary of the arcade menus:
+    ///
+    ///   0  stay on this page          4  leave, exit byte 0
+    ///   1  go into a sub-page         5  leave, exit byte 2
+    ///   2  pop back a page            6  leave, exit byte 3
+    ///   3  leave, exit byte 1 - the race
+    ///
+    /// Answer 3 ends the same way this does: it writes the exit byte and sets
+    /// the loop's result to zero, and the rest of the step method runs either
+    /// way. Giving the answer itself would be the tidier telling, but the page
+    /// that owns it changes - the arcade pushes the menu at 0x80052214 within a
+    /// frame or two of starting, and slot 1 moves with it - so there is no one
+    /// function to answer from. Writing the byte and the result is the same end
+    /// state reached without having to know which page is on top.
+    /// </summary>
     const uint ExitByte = 0x801EF5F4u;
 
     /// <summary>The exit that is the race, read out of the table at 0x800267DC.</summary>
     const byte TheRace = 1;
+
+    /// <summary>
+    /// The arcade's own "stop the music", on the object at 0x800F3A20.
+    ///
+    /// The menus are a stack of pages, and popping one calls the page's slot 0
+    /// with 1, which is func_8001D568, which calls this. A player reaches the
+    /// race through pages, so by the time they start one the music has already
+    /// been stopped by a pop. A launch that walks no pages never stops it, and
+    /// the sequencer then keeps stepping a stream that gt2_01 has landed on
+    /// top of - which is a byte read from 0xFE469CAA inside a VBlank.
+    /// </summary>
+    const uint StopTheArcadeMusic = 0x80025878u;
 
     /// <summary>Where the arcade builds its race parameters, and how many.</summary>
     const uint Parameters = 0x801C3350u;
@@ -102,7 +134,14 @@ public static class DirectRace
         _armed = false;
         _endNow = true;
         EndedTheScreen = true;
+
         m.WriteU8(ExitByte, TheRace);
+
+        // What a player's last page pop would have done. The race answer does
+        // not do it - it goes straight to the exit byte - because by then the
+        // music is already stopped, and a launch that walks no pages has to
+        // stop it itself or leave the sequencer reading into the next overlay.
+        Call(c, m, StopTheArcadeMusic);
 
         Console.Error.WriteLine(ready
             ? "[direct] the car is loaded - letting the arcade screen finish"
@@ -113,7 +152,8 @@ public static class DirectRace
     /// <summary>
     /// Post-hook on the same method. The screen has just done everything a
     /// normal last pass does; all that is left is to answer zero, which is what
-    /// the loop reads to know it is over.
+    /// the loop reads to know it is over - the same answer the menu's own race
+    /// case arrives at.
     ///
     /// Skipping the body instead, which an earlier version did, ends the screen
     /// without its last pass ever running - and the race then followed a

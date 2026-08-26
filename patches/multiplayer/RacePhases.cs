@@ -39,6 +39,13 @@ public static class RacePhases
     static readonly int HoldAt =
         int.TryParse(Environment.GetEnvironmentVariable("GT2_START_AT_PHASE"), out int n) ? n : -1;
 
+    /// <summary>
+    /// Whether a phase has been named to hold at, which is what says the
+    /// barrier at the overlay load should stand aside. Two barriers would be
+    /// two handshakes, and the session only expects one.
+    /// </summary>
+    public static bool HoldsLater => HoldAt >= 0;
+
     /// <summary>Where the state machine keeps the phase it is in.</summary>
     const uint CurrentPhaseInScreen = 0x08u;
 
