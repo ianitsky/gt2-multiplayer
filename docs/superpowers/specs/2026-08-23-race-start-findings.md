@@ -695,6 +695,42 @@ calls by address - it is reached through a pointer, and it is not in the vtable
 above. Whether it runs before the screen a direct launch would skip, or as part
 of it, decides whether skipping costs the owner again.
 
+### The owner is built before any screen, and the direct launch is unblocked
+
+Timed through a real arcade race:
+
+```
+1. 00.471  the arcade overlay's entry point runs
+2. 00.475  the screen object is initialised and the request records
+           installed              (A0 = 0x801FF9F0)
+3. 00.808  the car loader ticks for the first time - owner 0x801FF9F0
+4. 07.061  the 720-byte race parameters block is built
+5. 07.085  the pre-race screen is constructed  (object at 0x801FF9F0)
+6. 07.612  the race overlay is loaded
+```
+
+Step 2 lands **four milliseconds** after the entry point and six and a half
+seconds before any screen the race case constructs. So the car loader's owner
+comes out of the arcade's own initialisation, not out of a screen: a launch
+that skips the screens keeps it. That was the last thing standing between here
+and a direct launch.
+
+Note that the owner and the screen object are **the same address**. There is
+one object, at the entry point's `SP+0x10`, reconstructed with a different
+vtable as the arcade moves on - so "the loader's owner" and "the arcade's
+current screen" are the same thing seen from two sides.
+
+### A name the clock disproved
+
+0x80014898 was called the car and track screen, from where it sits in the race
+case. The timing says otherwise: it is constructed at 07.085 and the race loads
+at 07.612, half a second later, which is not long enough to choose a car and a
+track. Whatever the player chooses happens earlier, in the first screen - the
+six seconds between steps 3 and 4.
+
+It is now named for what is certain about it: the screen the race case
+constructs, with vtable 0x80027010, just before loading the race.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.

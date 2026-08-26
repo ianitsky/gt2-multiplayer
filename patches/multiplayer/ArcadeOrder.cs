@@ -43,13 +43,13 @@ public static class ArcadeOrder
     public static void ArcadeEntered(CpuContext c, IMemory m) =>
         Note("the arcade overlay's entry point runs");
 
-    /// <summary>Pre-hook on func_80013BE4, which installs the two car request records.</summary>
+    /// <summary>Pre-hook on the init that installs the two car request records.</summary>
     public static void OwnerBuilt(CpuContext c, IMemory m) =>
-        Note($"func_80013BE4 runs - the one that installs the request records (A0=0x{c.A0:X8})");
+        Note($"the screen object is initialised and the request records installed (A0=0x{c.A0:X8})");
 
-    /// <summary>Pre-hook on the car and track screen's constructor.</summary>
+    /// <summary>Pre-hook on the constructor the race case runs just before loading the race.</summary>
     public static void ScreenConstructed(CpuContext c, IMemory m) =>
-        Note($"the car and track screen is constructed (object at 0x{c.A0:X8})");
+        Note($"the pre-race screen is constructed (object at 0x{c.A0:X8})");
 
     /// <summary>Pre-hook on the builder of the 720-byte race parameters block.</summary>
     public static void ParametersBuilt(CpuContext c, IMemory m) =>

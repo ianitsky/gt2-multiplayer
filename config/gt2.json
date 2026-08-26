@@ -2658,7 +2658,11 @@
         },
         {
           "address": "0x80014898",
-          "name": "gt2_ovr3_arcade_construct_car_and_track_screen"
+          "name": "gt2_ovr3_arcade_construct_screen_vtable_80027010_just_before_the_race"
+        },
+        {
+          "address": "0x80013BE4",
+          "name": "gt2_ovr3_arcade_init_screen_object_and_install_car_request_records"
         }
       ]
     },
