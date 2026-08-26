@@ -2738,6 +2738,30 @@
       "function": "gt2_load_overlay",
       "target": "GT2Port.Multiplayer.ArcadeSetupWatch.LoadingOverlay",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80011750",
+      "target": "GT2Port.Multiplayer.ArcadeOrder.ArcadeEntered",
+      "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80013BE4",
+      "target": "GT2Port.Multiplayer.ArcadeOrder.OwnerBuilt",
+      "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80014898",
+      "target": "GT2Port.Multiplayer.ArcadeOrder.ScreenConstructed",
+      "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80010C84",
+      "target": "GT2Port.Multiplayer.ArcadeOrder.ParametersBuilt",
+      "mode": "pre"
     }
   ],
   "debug": false,

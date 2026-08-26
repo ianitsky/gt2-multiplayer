@@ -94,6 +94,7 @@ public static class CarLoad
     /// </summary>
     public static void Ticking(CpuContext c, IMemory m)
     {
+        if (_owner != c.A1) ArcadeOrder.OwnerKnown(c.A1);
         _owner = c.A1;
         Insist(c, m);
 

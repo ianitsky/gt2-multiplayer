@@ -56,6 +56,7 @@ public static class ArcadeSetupWatch
     /// </summary>
     public static void LoadingOverlay(CpuContext c, IMemory m)
     {
+        if (c.A1 == RaceOverlayEntry) ArcadeOrder.RaceLoading();
         if (!Watching || c.A1 != RaceOverlayEntry || _seen++ > 0) return;
 
         Dump(m, Built, Copied, "arcade-as-raced.bin", "as raced, after the screens");
