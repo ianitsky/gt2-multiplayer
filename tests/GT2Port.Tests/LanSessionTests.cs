@@ -443,4 +443,58 @@ public class LanSessionTests
 
         Assert.True(DriveUntil(() => hostSession.CanStart));
     }
+
+    // ---- the start barrier ----
+    //
+    // The barrier runs after the lobby has exited, and nothing calls ClientTick
+    // there. A client that learned of Go only through ClientTick would wait for
+    // a flag nobody could raise, sit out its whole patience and start alone -
+    // which is exactly what two instances did.
+
+    /// <summary>The host's "everyone may start", written out rather than shared.</summary>
+    static readonly byte[] GoDatagram = [0xA5, 2];
+
+    [Fact]
+    public void A_client_out_of_the_lobby_still_hears_the_hosts_go()
+    {
+        const int hostPort = BasePort + 15;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        Assert.False(client.HostSaidGo);
+
+        host.Send(GoDatagram, GoDatagram.Length, new IPEndPoint(IPAddress.Loopback, client.BoundPort));
+        WaitForDelivery(client);
+        client.CollectGo();
+
+        Assert.True(client.HostSaidGo);
+    }
+
+    [Fact]
+    public void Anything_that_is_not_a_go_leaves_the_client_waiting()
+    {
+        const int hostPort = BasePort + 16;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        // A report at the line, which is the other message on this channel and
+        // travels the opposite way - a client must not release itself on one.
+        byte[] atTheLine = [0xA5, 1];
+        host.Send(atTheLine, atTheLine.Length, new IPEndPoint(IPAddress.Loopback, client.BoundPort));
+        WaitForDelivery(client);
+        client.CollectGo();
+
+        Assert.False(client.HostSaidGo);
+    }
+
+    /// <summary>
+    /// Loopback delivery is not instant, and a receive that finds nothing is
+    /// indistinguishable from one that found the wrong thing - which would
+    /// make the negative test above pass for the wrong reason.
+    /// </summary>
+    static void WaitForDelivery(LanSession session)
+    {
+        for (int i = 0; i < 200 && session.Available == 0; i++) Thread.Sleep(5);
+        Assert.True(session.Available > 0, "the datagram never arrived");
+    }
 }

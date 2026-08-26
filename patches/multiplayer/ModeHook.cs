@@ -143,11 +143,26 @@ public static class ModeHook
     /// </summary>
     static void HoldForTheStart(Room room)
     {
-        if (_lanSession == null || room.Players.Count < 2) return;
+        if (_lanSession == null || room.Players.Count < 2)
+        {
+            Console.Error.WriteLine(
+                $"[start] no barrier: {(_lanSession == null ? "the session is gone" : $"only {room.Players.Count} player(s)")}");
+            return;
+        }
 
         bool hosting = _session!.Phase == SessionPhase.Hosting;
-        var until = DateTime.UtcNow + StartPatience;
-        Console.Error.WriteLine($"[start] holding for {room.Players.Count} players");
+        var began = DateTime.UtcNow;
+        var until = began + StartPatience;
+
+        // Timed, because "the race did not start together" has three different
+        // causes and the clock tells them apart: a barrier that was never
+        // reached prints nothing, one that worked prints a short wait, and one
+        // that gave up prints the full patience. What none of them can show is
+        // the fourth - a barrier that worked and was in the wrong place, with
+        // the machines drifting apart again on whatever they load afterwards.
+        Console.Error.WriteLine(
+            $"[start] {began:HH:mm:ss.fff} holding for {room.Players.Count} players"
+            + $" as {(hosting ? "host" : "client")}");
 
         while (DateTime.UtcNow < until)
         {
@@ -166,16 +181,21 @@ public static class ModeHook
                         _lanSession.SendGo();
                         Thread.Sleep(16);
                     }
-                    Console.Error.WriteLine("[start] everyone is at the line - go");
+                    Console.Error.WriteLine(
+                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} everyone is at the line - go"
+                        + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
                     return;
                 }
             }
             else if (_discovery!.TryGetHostAddress(room.Id, out var host))
             {
                 _lanSession.ReportAtTheLine(host);
+                _lanSession.CollectGo();
                 if (_lanSession.HostSaidGo)
                 {
-                    Console.Error.WriteLine("[start] the host said go");
+                    Console.Error.WriteLine(
+                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host said go"
+                        + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
                     return;
                 }
             }
@@ -183,7 +203,9 @@ public static class ModeHook
             Thread.Sleep(16);
         }
 
-        Console.Error.WriteLine("[start] gave up waiting - starting anyway");
+        Console.Error.WriteLine(
+            $"[start] {DateTime.UtcNow:HH:mm:ss.fff} gave up waiting - starting anyway"
+            + $" (nobody answered in {StartPatience.TotalSeconds:F0}s)");
     }
 
     public static bool TryEnterLobby(RecompOne.Runtime.Context.CpuContext c,

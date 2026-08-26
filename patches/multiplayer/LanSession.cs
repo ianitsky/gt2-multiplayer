@@ -126,6 +126,13 @@ public sealed class LanSession : IDisposable
     public int BoundPort => _boundPort;
 
     /// <summary>
+    /// How many datagrams are waiting to be read. Only a test uses it, to tell
+    /// "the message was rejected" from "the message had not arrived yet" -
+    /// without which a test that expects rejection passes on an empty socket.
+    /// </summary>
+    internal int Available => _disposed ? 0 : _socket.Available;
+
+    /// <summary>
     /// The exception from the most recent failed send, or null if the last
     /// send (if any) succeeded. See <see cref="LanDiscovery.LastSendFailure"/>
     /// for why this is remembered rather than thrown.
@@ -210,12 +217,45 @@ public sealed class LanSession : IDisposable
     }
 
     /// <summary>
-    /// Whether the host has said to start. Set by <see cref="ClientTick"/>
-    /// rather than by draining the socket here: during the lobby the client
-    /// needs every room announcement it is sent, and a second reader would
-    /// swallow them.
+    /// Whether the host has said to start.
+    ///
+    /// Set from two places, because there are two periods to cover and they
+    /// have opposite needs. During the lobby <see cref="ClientTick"/> sets it,
+    /// since the client needs every room announcement it is sent and a second
+    /// reader would swallow them. After the lobby, nothing calls ClientTick at
+    /// all - so a barrier relying on it alone waits for a flag nobody can
+    /// raise, and every client sits out its full patience while the host races
+    /// away. <see cref="CollectGo"/> covers that period.
     /// </summary>
     public bool HostSaidGo { get; private set; }
+
+    /// <summary>
+    /// Looks for the host's Go, for a client that has left the lobby.
+    ///
+    /// Room announcements no longer matter here - the room is settled and the
+    /// race is loading - so swallowing them costs nothing, which is what makes
+    /// a second reader safe at this point and not during the lobby.
+    /// </summary>
+    public void CollectGo()
+    {
+        if (_disposed) return;
+
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        {
+            IPEndPoint? from = null;
+            byte[] data;
+            try
+            {
+                data = _socket.Receive(ref from);
+            }
+            catch (SocketException)
+            {
+                return;
+            }
+
+            if (data.Length >= 2 && data[0] == StartMagic && data[1] == Go) HostSaidGo = true;
+        }
+    }
 
     public void HostTick(Session session)
     {
