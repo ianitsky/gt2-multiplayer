@@ -925,3 +925,60 @@ is what let the filler through.
 Every machine will run its own simulation. Everyone starts together with the
 right cars in the right places, and then drifts — the other cars are driven by
 the local AI. Seeing each other move is rollback, which is a later cycle.
+
+## The arcade's race case, read end to end
+
+`gt2_ovr3_arcade_entrypoint_run_menus_then_load_chosen_overlay` (0x80011750)
+runs its first screen, reads the exit byte at 0x801EF5F4, and jumps through the
+table at 0x800267DC. Exit 1 is the race, at 0x8001184C, and it does exactly
+seven things:
+
+1. `0x8007D23C(0)` into a local, then `0x80083AE0(&local)` twice - two values
+2. `gt2_ovr3_arcade_build_race_parameters_block_720_bytes(v1, v2, 0x801C3350)`
+3. constructs the pre-race screen at 0x80014898 and loops it through 0x800833E8
+4. tears it down with 0x800148CC
+5. copies 0x2D0 bytes from 0x801C3350 to 0x801D5FA0
+6. writes 1 to 0x801EF5F1 and 0x801EF5F2
+7. `gt2_load_overlay(0, 0x80011F64, 0)` - the race
+
+Nothing else touches the race. The builder is the only caller-visible place
+where a race is described, and it has exactly one caller.
+
+### The builder's three modes
+
+`FP = A2`, the block. `(sbyte)[FP+0x02]` selects:
+
+| mode | at | what it reads the car from |
+|------|----|---------------------------|
+| 0 | 0x80010D1C | per-entrant fields at +0xB0/+0xB2/+0xB6, course at +0xA0/+0xA4 |
+| 4 | 0x80011324 | the single chosen car at +0x10 |
+| 6 | 0x80011038 | - |
+| anything else | 0x80011514 | nothing: copies the scratch buffer out and returns |
+
+Mode 4 - the arcade race - splits on `(short)[FP+0x06]`:
+
+- **negative**: `0x8001003C([FP+0x10], (short)[FP+0x16])` for a byte,
+  `[FP+0x18]` for another, then
+  `gt2_ovr3_find_car_record_by_packed_id_in_arcade_or_garage_table([FP+0x10], (sbyte)[FP+0x14])`
+  for the record, then
+  `gt2_ovr3_build_race_block_and_fill_all_six_entrants(0, 0, S7, record, &triple, 0, 0)`,
+  then `load_car_parts(record, SP+0x20)`.
+- **non-negative**: the entrant comes from a table indexed by `[FP+0x06]`, and
+  the fill is called with A3 = 0.
+
+Both call the fill. `load_car_parts`'s destination here is a 0x80-byte scratch
+buffer, which the tail at 0x80011514 copies into the block at **+0x1C** - that
+is how the player's car reaches the race overlay. The six `load_car_parts`
+calls a walked race shows aimed at entrant+8 come from inside the fill, not
+from the builder.
+
+### Why a launched race had no car
+
+The pre-hook that supplies the captured block called the sound-callback
+unregister on the same `CpuContext` without restoring it. That call sets A0 and
+A1 and descends into 0x800830CC. The builder's first instruction is `FP = A2`,
+so it read the mode byte from a garbage address, matched none of the three
+modes, and took the fall-through - no record lookup, no fill, no car.
+
+**Any hook that runs game code must snapshot and restore the context.** The
+function it precedes has not read its arguments yet.
