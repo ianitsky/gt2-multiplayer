@@ -2719,6 +2719,17 @@
       "address": "0x80016640",
       "target": "GT2Port.Multiplayer.CarLoad.Ticking",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80010C84",
+      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.ObjectBuilt",
+      "mode": "post"
+    },
+    {
+      "function": "gt2_load_overlay",
+      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.LoadingOverlay",
+      "mode": "pre"
     }
   ],
   "debug": false,
