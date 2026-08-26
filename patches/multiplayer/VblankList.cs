@@ -25,7 +25,8 @@ public static class VblankList
     /// <summary>Longest list worth following before calling it circular.</summary>
     const int MostNodes = 32;
 
-    static bool _said;
+    /// <summary>How many changes are worth printing before the point is made.</summary>
+    const int MostReports = 40;
 
     /// <summary>The node the register/unregister pair at 0x800686C8 owns.</summary>
     const uint TheNode = 0x801C949Cu;
@@ -44,20 +45,8 @@ public static class VblankList
             + $" (next 0x{m.ReadU32(TheNode + 0x4u):X8}, calls 0x{m.ReadU32(TheNode + 0x8u):X8})");
     }
 
-    /// <summary>
-    /// Asks for the list to be reported on the next walk, whatever it holds.
-    ///
-    /// A bad list only says what went wrong; a good one from the same moment in
-    /// a run that works says what it should have been. Both paths reach the
-    /// arcade building its parameters, which makes that the moment to compare.
-    /// </summary>
-    public static void ReportOnce()
-    {
-        if (!Watching) return;
-        _report = true;
-    }
-
-    static bool _report;
+    /// <summary>Kept so the caller that marked the comparison moment still builds.</summary>
+    public static void ReportOnce() { }
 
     static string Where(uint address) => address switch
     {
@@ -69,10 +58,23 @@ public static class VblankList
 
     static bool IsCode(uint address) => address is >= 0x80000000u and < 0x80200000u;
 
-    /// <summary>Pre-hook on the walker. Reads the list; changes nothing.</summary>
+    /// <summary>What the list looked like last time, so only changes are said.</summary>
+    static string _last = "";
+
+    static int _changes;
+
+    /// <summary>
+    /// Pre-hook on the walker. Reads the list; changes nothing.
+    ///
+    /// Reported whenever it changes rather than once, because one photograph
+    /// settles nothing: taken where the arcade builds its parameters, a walked
+    /// run and a launched one hold exactly the same five nodes. Whatever goes
+    /// wrong goes wrong after that, so what is needed is the sequence either
+    /// side of it and the point where the two stop agreeing.
+    /// </summary>
     public static void AboutToRun(CpuContext c, IMemory m)
     {
-        if (!Watching || (_said && !_report)) return;
+        if (!Watching) return;
 
         uint head = c.A0;
         var lines = new List<string>();
@@ -93,10 +95,16 @@ public static class VblankList
             node = next;
         }
 
-        if (!bad && !_report) return;
-        _said = true;
-        _report = false;
-        Console.Error.WriteLine($"[vblank] the callback list from 0x{head:X8}"
+        string now = string.Join("|", lines);
+        if (now == _last) return;
+        _last = now;
+
+        // A list that keeps changing is a different problem from one that
+        // changes once and breaks, and a cap keeps the first from burying the
+        // second under thousands of lines.
+        if (++_changes > MostReports) return;
+
+        Console.Error.WriteLine($"[vblank] {_changes}. the callback list from 0x{head:X8}"
             + (bad ? " holds something that is not code:" : ":"));
         foreach (var line in lines) Console.Error.WriteLine(line);
     }
