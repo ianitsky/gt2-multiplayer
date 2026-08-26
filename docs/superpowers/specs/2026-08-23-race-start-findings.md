@@ -758,6 +758,45 @@ took the arcade's own body down as well as the direct launch - which is how it
 was found: a fallback that dies where the thing it replaces died is not a
 failure of the replacement.
 
+### Ending a screen from outside leaves a state the game never makes
+
+The screen-ending works exactly as the vtable said it would: the loader runs
+its steps, the first screen is told to stop, and the arcade takes exit 1,
+builds its parameter block and constructs the pre-race screen by itself. It
+then crashes in that screen, in a VBlank DMA with an address that is not
+memory.
+
+Capturing the screen object at the same moment in a walked run and a launched
+one says why. 91 bytes differ, and the ones that matter are a table:
+
+```
++0x1CC  walked 0x80052508  launched 0x800521C0   still the value it started at
++0x1C8  walked 0x8005255C  launched 0x80052214
++0x1D8  walked 0x80052268  launched 0x800A8C54   never written
++0x1DC  walked 0x80052310  launched 0x8007D2C4
++0x1E0  walked 0x80052364  launched 0x800D726F
++0x1E4  walked 0x8005240C  launched 0x800E4344
++0x1E8  walked 0x80052508  launched 0x800D726E
++0x1EC  walked 0x8005255C  launched 0x00034D80
+```
+
+0x800521C0 is the root - the second argument the arcade hands the
+constructor - and the entries are 0x54 bytes apart. In a walked run those six
+words are a rising trail of menu nodes the player passed through. In a
+launched one they are whatever the stack held.
+
+So what is missing is not a field but the record of the navigation itself. A
+launch that fills it by hand has to reproduce everything else each of those
+screens wrote on the way, which is an open list - the same open list that cost
+five attempts at replaying the entry point.
+
+That is the argument for synthesising input instead. A walked run works
+perfectly and differs only in that a player navigated; making the game believe
+the buttons were pressed reproduces that state and everything alongside it,
+without anyone having to learn what the rest is. It costs knowing which
+buttons on which screens, and it breaks if the menus change - but the game
+stays in control, which is what every failed approach here lacked.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.
