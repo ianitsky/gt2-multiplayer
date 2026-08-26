@@ -837,6 +837,47 @@ thing on the arcade's own path that a launched race skips. It cannot simply be
 put back: with the race block written it still dies, earlier than before, on a
 fault of its own.
 
+### An entrant carries the car, not just its name
+
+Two genuine arcade races on Tahiti Road, one in ccrcn and one in ufc9n,
+differ in 60 of the entrant record's 208 bytes:
+
+```
++0x00       the packed car id
++0x0C..0x34 small values      0x0A vs 0x39, 0x11 vs 0x59, 0x0B vs 0x48
++0x44..0x4B pairs of 16 bits  0974 0A50 06F4 1400  /  0C94 0D2A 07C6 3200
++0x4E..0x7E more of the same
++0x8D       the grid place
++0x90       the name
+```
+
+Those pairs at +0x44 are the same numbers that sit in the 720-byte parameter
+block at +0x58 and +0x5C, so the two blocks carry the car's data between them
+and both are specific to the car that was chosen.
+
+**RaceGrid writes the id, the name and the flags and leaves the rest.** A
+launched race therefore runs the room's car as a model with the captured car's
+everything else. That is a candidate for the dead throttle - wrong drivetrain
+figures would drive like nothing - but only a candidate: input has other ways
+to fail.
+
+An earlier attempt to establish this compared the template against
+race-context-4, which turned out to be that same template with RaceGrid applied
+over it. That comparison could only ever show the fields RaceGrid writes, which
+is the same circularity that made the 720-byte block look screen-independent.
+Two captures from the same side of a boundary prove nothing about the boundary.
+
+### The load trace cannot see the course
+
+Neither a walked race nor a launched one asks for any course geometry through
+`gt2_main_vol_get_file_data_sector_offset`. Both load exactly the same files -
+fonts, sound banks, engine samples, the car - and the walked one adds only
+`/arcade/course_map`, which is the menu's picture.
+
+So "the launched race never asks for the course" was the instrument's limit
+rather than a finding. The course arrives by some other route, and seeing it
+needs tracing at the drive rather than at the archive.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.
