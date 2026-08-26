@@ -18,3 +18,4 @@ ram-*.bin
 crash.log
 run.log
 trace.log
+idx.txt
