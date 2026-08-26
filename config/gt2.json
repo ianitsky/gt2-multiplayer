@@ -2793,7 +2793,7 @@
       "overlay": "gt2_03",
       "address": "0x80010C84",
       "target": "GT2Port.Multiplayer.DirectRace.ParametersBuilt",
-      "mode": "post"
+      "mode": "pre"
     },
     {
       "address": "0x80083134",

@@ -193,14 +193,28 @@ public static class DirectRace
 
     static byte[]? _parameters;
 
+    /// <summary>Where the parameter block names the car that was chosen.</summary>
+    const uint ChosenCar = 0x0Cu;
+    const uint ChosenCarAgain = 0x10u;
+
     /// <summary>
-    /// Post-hook on the arcade parameter builder. Built without the menus the
-    /// block comes out all zeroes, since it is assembled from what the screens
-    /// decided - the course reads out of it as text at +0xB8. So a captured one
-    /// is written over the top, and the arcade copies that out as its own.
+    /// Pre-hook on the arcade parameter builder.
     ///
-    /// The cost is worth stating plainly: every launched race runs the course
-    /// the capture was taken on, whatever the room says.
+    /// Built without the menus the block comes out all zeroes, since it is
+    /// assembled from what the screens decided - the course reads out of it as
+    /// text at +0xB8. So a captured one is supplied.
+    ///
+    /// Before rather than after, which the first version got wrong. The builder
+    /// reads the chosen car out of this block at +0x10, looks the car's record
+    /// up and fills the entrant from it; writing the block afterwards left the
+    /// entrant filled from whatever was there and the race running one car's
+    /// model with another's figures.
+    ///
+    /// So the captured block is written first and the room's car patched into
+    /// it, and the game fills the entrant itself - which is the whole of the
+    /// fifty bytes RaceGrid was never going to write correctly by hand.
+    ///
+    /// The course is still the capture's, whatever the room says.
     /// </summary>
     public static void ParametersBuilt(CpuContext c, IMemory m)
     {
@@ -215,15 +229,25 @@ public static class DirectRace
 
         for (int i = 0; i < ParametersSize; i++)
             m.WriteU8(Parameters + (uint)i, _parameters[i]);
-        Console.Error.WriteLine("[direct] the race parameters are supplied from a captured race");
 
-        // And the race itself. These two blocks describe one race between them
-        // and neither is any use alone: without this one the race has no
-        // description at all, and the engine sound it looks up comes out as
-        // /engine/00000.es - a file whose decompression walks off the end of
-        // memory. Both were captured from the same run.
-        if (_race is { } race && !RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
-            Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
+        // The capture names the car it was taken with. Naming the room's
+        // instead is the whole fix: the builder resolves it to the car's own
+        // record and fills the entrant from that, so nothing here has to know
+        // what those fields mean.
+        string car = _race?.Car ?? "";
+        if (CarInfo.TryEncodeCode(car, out uint packed))
+        {
+            m.WriteU32(Parameters + ChosenCar, packed);
+            m.WriteU32(Parameters + ChosenCarAgain, packed);
+            Console.Error.WriteLine(
+                $"[direct] the race parameters are supplied from a capture, driving {car}");
+        }
+        else
+        {
+            Console.Error.WriteLine(
+                $"[direct] the race parameters are supplied from a capture,"
+                + $" but {car} is not a car id - the capture's car will drive");
+        }
 
         SilenceTheArcade(c, m);
 
