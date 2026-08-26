@@ -256,6 +256,17 @@ public static class DirectRace
     const uint RaceBlock = 0x801D585Cu;
     const uint FirstEntrant = 0x5Cu;
 
+    /// <summary>
+    /// Where inside an entrant the car's own data begins.
+    ///
+    /// load_car_parts is handed the entrant plus eight, not the entrant -
+    /// watching a walked race fill the grid shows it aimed at 0x801D58C0 while
+    /// entrant 0 starts at 0x801D58B8. Handing it the base instead lands the
+    /// whole record eight bytes low, which is a car with no engine and no
+    /// tyres and therefore no throttle.
+    /// </summary>
+    const uint CarDataInEntrant = 0x8u;
+
     /// <summary>Packed car id to the car's own record.</summary>
     const uint FindCarRecord = 0x80010000u;
 
@@ -302,7 +313,7 @@ public static class DirectRace
         }
 
         c.A0 = record;
-        c.A1 = RaceBlock + FirstEntrant;
+        c.A1 = RaceBlock + FirstEntrant + CarDataInEntrant;
         Call(c, m, LoadCarParts);
         Console.Error.WriteLine($"[direct] the entrant is filled from {race.Car}'s own record at 0x{record:X8}");
 
