@@ -2651,6 +2651,14 @@
         {
           "address": "0x80016640",
           "name": "gt2_ovr3_car_request_advance_one_load_step"
+        },
+        {
+          "address": "0x80010C84",
+          "name": "gt2_ovr3_arcade_build_race_parameters_block_720_bytes"
+        },
+        {
+          "address": "0x80014898",
+          "name": "gt2_ovr3_arcade_construct_car_and_track_screen"
         }
       ]
     },

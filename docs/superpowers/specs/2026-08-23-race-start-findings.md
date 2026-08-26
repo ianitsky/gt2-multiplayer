@@ -656,6 +656,45 @@ also fill state, and the 0x2D0 bytes copied out of 0x801C3350 are assembled
 somewhere. If part of that only exists because a screen ran, a direct launch
 dies the way the old one did - but this time the place to look is named.
 
+### The screens contribute nothing to the 720 bytes
+
+Captured from a real arcade race: the object at 0x801C3350 the moment
+`gt2_ovr3_arcade_build_race_parameters_block_720_bytes` finished building it,
+and the 720 bytes at 0x801D5FA0 the moment the race overlay loaded. **They are
+byte for byte identical** - 212 non-zero bytes in each, in the same places.
+
+So the car and track screen does not touch this object at all. The player's
+choices go into the race block at 0x801D585C, which is a different thing; this
+one is built once, before the screen runs, and copied out unchanged after it.
+The risk that a direct launch would be missing state the screens filled in does
+not apply here.
+
+The source reads as all zeroes by the time the overlay loads, which is after
+the copy - something clears it between the two. That is a curiosity rather
+than a problem, since the copy has already happened by then.
+
+### The screens are objects with vtables
+
+`gt2_ovr3_arcade_construct_car_and_track_screen` at 0x80014898 is a
+constructor: it calls 0x8007FE8C and writes the vtable 0x80027010 into the
+object. That vtable, read out of the overlay image:
+
+```
++0x04 0x80015620   +0x08 0x800148CC   +0x0C 0x80083418   +0x10 0x800148F4
++0x14 0x80080A24   +0x18 0x80080B10   +0x1C 0x80014B68   +0x20 0x80080C94
++0x24 0x80014B88
+```
+
+Slot 0x0C is the one `gt2_main_call_vtable_slot_0c_and_report_zero` reaches,
+and it is 0x80083418 in main - a generic run-a-screen method, not something
+specific to this screen.
+
+Still unsettled: where the car loader's owner is built. The code that installs
+the two request records is at 0x80013E8C inside func_80013BE4, which nothing
+calls by address - it is reached through a pointer, and it is not in the vtable
+above. Whether it runs before the screen a direct launch would skip, or as part
+of it, decides whether skipping costs the owner again.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.
