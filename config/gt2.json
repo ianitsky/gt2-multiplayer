@@ -2821,6 +2821,17 @@
       "address": "0x80010C84",
       "target": "GT2Port.Multiplayer.DirectRace.RaceBuilt",
       "mode": "post"
+    },
+    {
+      "address": "0x80010554",
+      "target": "GT2Port.Multiplayer.CarFillWatch.Filling",
+      "mode": "pre",
+      "overlay": "gt2_03"
+    },
+    {
+      "address": "0x80076FC0",
+      "target": "GT2Port.Multiplayer.CarFillWatch.LoadingParts",
+      "mode": "pre"
     }
   ],
   "debug": false,
