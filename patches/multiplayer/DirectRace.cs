@@ -249,6 +249,7 @@ public static class DirectRace
                 + $" but {car} is not a car id - the capture's car will drive");
         }
 
+        Say(m, "as supplied");
         SilenceTheArcade(c, m);
     }
 
@@ -288,8 +289,28 @@ public static class DirectRace
     /// that record, field by field, through the descriptor it already has.
     /// Nothing here has to know what any of those fields mean.
     /// </summary>
+    /// <summary>
+    /// The head of the parameter block, which is what the builder branches on.
+    ///
+    /// +0x02 chooses among its modes and +0x06 decides, when negative, whether
+    /// the player's car record is resolved and handed to the fill. The capture
+    /// holds 4 and -1. Whether the block still holds them when the builder
+    /// looks is the question a launched race keeps failing on, and printing it
+    /// either side of the builder is the cheapest way to stop guessing.
+    /// </summary>
+    static void Say(IMemory m, string when)
+    {
+        Console.Error.WriteLine(
+            $"[direct] the parameter block {when}:"
+            + $" +0x00={m.ReadU8(Parameters):X2} +0x01={m.ReadU8(Parameters + 1u):X2}"
+            + $" +0x02={m.ReadU8(Parameters + 2u):X2} +0x06={(short)m.ReadU16(Parameters + 6u)}"
+            + $" +0x0C=0x{m.ReadU32(Parameters + 0x0Cu):X8}"
+            + $" +0x10=0x{m.ReadU32(Parameters + 0x10u):X8}");
+    }
+
     public static void RaceBuilt(CpuContext c, IMemory m)
     {
+        Say(m, "as the builder left it");
         if (_race is not { } race) return;
 
         if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
