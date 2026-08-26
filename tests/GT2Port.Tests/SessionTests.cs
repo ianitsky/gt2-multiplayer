@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
+using RecompOne.Runtime.Context;
+using RecompOne.Runtime.Memory;
 using GT2Port.Multiplayer;
 using RecompOne.Runtime.Host.Window;
 using Xunit;
@@ -679,7 +681,7 @@ public class SessionTests
     {
         var panelsBefore = PanelManager.Panels.Count;
 
-        bool entered = ModeHook.TryEnterLobby(0x12345678u);
+        bool entered = ModeHook.TryEnterLobby(new CpuContext(), new PSMemory(), 0x12345678u);
 
         Assert.False(entered);
 
