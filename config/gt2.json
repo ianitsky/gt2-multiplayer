@@ -2662,7 +2662,7 @@
         },
         {
           "address": "0x80013BE4",
-          "name": "gt2_ovr3_arcade_init_screen_object_and_install_car_request_records"
+          "name": "gt2_ovr3_arcade_screen_frame_installs_then_ticks_car_requests"
         }
       ]
     },

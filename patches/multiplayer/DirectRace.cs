@@ -58,19 +58,25 @@ public static class DirectRace
     const uint FirstScreenSetup = 0x800521C0u;
 
     /// <summary>
-    /// The init that installs the two car request records.
+    /// The first screen's per-frame handler, which is more than its name in the
+    /// arcade suggests: on its first pass it installs the two car request
+    /// records, and on every pass after it ticks them.
     ///
-    /// Nothing calls it by address: the arcade reaches it through a pointer on
-    /// the first frame of its first screen, four milliseconds after the entry
-    /// point. That frame is one this never runs, so without calling it here the
-    /// request slots hold whatever was in memory - a first attempt read
+    /// Nothing calls it by address - the arcade reaches it through a pointer,
+    /// four milliseconds after the entry point - so without calling it here the
+    /// request slots hold whatever was in memory. A first attempt read
     /// 0x8005DB7C out of one, which is code, and asked the game to load a car
     /// through it.
     ///
     /// Its argument is the screen object, which the ordering probe reported
-    /// directly rather than leaving to be guessed.
+    /// directly rather than leaving to be worked out.
+    ///
+    /// Calling it per frame is also how the load is driven. Reaching past it to
+    /// the loader itself is not enough: the loader's third step polls a
+    /// decompression that only this advances, so a launch that ticked the
+    /// loader alone stalled there for ever.
     /// </summary>
-    const uint InstallCarRequestRecords = 0x80013BE4u;
+    const uint ScreenFrame = 0x80013BE4u;
 
     const uint Seed = 0x8007D23Cu;
     const uint SeedStep = 0x80083AE0u;
@@ -167,7 +173,7 @@ public static class DirectRace
             Call(c, m, ConstructFirstScreen);
 
             c.A0 = screen;
-            Call(c, m, InstallCarRequestRecords);
+            Call(c, m, ScreenFrame);
 
             // Told before the slots are read rather than when the car is asked
             // for: RequestIn answers zero when it has no owner, so checking
@@ -267,7 +273,6 @@ public static class DirectRace
         if (!CarLoad.TryAsk(c, m, 0, car))
             throw new InvalidOperationException($"the game would not be asked to load {car}");
 
-        uint request = CarLoad.RequestIn(m, 0);
         var until = DateTime.UtcNow + CarPatience;
 
         // Where it got to, not just that it did not get there. The loader is
@@ -284,9 +289,10 @@ public static class DirectRace
                     $"{car} stalled on step {CarLoad.StepIn(m, 0)} of the loader"
                     + $" after reaching {string.Join(", ", reached)}");
 
-            c.A0 = request;
-            c.A1 = owner;
-            Call(c, m, CarLoad.AdvanceOneStep);
+            // The screen's own frame, not the loader underneath it: the steps
+            // depend on work this drives and the loader alone cannot finish.
+            c.A0 = owner;
+            Call(c, m, ScreenFrame);
 
             byte now = CarLoad.StepIn(m, 0);
             if (now != step) { step = now; reached.Add(now); }
