@@ -797,6 +797,46 @@ without anyone having to learn what the rest is. It costs knowing which
 buttons on which screens, and it breaks if the menus change - but the game
 stays in control, which is what every failed approach here lacked.
 
+## The launch reaches the track
+
+A race started from the lobby now reaches the track with the car on it, the
+HUD drawing, the lap timer running and the speedometer live. What it took, in
+the end, was two answers changed and two blocks supplied - not the sequence
+replay that five attempts went into.
+
+```
+the arcade runs untouched
+  its first screen loads the room's car through its own frame loop
+  once the car is in memory, its "keep going?" answers zero
+    the loop ends the way it ends for a player: last pass, teardown
+  the arcade builds its parameter block - a captured one is written over it
+  the 1420-byte race block is supplied from a captured race too
+  the sound sequencer is taken off the VBlank list
+  the pre-race screen is ended before it draws
+  the arcade copies, loads gt2_04, and gt2_04 loads the race
+```
+
+Each of those was one round of a failure moving further in, and each round
+named its own cause: the overlay index that has to agree with the entry point,
+the request records installed by a screen's first pass, "finished" being a step
+of zero rather than a step past the last, the parameter block that is assembled
+from what the screens decided, the race block a rewrite stopped writing, and a
+sequencer reading a stream the race had landed on top of.
+
+### What is wrong with it
+
+- **No course.** The race loads fonts, sounds, engines and the car, and asks
+  for no track geometry at all, which is why the track is empty. Nothing in
+  the trace requests a course file.
+- **The throttle does nothing.** Input reaches the game - the lobby is driven
+  by it - but the race does not act on it.
+- Some interface elements draw wrongly.
+
+The pre-race screen is the first suspect for the course, since it is the one
+thing on the arcade's own path that a launched race skips. It cannot simply be
+put back: with the race block written it still dies, earlier than before, on a
+fault of its own.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.
