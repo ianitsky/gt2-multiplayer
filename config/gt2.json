@@ -2790,6 +2790,11 @@
       "address": "0x80010C84",
       "target": "GT2Port.Multiplayer.DirectRace.ParametersBuilt",
       "mode": "post"
+    },
+    {
+      "address": "0x80083134",
+      "target": "GT2Port.Multiplayer.VblankList.AboutToRun",
+      "mode": "pre"
     }
   ],
   "debug": false,
@@ -3637,6 +3642,10 @@
     {
       "address": "0x800833E8",
       "name": "gt2_main_call_vtable_slot_0c_and_report_zero"
+    },
+    {
+      "address": "0x80083134",
+      "name": "gt2_main_vblank_run_callback_list"
     }
   ]
 }
