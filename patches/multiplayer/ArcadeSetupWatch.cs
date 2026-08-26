@@ -66,9 +66,34 @@ public static class ArcadeSetupWatch
     /// first one: a second race would capture a screen's leftovers rather than
     /// a screen's work.
     /// </summary>
+    /// <summary>Where the parameter block names the course, as a number.</summary>
+    const uint ChosenCourse = 0x1B8u;
+
+    /// <summary>Where it keeps the course's name, as text, for display.</summary>
+    const uint CourseName = 0xB8u;
+
     public static void LoadingOverlay(CpuContext c, IMemory m)
     {
         if (c.A1 == RaceOverlayEntry) ArcadeOrder.RaceLoading();
+
+        // Said on every race, walked or launched, because it is the one line
+        // that pairs a course with the number the block carries for it. Two
+        // walked races on two tracks settle what a hundred lines of reading
+        // has not: whether the number varies with the course at all, and
+        // whether it is the same number in a later session.
+        if (c.A1 == RaceOverlayEntry)
+        {
+            var name = new System.Text.StringBuilder();
+            for (uint i = 0; i < 32; i++)
+            {
+                byte b = m.ReadU8(Built + CourseName + i);
+                if (b == 0) break;
+                name.Append((char)b);
+            }
+            Console.Error.WriteLine(
+                $"[course] racing {name} - the block carries 0x{m.ReadU32(Built + ChosenCourse):X8}"
+                + $" at +0x1B8, event {m.ReadU8(Built):X2}/{m.ReadU8(Built + 1u):X2}");
+        }
         if (!Watching || c.A1 != RaceOverlayEntry || _seen++ > 0) return;
 
         Dump(m, Built, Copied, "arcade-as-raced.bin", "as raced, after the screens");

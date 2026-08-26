@@ -43,6 +43,20 @@ public static class RaceStartLine
         Environment.GetEnvironmentVariable("GT2_HOLD_AT_OVERLAY") is (null or "")
         && !RacePhases.HoldsLater;
 
+    /// <summary>
+    /// How long a frame may take before it is worth a line of its own.
+    ///
+    /// A race frame is meant to be about 16ms. The countdown ending is reported
+    /// as three seconds of nothing, so anything near a tenth of a second is
+    /// already the thing being looked for, and at that threshold a normal race
+    /// says nothing at all.
+    /// </summary>
+    static readonly TimeSpan TooLong = TimeSpan.FromMilliseconds(100);
+
+    static DateTime _frameBegan;
+    static int _readsAtFrameStart;
+    static int _stalls;
+
     static int _frame;
     static bool _held;
     static DateTime _began;
@@ -75,6 +89,23 @@ public static class RaceStartLine
                 ModeHook.HoldAtTheLine();
             }
         }
+
+        // Every frame, watched or not: a hitch that only shows up when a
+        // switch is set is a hitch nobody reports. Reads are printed beside it
+        // because they are what separates "the disc is being read" from "the
+        // machine is busy" - two different faults with one symptom.
+        if (_frame > 1)
+        {
+            var took = now - _frameBegan;
+            if (took > TooLong)
+                Console.Error.WriteLine(
+                    $"[stall] {now:HH:mm:ss.fff} frame {_frame - 1} took {took.TotalMilliseconds:F0}ms"
+                    + $"  ({reads - _readsAtFrameStart} files read during it,"
+                    + $" {(now - _began).TotalSeconds:F1}s into the race,"
+                    + $" {++_stalls} so far)");
+        }
+        _frameBegan = now;
+        _readsAtFrameStart = reads;
 
         if (!Watching) return;
 
