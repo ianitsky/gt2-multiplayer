@@ -2378,6 +2378,10 @@
         {
           "address": "0x80046824",
           "name": "entry_80046824"
+        },
+        {
+          "address": "0x80047C44",
+          "name": "gt2_ovr1_race_mode_is_one_or_six_to_ten"
         }
       ],
       "image": "ovl_patched/gt2_01.bin"
@@ -2887,6 +2891,16 @@
       "overlay": "gt2_01",
       "address": "0x80015B64",
       "target": "GT2Port.Multiplayer.RaceStartLine.FrameEnds",
+      "mode": "pre"
+    },
+    {
+      "address": "0x8007FAB8",
+      "target": "GT2Port.Multiplayer.PadWatch.ReaderRegistered",
+      "mode": "pre"
+    },
+    {
+      "address": "0x8007FC30",
+      "target": "GT2Port.Multiplayer.PadWatch.PadDecoded",
       "mode": "pre"
     }
   ],

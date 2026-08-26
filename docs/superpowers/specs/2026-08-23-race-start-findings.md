@@ -1161,3 +1161,61 @@ which the captured mode-4 block carries.
 So the target for pad synchronisation stays: find where the AI decides an
 entrant's steering, throttle and brake, and put the network's answer there for
 the entrants belonging to remote players.
+
+## How input reaches the game
+
+Settled by reading, end to end.
+
+`PadInitDirect` is called once, from 0x800109EC, with two raw buffers:
+
+| what | where |
+|------|-------|
+| the pad struct | 0x801F0C70 |
+| raw buffer, pad 0 | 0x801F0C98 |
+| raw buffer, pad 1 | 0x801F0CBA |
+| reader record for pad 0 | `[0x801F0C80]` |
+| reader record for pad 1 | `[0x801F0C84]` |
+
+A raw buffer is eight bytes: connected, type id, buttons low, buttons high,
+right X, right Y, left X, left Y. The decoder finds one as
+`padIndex * 34 + 0x801F0C98`, which is where the two addresses above come from.
+
+`gt2_main_install_the_pad_reader_on_the_vblank_list` (0x8007F924) puts
+`gt2_main_read_both_pads_every_vblank` (0x8007F978) on the VBlank list and
+calls PadStartCom. Every frame that callback runs, for each pad:
+
+1. `gt2_main_detect_one_pads_presence_and_type` (0x8007F9CC) - writes the
+   connection state into the struct at `+0x18 + pad*8`
+2. `gt2_main_decode_one_pad_into_its_reader_record` (0x8007FC30) - reads the
+   raw buffer and fills the record
+
+Any screen that wants input registers a record through
+`gt2_main_register_a_pad_reader_for_one_pad` (0x8007FAB8), which takes the
+record, the pad index and a callback, and zeroes the record's button fields at
++0x5A, +0x5C, +0x5E and +0x60.
+
+**So a remote player's controls have a place to be written: a reader record.**
+What is not yet known is which record the race reads its driver from, and what
+reads it afterwards - and that is what has to be known before an AI-driven
+entrant can be given a human's input instead.
+
+### Why the mode byte is not the answer
+
+`gt2_ovr1_race_setup_one_viewport_per_human_player` counts two humans when the
+race's mode byte is 0, so split screen is one byte. But **sixty-six functions
+in gt2_01 branch on that byte**, covering rendering, the HUD, the camera and
+the timing, and the builder's mode 0 is a different branch again. It is not a
+switch that can be flipped to get two networked drivers.
+
+### Where static reading ran out
+
+Finding what writes a car's steering, throttle and brake each frame did not
+fall out of reading: the per-frame method's callees hold no loop over cars, the
+entrant-stride loops are demo setup and race-screen initialisation, and the one
+predicate that reads both the mode and an entrant flag
+(`gt2_ovr1_race_mode_is_one_or_six_to_ten`, 0x80047C44) only tests the mode.
+
+`PadWatch` asks the running game instead: GT2_PAD_WATCH reports every reader
+record as it is registered, and every hundred and twentieth decode with the raw
+bytes beside it. A race with that on names the record the driver is read from,
+and from there the consumer is one watch away.

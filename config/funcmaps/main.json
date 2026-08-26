@@ -7432,17 +7432,17 @@
     },
     {
       "address": "0x8007F924",
-      "name": "gt2_main_task04_pad_config",
+      "name": "gt2_main_install_the_pad_reader_on_the_vblank_list",
       "size": 84
     },
     {
       "address": "0x8007F978",
-      "name": "gt2_main_task04_pad_config_task0",
+      "name": "gt2_main_read_both_pads_every_vblank",
       "size": 84
     },
     {
       "address": "0x8007F9CC",
-      "name": "gt2_main_task04_pad_config_task00",
+      "name": "gt2_main_detect_one_pads_presence_and_type",
       "size": 196
     },
     {
@@ -7452,7 +7452,7 @@
     },
     {
       "address": "0x8007FAB8",
-      "name": "gt2_main_sharedovr_funcD",
+      "name": "gt2_main_register_a_pad_reader_for_one_pad",
       "size": 128
     },
     {
@@ -7467,7 +7467,7 @@
     },
     {
       "address": "0x8007FC30",
-      "name": "gt2_main_task04_pad_config_task01",
+      "name": "gt2_main_decode_one_pad_into_its_reader_record",
       "size": 516
     },
     {
