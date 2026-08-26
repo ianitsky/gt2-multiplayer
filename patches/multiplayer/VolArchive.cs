@@ -158,6 +158,29 @@ public sealed class VolArchive : IDisposable
     }
 
     /// <summary>
+    /// The archive's own number for <paramref name="path"/> - the directory
+    /// value the game passes when it asks where a file starts.
+    ///
+    /// The port needs this because loading is not a call but a queue: the
+    /// game fills in a request record whose <c>+0x04</c> is exactly this
+    /// number, and the loader state machine turns it into a sector and a
+    /// length. So a race started outside the menus has to name its files the
+    /// same way the menus do, by index rather than by path.
+    ///
+    /// False for anything missing or for a directory, which has a number of
+    /// its own but is never the subject of a read request.
+    /// </summary>
+    public bool TryIndexOf(string path, out int index)
+    {
+        index = -1;
+        if (_disposed || string.IsNullOrEmpty(path)) return false;
+        if (!TryResolve(path, out var found) || (found.Flags & DirectoryFlag) != 0) return false;
+
+        index = found.Value;
+        return true;
+    }
+
+    /// <summary>
     /// Reads a slash-separated <paramref name="path"/> out of the archive. A
     /// member whose name ends ".gz" is gunzipped; anything else comes back
     /// raw. False for anything missing, malformed, or too short to actually

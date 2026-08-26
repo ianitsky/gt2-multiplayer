@@ -457,6 +457,57 @@ queue rather than to call a loader directly. The file index comes from the
 table the loader built, keyed by the car's five-character code, which the room
 already knows.
 
+### The loader is a state machine, and the index is the archive's own number
+
+`func_80016640(A0 = request, A1 = owner)` in gt2_03 is not a loader called
+once. `[request + 0x10]` is a step number, 1 to 8, and the function jumps
+through a table at `0x800270A8` to whichever step is due:
+
+```
+1  0x80016700   check the request is ready to go
+2  0x80016764   read and inflate the model     [request+0x04]
+3  0x800167B0   size it
+4  0x8001681C   read and inflate the textures  [request+0x04] + 1
+5  0x8001686C   size it
+6  0x800168F8
+7  0x80016944
+8  0x800169C0
+```
+
+So a request is ticked, not called: each pass advances `+0x10` by one, and a
+step that cannot finish yet leaves it alone and returns. The record's fields
+that matter so far:
+
+```
++0x04  u16  the file index of the car's .cdo; the .cdp is this plus one
++0x10  u8   which step is due
++0x48  u32  where the model is unpacked to
++0x4C  u32  where the textures are unpacked to
+```
+
+The owner is walked by `entry_800141B8` at `0x80014434`: it reads
+`[owner + 0x228]` and `[owner + 0x22C]` - **two** request pointers - and ticks
+each one every frame. Two slots, which is what a race needs when the player's
+car and one other are being brought in.
+
+**The file index is the archive's own directory value.** Resolving
+`carobj/ccrcn.cdo.gz` against GT2.VOL offline gives 4091 and
+`carobj/ccrcn.cdp.gz` gives 4092 - exactly the two numbers the load trace
+caught the game asking for, and consecutive, which is what step 4 assumes when
+it adds one rather than looking the second file up. `carobj/` holds 4440 names,
+which is the 1110 cars times their four files (`.cdo`, `.cdp`, `.cno`, `.cnp`).
+
+So the room's five-character code resolves to a file index with no table
+lookup at all: `carobj/<code>.cdo.gz`, through `VolArchive.TryIndexOf`. The
+in-RAM table at `0x801DF5D0` that the boot-time loader builds is the game's own
+route to the same number, and is not needed.
+
+What is still unknown is the rest of the record - where a request lives, who
+owns it, and where the unpacked bytes are meant to land. Those are runtime
+facts, so `LoadTrace` now reports them: a pre-hook runs before the callee
+spills anything, so at the moment the game asks for a car file the caller's S1
+is the record, S3 the owner and S2 the unpack destination.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:

@@ -47,5 +47,37 @@ public static class LoadTrace
         _lastCaller = c.RA;
 
         Console.Error.WriteLine($"[load] {_reads,4}: file index {c.A0} asked for from 0x{c.RA:X8}");
+        Request(c, m);
+    }
+
+    /// <summary>Where func_80016640 asks for the two halves of a car object.</summary>
+    const uint AsksForTheModel = 0x80016770u;
+    const uint AsksForTheTextures = 0x80016828u;
+
+    /// <summary>
+    /// Reports the request record behind a car-object read.
+    ///
+    /// Loading a car is not a call but a queue: func_80016640 is a state
+    /// machine over a request record, stepping through it one file at a time,
+    /// and the record says which file and where to put it. A pre-hook runs
+    /// before the callee's prologue spills anything, so the caller's registers
+    /// are still live here - S1 is the record, S3 the object that owns it, S2
+    /// the destination the inflate call is handed.
+    ///
+    /// The record's file index is the one thing already understood: it is the
+    /// archive's own number for carobj/&lt;code&gt;.cdo.gz, and the .cdp is that
+    /// number plus one. What a cold launch still needs is the rest - where the
+    /// record lives, who owns it, and where the bytes are meant to land.
+    /// </summary>
+    static void Request(CpuContext c, IMemory m)
+    {
+        if (c.RA is not (AsksForTheModel or AsksForTheTextures)) return;
+
+        Console.Error.WriteLine(
+            $"[load]       request at 0x{c.S1:X8}, owned by 0x{c.S3:X8}, unpacking into 0x{c.S2:X8}"
+            + $"{Environment.NewLine}[load]       +0x04 index {m.ReadU16(c.S1 + 0x04u)}"
+            + $"  +0x10 step {m.ReadU8(c.S1 + 0x10u)}"
+            + $"  +0x48 model -> 0x{m.ReadU32(c.S1 + 0x48u):X8}"
+            + $"  +0x4C textures -> 0x{m.ReadU32(c.S1 + 0x4Cu):X8}");
     }
 }

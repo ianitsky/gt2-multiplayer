@@ -175,6 +175,43 @@ public class VolArchiveTests
     }
 
     [Fact]
+    public void Gives_a_file_the_number_the_game_asks_for_it_by()
+    {
+        var image = BuildArchive([
+            new Item("..", null, 0),
+            new Item("carobj", null, 2, Last: true),
+            new Item("..", null, 0),
+            new Item("a.cdo.gz", [1], Last: false),
+            new Item("a.cdp.gz", [2], Last: true),
+        ]);
+        using var vol = VolArchive.FromImage(image);
+
+        Assert.True(vol.TryIndexOf("carobj/a.cdo.gz", out int first));
+        Assert.True(vol.TryIndexOf("carobj/a.cdp.gz", out int second));
+
+        // The loader state machine reads the .cdp by adding one to the .cdo's
+        // number rather than by looking it up, so the pair being consecutive
+        // is not a coincidence of this fixture but something a car's two
+        // files have to satisfy.
+        Assert.Equal(first + 1, second);
+    }
+
+    [Fact]
+    public void Refuses_a_number_for_a_directory()
+    {
+        var image = BuildArchive([
+            new Item("..", null, 0),
+            new Item("carobj", null, 2, Last: true),
+            new Item("..", null, 0),
+            new Item("a.cdo.gz", [1], Last: true),
+        ]);
+        using var vol = VolArchive.FromImage(image);
+
+        Assert.False(vol.TryIndexOf("carobj", out _));
+        Assert.False(vol.TryIndexOf("carobj/nothing.gz", out _));
+    }
+
+    [Fact]
     public void Refuses_a_path_that_is_not_there()
     {
         var payload = Encoding.ASCII.GetBytes("readme content");
