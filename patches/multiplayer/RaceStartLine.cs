@@ -112,7 +112,7 @@ public static class RaceStartLine
                     + $" baton asked {RecompOne.Runtime.Dispatch.TaskStacks.Takes - _takesAtFrameStart} times,"
                     + $" waits {RecompOne.Runtime.Dispatch.TaskStacks.Waits - _waitsAtFrameStart}"
                     + $" costing {(RecompOne.Runtime.Dispatch.TaskStacks.Waited - _waitedAtFrameStart).TotalMilliseconds:F0}ms,"
-                    + $" longest one {RecompOne.Runtime.Dispatch.TaskStacks.Longest.TotalMilliseconds:F0}ms,"
+                    + $" longest one {RecompOne.Runtime.Dispatch.TaskStacks.TakeLongest().TotalMilliseconds:F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)");
         }
