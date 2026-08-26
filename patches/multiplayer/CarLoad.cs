@@ -203,6 +203,17 @@ public static class CarLoad
     /// <summary>The address of the one call that advances a request by one step.</summary>
     public const uint AdvanceOneStep = 0x80016640u;
 
+    /// <summary>
+    /// Which of the eight steps the request in <paramref name="slot"/> is due
+    /// to run, or zero when it has not been set going. A load that does not
+    /// finish is a step that does not advance, so this is what says where.
+    /// </summary>
+    public static byte StepIn(IMemory m, int slot)
+    {
+        uint request = RequestIn(m, slot);
+        return request == 0u ? (byte)0 : m.ReadU8(request + Step);
+    }
+
     /// <summary>Whether a tick has been seen, which is what knowing the owner takes.</summary>
     public static bool Ready => _owner != 0u;
 

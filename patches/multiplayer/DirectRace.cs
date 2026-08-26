@@ -260,32 +260,42 @@ public static class DirectRace
     static void LoadTheCar(CpuContext c, IMemory m, uint owner, string car)
     {
         CarLoad.UseOwner(owner);
+        // Carrying on without the car is what the race cannot survive: the
+        // overlay loads, dereferences an object nobody built, and dies several
+        // layers away as a call to something that is not code. Stopping here
+        // costs the race and keeps the reason.
         if (!CarLoad.TryAsk(c, m, 0, car))
-        {
-            Console.Error.WriteLine($"[direct] could not ask for {car} - the race will use whatever is loaded");
-            return;
-        }
+            throw new InvalidOperationException($"the game would not be asked to load {car}");
 
         uint request = CarLoad.RequestIn(m, 0);
         var until = DateTime.UtcNow + CarPatience;
 
+        // Where it got to, not just that it did not get there. The loader is
+        // eight steps and a load that stalls is one step that stops advancing,
+        // so the step it stalled on is the whole diagnosis - and the steps it
+        // did reach say whether it stalled at once or partway.
+        byte step = CarLoad.StepIn(m, 0);
+        var reached = new List<byte> { step };
+
         while (!CarLoad.DoneIn(m, 0))
         {
             if (DateTime.UtcNow > until)
-            {
-                Console.Error.WriteLine($"[direct] {car} did not finish loading in time");
-                return;
-            }
+                throw new InvalidOperationException(
+                    $"{car} stalled on step {CarLoad.StepIn(m, 0)} of the loader"
+                    + $" after reaching {string.Join(", ", reached)}");
 
             c.A0 = request;
             c.A1 = owner;
             Call(c, m, CarLoad.AdvanceOneStep);
 
+            byte now = CarLoad.StepIn(m, 0);
+            if (now != step) { step = now; reached.Add(now); }
+
             // The steps wait on the drive, and nothing else is advancing it.
             RecompOne.Runtime.Runtime.PumpHost();
         }
 
-        Console.Error.WriteLine($"[direct] {car} is loaded");
+        Console.Error.WriteLine($"[direct] {car} is loaded, through steps {string.Join(", ", reached)}");
     }
 
     /// <summary>
