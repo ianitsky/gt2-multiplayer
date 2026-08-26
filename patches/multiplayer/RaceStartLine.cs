@@ -77,6 +77,8 @@ public static class RaceStartLine
     static TimeSpan _waitedAtFrameStart;
     static long _waitsAtFrameStart;
     static long _takesAtFrameStart;
+    static long _cdCommandsAtFrameStart;
+    static long _cdAnswersAtFrameStart;
 
     /// <summary>
     /// Pre-hook on the race screen's per-frame method, which is not the one the
@@ -115,6 +117,9 @@ public static class RaceStartLine
                     + $" waits {RecompOne.Runtime.Dispatch.TaskStacks.Waits - _waitsAtFrameStart}"
                     + $" costing {(RecompOne.Runtime.Dispatch.TaskStacks.Waited - _waitedAtFrameStart).TotalMilliseconds:F0}ms,"
                     + $" longest one {RecompOne.Runtime.Dispatch.TaskStacks.TakeLongest().TotalMilliseconds:F0}ms,"
+                    + $" cd {RecompOne.Runtime.Cdrom.CdController.Commands - _cdCommandsAtFrameStart}"
+                    + $" commands answered {RecompOne.Runtime.Cdrom.CdController.Answers - _cdAnswersAtFrameStart}"
+                    + $" times, last 0x{RecompOne.Runtime.Cdrom.CdController.LastCommand:X2},"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)"
                     + (whereItWas is null ? "" : Environment.NewLine + $"[stall]     {whereItWas}"));
@@ -126,6 +131,8 @@ public static class RaceStartLine
         _waitedAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Waited;
         _waitsAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Waits;
         _takesAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Takes;
+        _cdCommandsAtFrameStart = RecompOne.Runtime.Cdrom.CdController.Commands;
+        _cdAnswersAtFrameStart = RecompOne.Runtime.Cdrom.CdController.Answers;
     }
 
     static int _frame;
