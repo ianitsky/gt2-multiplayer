@@ -446,16 +446,18 @@ public static class DirectRace
         Say(m, "as the builder left it");
         if (_race is not { } race) return;
 
-        // Only the room's entrants. The car itself is the builder's work now:
-        // reading the arcade's race case end to end shows the block's mode byte
-        // sending it through 0x80010000 for the record, func_80010554 to build
-        // the race and fill all six entrants, and load_car_parts to put the
-        // player's car into the block at +0x1C. Doing any of that again here
-        // would only overwrite it - and load_car_parts aimed at the entrant
-        // writes 0x80 bytes from +0x08, which covers the AI skill at +0x42 and
-        // the AI flag at +0x82 that RaceLauncher has just set.
-        if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
-            Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
+        // Only the room's entrants, and only their identities.
+        //
+        // RaceLauncher used to install a whole captured race block over this
+        // one first. That made sense when the builder was falling through its
+        // branch and leaving nothing behind, and it is exactly wrong now: the
+        // builder fills all six entrants from the parameter block, and the
+        // template - captured on Tahiti Road - put that course's number back at
+        // +0x40 and its name back at +0x20 over the top. Every launched race
+        // ran Tahiti Road because a Tahiti Road race was being written over the
+        // one the game had just built correctly.
+        if (!RaceGrid.TryApply(m, race.Players, race.Me, race.Cars))
+            Console.Error.WriteLine("[direct] the race is not built yet - the room was not applied");
 
         SayTheRacesCourse(m);
 
