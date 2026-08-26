@@ -66,6 +66,13 @@ public static class ArcadeSetupWatch
     /// first one: a second race would capture a screen's leftovers rather than
     /// a screen's work.
     /// </summary>
+    /// <summary>
+    /// Read from the copy, not from where it was built. By the time the overlay
+    /// loads, 0x801C3350 is zeroed - the pre-race screen uses that memory - and
+    /// the arcade has already copied the block to 0x801D5FA0, which is what the
+    /// race reads. Reading the original printed an empty course and a course
+    /// number of zero for every race, walked or launched.
+    /// </summary>
     /// <summary>Where the parameter block names the course, as a number.</summary>
     const uint ChosenCourse = 0x1B8u;
 
@@ -86,13 +93,13 @@ public static class ArcadeSetupWatch
             var name = new System.Text.StringBuilder();
             for (uint i = 0; i < 32; i++)
             {
-                byte b = m.ReadU8(Built + CourseName + i);
+                byte b = m.ReadU8(CopiedTo + CourseName + i);
                 if (b == 0) break;
                 name.Append((char)b);
             }
             Console.Error.WriteLine(
-                $"[course] racing {name} - the block carries 0x{m.ReadU32(Built + ChosenCourse):X8}"
-                + $" at +0x1B8, event {m.ReadU8(Built):X2}/{m.ReadU8(Built + 1u):X2}");
+                $"[course] racing {name} - the block carries 0x{m.ReadU32(CopiedTo + ChosenCourse):X8}"
+                + $" at +0x1B8, event {m.ReadU8(CopiedTo):X2}/{m.ReadU8(CopiedTo + 1u):X2}");
         }
         if (!Watching || c.A1 != RaceOverlayEntry || _seen++ > 0) return;
 

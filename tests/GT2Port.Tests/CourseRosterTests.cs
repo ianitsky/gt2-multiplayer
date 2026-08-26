@@ -17,6 +17,8 @@ public class CourseRosterTests
     static IMemory WithCourses(params (uint Id, string Name)[] courses)
     {
         var m = new PSMemory();
+        foreach ((int i, byte b) in new[] { (0, (byte)'C'), (1, (byte)'R'), (2, (byte)'S'), (3, (byte)0) })
+            m.WriteU8(Table + (uint)i, b);
         m.WriteU16(Table + 0x06u, (ushort)courses.Length);
 
         uint name = Names;
@@ -74,5 +76,36 @@ public class CourseRosterTests
     {
         Assert.Empty(CourseRoster.Read(new PSMemory()));
         Assert.False(CourseRoster.TryFind(new PSMemory(), "Tahiti Road", out _));
+    }
+
+    /// <summary>
+    /// The disc carries 126 courses - every track forwards, reversed, in dirt
+    /// and in two-player - and the first guard here was set at 64, which threw
+    /// a real roster away and reported it as "not built yet". The count is not
+    /// what says a roster is real; the header saying "CRS" is.
+    /// </summary>
+    [Fact]
+    public void ReadsARosterAsLargeAsTheDiscActuallyCarries()
+    {
+        var many = Enumerable.Range(0, 126)
+            .Select(i => ((uint)(0x1000 + i), $"Course {i}"))
+            .ToArray();
+
+        var courses = CourseRoster.Read(WithCourses(many));
+
+        Assert.Equal(126, courses.Count);
+        Assert.Equal("Course 125", courses[125].Name);
+    }
+
+    /// <summary>
+    /// And a page of memory that happens to hold a plausible count is still not
+    /// a roster, which is what the magic is for.
+    /// </summary>
+    [Fact]
+    public void ReadsNothingFromMemoryThatOnlyLooksLikeARoster()
+    {
+        var m = new PSMemory();
+        m.WriteU16(Table + 0x06u, 12);
+        Assert.Empty(CourseRoster.Read(m));
     }
 }

@@ -861,7 +861,7 @@
         },
         {
           "address": "0x8001584C",
-          "name": "gt2_ovr1_race_screen_step_one_frame"
+          "name": "gt2_ovr1_race_screen_first_pass_runs_once"
         },
         {
           "address": "0x80015B1C",
@@ -869,7 +869,7 @@
         },
         {
           "address": "0x80015B64",
-          "name": "gt2_ovr1_race_screen_say_whether_to_continue"
+          "name": "gt2_ovr1_race_screen_step_one_frame_and_say_whether_to_continue"
         },
         {
           "address": "0x80015E44",
@@ -2881,6 +2881,12 @@
       "overlay": "gt2_01",
       "address": "0x8001584C",
       "target": "GT2Port.Multiplayer.RaceStartLine.FrameBegins",
+      "mode": "pre"
+    },
+    {
+      "overlay": "gt2_01",
+      "address": "0x80015B64",
+      "target": "GT2Port.Multiplayer.RaceStartLine.FrameEnds",
       "mode": "pre"
     }
   ],

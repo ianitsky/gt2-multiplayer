@@ -56,6 +56,41 @@ public static class RaceStartLine
     static DateTime _frameBegan;
     static int _readsAtFrameStart;
     static int _stalls;
+    static int _frames;
+
+    /// <summary>
+    /// Pre-hook on the race screen's per-frame method, which is not the one the
+    /// barrier holds at.
+    ///
+    /// loop__14ScreenViewLoop calls slot 0x10 once and then slots 0x14 and 0x18
+    /// in a loop, so 0x8001584C - RaceMenuLoop's slot 0x10 - runs exactly once.
+    /// The first version timed frames there and reported a single frame for a
+    /// whole race, which is what a once-only method looks like when it is
+    /// mistaken for a loop. The per-frame work is slot 0x24, reached through
+    /// the generic slot 0x14, the same shape the arcade's menu screens have.
+    ///
+    /// Not behind a switch: a hitch that only reports itself when a variable is
+    /// set is a hitch nobody reports. At 100ms a race that runs says nothing.
+    /// </summary>
+    public static void FrameEnds(CpuContext c, IMemory m)
+    {
+        var now = DateTime.UtcNow;
+        int reads = LoadTrace.Reads;
+
+        if (_frames++ > 0)
+        {
+            var took = now - _frameBegan;
+            if (took > TooLong)
+                Console.Error.WriteLine(
+                    $"[stall] {now:HH:mm:ss.fff} frame {_frames - 1} took {took.TotalMilliseconds:F0}ms"
+                    + $"  ({reads - _readsAtFrameStart} files read during it,"
+                    + $" {(now - _began).TotalSeconds:F1}s into the race,"
+                    + $" {++_stalls} so far)");
+        }
+
+        _frameBegan = now;
+        _readsAtFrameStart = reads;
+    }
 
     static int _frame;
     static bool _held;
@@ -89,23 +124,6 @@ public static class RaceStartLine
                 ModeHook.HoldAtTheLine();
             }
         }
-
-        // Every frame, watched or not: a hitch that only shows up when a
-        // switch is set is a hitch nobody reports. Reads are printed beside it
-        // because they are what separates "the disc is being read" from "the
-        // machine is busy" - two different faults with one symptom.
-        if (_frame > 1)
-        {
-            var took = now - _frameBegan;
-            if (took > TooLong)
-                Console.Error.WriteLine(
-                    $"[stall] {now:HH:mm:ss.fff} frame {_frame - 1} took {took.TotalMilliseconds:F0}ms"
-                    + $"  ({reads - _readsAtFrameStart} files read during it,"
-                    + $" {(now - _began).TotalSeconds:F1}s into the race,"
-                    + $" {++_stalls} so far)");
-        }
-        _frameBegan = now;
-        _readsAtFrameStart = reads;
 
         if (!Watching) return;
 

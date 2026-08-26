@@ -32,8 +32,16 @@ public static class CourseRoster
     const uint NameIn = 0x00u;
     const uint IdIn = 0x04u;
 
-    /// <summary>More than the disc has, as a guard against reading a table that is not one.</summary>
-    const int TooMany = 64;
+    /// <summary>
+    /// More than the disc has, as a guard against reading a table that is not
+    /// one. Set at 64 first, which threw away a real roster: the disc carries
+    /// 126 courses - forward, reverse, dirt and two-player variants of about
+    /// thirty tracks - and the guard turned that into "no roster yet".
+    /// </summary>
+    const int TooMany = 512;
+
+    /// <summary>What the roster's header says it is, which is how to know it is built.</summary>
+    static readonly byte[] Magic = [(byte)'C', (byte)'R', (byte)'S', 0];
 
     public sealed record Entry(int Index, uint Id, string Name);
 
@@ -43,6 +51,9 @@ public static class CourseRoster
     /// </summary>
     public static IReadOnlyList<Entry> Read(IMemory m)
     {
+        for (uint i = 0; i < Magic.Length; i++)
+            if (m.ReadU8(Table + i) != Magic[i]) return [];
+
         int count = m.ReadU16(Table + Count);
         if (count <= 0 || count > TooMany) return [];
 
@@ -95,18 +106,37 @@ public static class CourseRoster
             var head = new System.Text.StringBuilder();
             for (uint i = 0; i < 0x20; i++) head.Append($"{m.ReadU8(Table + i):X2} ");
             Console.Error.WriteLine(
-                $"[course] {when}: the roster at 0x{Table:X8} says {count} entries"
-                + $" - {(count == 0 ? "not built" : count > TooMany ? "more than this will trust" : "unreadable")}");
+                $"[course] {when}: no roster at 0x{Table:X8} - its header says {count} entries"
+                + $" and its magic is not \"CRS\"");
             Console.Error.WriteLine($"[course]   0x{Table:X8}: {head.ToString().TrimEnd()}");
             return;
         }
 
-        Console.Error.WriteLine($"[course] {when}: the game has {courses.Count} course(s) ready:");
+        Console.Error.WriteLine($"[course] {when}: the game has {courses.Count} course(s) ready");
+        if (!Listing) return;
+
+        // The whole roster, when asked for. Names repeat - the disc has a
+        // Tahiti Road forwards, reversed and two-player - so the four words
+        // after the id come too: whichever of them tells the variants apart is
+        // what a room's asset code will have to be matched against.
         foreach (var course in courses)
-            Console.Error.WriteLine($"[course]   {course.Index,2}. 0x{course.Id:X8}  {course.Name}");
+        {
+            uint entry = Table + FirstEntry + (uint)(course.Index * EntrySize);
+            var rest = new System.Text.StringBuilder();
+            for (uint i = 0x08; i < EntrySize; i += 4) rest.Append($"0x{m.ReadU32(entry + i):X8} ");
+            Console.Error.WriteLine(
+                $"[course]  {course.Index,3}. 0x{course.Id:X8}  {rest.ToString().TrimEnd()}  {course.Name}");
+        }
     }
 
     static readonly HashSet<string> _said = [];
+
+    /// <summary>
+    /// Whether to print all 126 of them. Off by default: the count is the part
+    /// worth seeing every run, and the list is what you ask for once.
+    /// </summary>
+    static readonly bool Listing =
+        Environment.GetEnvironmentVariable("GT2_COURSE_ROSTER") is not (null or "");
 
     /// <summary>How long a course name is allowed to be before this stops reading.</summary>
     const int LongestName = 64;
