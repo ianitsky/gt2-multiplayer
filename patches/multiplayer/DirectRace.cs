@@ -142,9 +142,23 @@ public static class DirectRace
     /// once is the same trick that worked on the first screen, and it never
     /// draws a frame to go wrong in.
     /// </summary>
+    /// <summary>
+    /// Whether to skip the pre-race screen, off unless GT2_SKIP_PRERACE is set.
+    ///
+    /// It was skipped because it rendered through a wrong pointer and wrote
+    /// over a VBlank callback node. That was found before the race block turned
+    /// out not to be written at all, and a screen drawing a race out of an
+    /// empty block is exactly what a wrong pointer looks like - so the reason
+    /// for skipping may have gone with the cause. It is also the screen that
+    /// would stop the arcade's music, which a sequencer reading freed data
+    /// suggests nobody did.
+    /// </summary>
+    static readonly bool SkipPreRace =
+        Environment.GetEnvironmentVariable("GT2_SKIP_PRERACE") is not (null or "");
+
     public static void PreRaceScreenAnswered(CpuContext c, IMemory m)
     {
-        if (!EndedTheScreen || _preRaceEnded) return;
+        if (!SkipPreRace || !EndedTheScreen || _preRaceEnded) return;
         _preRaceEnded = true;
         c.V0 = 0u;
         Console.Error.WriteLine("[direct] the pre-race screen is ended before it draws");
