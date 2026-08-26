@@ -1077,3 +1077,53 @@ slot 1 of `[screen+0x1D0 + depth*4]`, and the answer indexes 0x80026F98.
 
 The race answer does not stop the music because a player has already popped a
 page to reach it. A launch that walks no pages must make that call itself.
+
+## The race-start hitch
+
+Reported as three seconds of nothing at the end of the countdown, recovering
+on its own. Ruled out in this order, each by measurement:
+
+| suspect | measured | verdict |
+|---------|----------|---------|
+| disc loading | 0 files read across the frame | no |
+| garbage collection | 3ms of pause across 2573ms | no |
+| the task scheduler | frame's own thread: 0 waits, 0 asks | no |
+| game code | 490 of 571 samples at one address | **yes, and it was waiting** |
+
+Sampling needs saying: a stalled frame reaches no hook, so `Dispatcher.Call`
+records the address it dispatches and a watchdog thread samples that from
+outside. 0x8008AAD4 is a resume point inside the BIOS routine at 0x8008A594:
+
+```
+V0 = [*(0x800A7AD4)]      ; the drive's status byte
+V0 &= 7
+if (V0 == 0) goto 0x8008AAD4
+```
+
+The game busy-waits on the CD. The counters then said seven commands and
+**4806 answers** in 2970ms - about sixteen hundred interrupts a second against
+the hundred and fifty a two-speed drive manages.
+
+### The loop is in the port
+
+```
+Irq.Service()  ->  PumpHost()  ->  Cd.AdvanceStreaming()  ->  reads a sector
+               ->  DeliverImmediate  ->  InterruptController.Raise(CdRom)
+               ->  Irq.Service()  ->  ...
+```
+
+Nothing paces it, and every turn also swept the host window's message queue.
+Capping the sweep at 500/s took the frame from **2970ms to 166ms** with the
+same 4888 CD answers and the same 4882 pumps - 81 sweeps instead of 4882.
+
+The drive itself is deliberately left unpaced: throttling it would make every
+load slower.
+
+### Still open
+
+- **A leaked task.** Stack 0x800E waits three seconds for the baton while
+  stack 0x0000 holds it with an empty inbox, once per run and early. Harmless
+  so far; it polls every 8ms and nothing depends on it.
+- **~166ms at the countdown and ~370ms on the race's first frame.** Both
+  sample inside gt2_01 rather than the CD loop, so both are the game doing its
+  own work.
