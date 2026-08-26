@@ -250,6 +250,61 @@ public static class DirectRace
         }
 
         SilenceTheArcade(c, m);
+    }
+
+    /// <summary>Where the race lives, and where its first entrant begins.</summary>
+    const uint RaceBlock = 0x801D585Cu;
+    const uint FirstEntrant = 0x5Cu;
+
+    /// <summary>Packed car id to the car's own record.</summary>
+    const uint FindCarRecord = 0x80010000u;
+
+    /// <summary>Clears an entrant and fills it from a car's record.</summary>
+    const uint LoadCarParts = 0x80076FC0u;
+
+    /// <summary>
+    /// Post-hook on the builder: supplies the race, then puts the room's car in
+    /// it through the game's own two calls.
+    ///
+    /// The builder alone does not produce a usable race - left to itself it
+    /// gives a block with no laps and an entrant whose engine resolves to
+    /// /engine/00000.es. The captured block does, so it goes in. But it
+    /// describes the car it was captured with, and writing the id over the top
+    /// leaves the fifty bytes beside it belonging to that car.
+    ///
+    /// So the game is asked instead: 0x80010000 turns a packed id into the
+    /// car's record and load_car_parts clears the entrant and fills it from
+    /// that record, field by field, through the descriptor it already has.
+    /// Nothing here has to know what any of those fields mean.
+    /// </summary>
+    public static void RaceBuilt(CpuContext c, IMemory m)
+    {
+        if (_race is not { } race) return;
+
+        if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
+        {
+            Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
+            return;
+        }
+
+        if (!CarInfo.TryEncodeCode(race.Car, out uint packed)) return;
+
+        c.A0 = packed;
+        c.A1 = 0u;
+        Call(c, m, FindCarRecord);
+        uint record = c.V0;
+
+        if (record is < 0x80000000u or >= 0x80200000u)
+        {
+            Console.Error.WriteLine(
+                $"[direct] {race.Car} has no car record (got 0x{record:X8}) - its figures will be the capture's");
+            return;
+        }
+
+        c.A0 = record;
+        c.A1 = RaceBlock + FirstEntrant;
+        Call(c, m, LoadCarParts);
+        Console.Error.WriteLine($"[direct] the entrant is filled from {race.Car}'s own record at 0x{record:X8}");
 
         // The VBlank callback list is sound here and nonsense a moment later,
         // so this is where a watch on it wants to start looking.

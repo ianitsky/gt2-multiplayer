@@ -2815,6 +2815,12 @@
       "address": "0x80014B88",
       "target": "GT2Port.Multiplayer.DirectRace.PreRaceScreenAnswered",
       "mode": "post"
+    },
+    {
+      "overlay": "gt2_03",
+      "address": "0x80010C84",
+      "target": "GT2Port.Multiplayer.DirectRace.RaceBuilt",
+      "mode": "post"
     }
   ],
   "debug": false,
