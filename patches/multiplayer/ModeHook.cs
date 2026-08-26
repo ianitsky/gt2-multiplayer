@@ -141,13 +141,17 @@ public static class ModeHook
         // choice from a room that is no longer running.
         CarLoad.StopDriving();
 
-        // Not here when a phase has been named. This point is the race overlay
-        // arriving, and a measured run puts it 14.2s before the race's first
-        // phase change - all of it course, opponents and sounds loading at
-        // whatever speed each machine manages. Holding here and calling it a
-        // synchronised start is what let both sides report a 0.2s wait and
-        // still begin apart.
-        if (RacePhases.HoldsLater) return;
+        // Not here. This point is the race overlay arriving, and a measured run
+        // puts it 14.2s before the race's first phase change - all of it
+        // course, opponents and sounds loading at whatever speed each machine
+        // manages. Holding here and calling it a synchronised start is what let
+        // both sides report a 0.2s wait and still begin apart; that it looked
+        // right was two machines happening to load at the same speed.
+        //
+        // RaceStartLine holds at the race's first frame instead, or RacePhases
+        // at a named phase. Only one of the three can hold: two barriers would
+        // be two handshakes and the session expects one.
+        if (RaceStartLine.HoldsHere || RacePhases.HoldsLater) return;
 
         HoldForTheStart(room);
     }

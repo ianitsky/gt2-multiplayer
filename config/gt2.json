@@ -857,19 +857,19 @@
         },
         {
           "address": "0x80015824",
-          "name": "gt2_ovr1_main_task077_caller"
+          "name": "gt2_ovr1_race_screen_run_the_view_loop"
         },
         {
           "address": "0x8001584C",
-          "name": "entry_8001584C"
+          "name": "gt2_ovr1_race_screen_step_one_frame"
         },
         {
           "address": "0x80015B1C",
-          "name": "entry_80015B1C"
+          "name": "gt2_ovr1_race_screen_teardown"
         },
         {
           "address": "0x80015B64",
-          "name": "entry_80015B64"
+          "name": "gt2_ovr1_race_screen_say_whether_to_continue"
         },
         {
           "address": "0x80015E44",
@@ -981,7 +981,7 @@
         },
         {
           "address": "0x800162A0",
-          "name": "entry_800162A0"
+          "name": "gt2_ovr1_race_phase_run_the_race_view_loop"
         },
         {
           "address": "0x800162D8",
@@ -2875,6 +2875,12 @@
       "overlay": "gt2_01",
       "address": "0x80015FB0",
       "target": "GT2Port.Multiplayer.RacePhases.PhaseDecided",
+      "mode": "pre"
+    },
+    {
+      "overlay": "gt2_01",
+      "address": "0x8001584C",
+      "target": "GT2Port.Multiplayer.RaceStartLine.FrameBegins",
       "mode": "pre"
     }
   ],
