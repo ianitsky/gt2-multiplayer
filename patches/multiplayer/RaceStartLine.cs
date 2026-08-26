@@ -79,6 +79,14 @@ public static class RaceStartLine
     static long _takesAtFrameStart;
     static long _cdCommandsAtFrameStart;
     static long _cdAnswersAtFrameStart;
+    static long _pumpTicksAtFrameStart;
+    static long _pumpsAtFrameStart;
+    static long _sweepsAtFrameStart;
+
+    /// <summary>How long pumping has cost since this frame began.</summary>
+    static double PumpedMs() =>
+        (RecompOne.Runtime.Runtime.PumpedTicks - _pumpTicksAtFrameStart)
+        * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 
     /// <summary>
     /// Pre-hook on the race screen's per-frame method, which is not the one the
@@ -120,6 +128,9 @@ public static class RaceStartLine
                     + $" cd {RecompOne.Runtime.Cdrom.CdController.Commands - _cdCommandsAtFrameStart}"
                     + $" commands answered {RecompOne.Runtime.Cdrom.CdController.Answers - _cdAnswersAtFrameStart}"
                     + $" times, last 0x{RecompOne.Runtime.Cdrom.CdController.LastCommand:X2},"
+                    + $" pumped {RecompOne.Runtime.Runtime.Pumps - _pumpsAtFrameStart} times"
+                    + $" ({RecompOne.Runtime.Runtime.WindowSweeps - _sweepsAtFrameStart} sweeps)"
+                    + $" costing {PumpedMs():F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)"
                     + (whereItWas is null ? "" : Environment.NewLine + $"[stall]     {whereItWas}"));
@@ -133,6 +144,9 @@ public static class RaceStartLine
         _takesAtFrameStart = RecompOne.Runtime.Dispatch.TaskStacks.Takes;
         _cdCommandsAtFrameStart = RecompOne.Runtime.Cdrom.CdController.Commands;
         _cdAnswersAtFrameStart = RecompOne.Runtime.Cdrom.CdController.Answers;
+        _pumpTicksAtFrameStart = RecompOne.Runtime.Runtime.PumpedTicks;
+        _pumpsAtFrameStart = RecompOne.Runtime.Runtime.Pumps;
+        _sweepsAtFrameStart = RecompOne.Runtime.Runtime.WindowSweeps;
     }
 
     static int _frame;
