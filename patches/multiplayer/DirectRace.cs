@@ -252,34 +252,34 @@ public static class DirectRace
         SilenceTheArcade(c, m);
     }
 
-    /// <summary>Where the race lives, and where its first entrant begins.</summary>
+    /// <summary>Where the race lives, and how its entrants are laid out.</summary>
     const uint RaceBlock = 0x801D585Cu;
     const uint FirstEntrant = 0x5Cu;
-
-    /// <summary>Packed car id to the car's own record.</summary>
-    const uint FindCarRecord = 0x80010000u;
-
-    /// <summary>Clears an entrant and fills it from a car's record.</summary>
-    const uint LoadCarParts = 0x80076FC0u;
+    const int EntrantSize = 0xD0;
 
     /// <summary>
-    /// Post-hook on the builder: supplies the race, then puts the room's car in
-    /// it through the game's own two calls.
+    /// Post-hook on the builder: supplies the race, keeping the entrant the
+    /// builder has just filled.
     ///
-    /// The builder alone does not produce a usable race - left to itself it
-    /// gives a block with no laps and an entrant whose engine resolves to
-    /// /engine/00000.es. The captured block does, so it goes in. But it
-    /// describes the car it was captured with, and writing the id over the top
-    /// leaves the fifty bytes beside it belonging to that car.
+    /// Told which car was chosen, the builder resolves its record and fills
+    /// entrant 0 from it - with its parts, which is what a car needs to have an
+    /// engine and tyres and therefore to move. Left to itself, though, it does
+    /// not produce a usable race: no laps, and a course the game cannot draw.
+    /// The captured block does.
     ///
-    /// So the game is asked instead: 0x80010000 turns a packed id into the
-    /// car's record and load_car_parts clears the entrant and fills it from
-    /// that record, field by field, through the descriptor it already has.
-    /// Nothing here has to know what any of those fields mean.
+    /// So both, in the only order that keeps both: the capture goes in and the
+    /// entrant the builder filled is put back on top of it. Filling that
+    /// entrant by hand was the alternative and it fell short - the game's own
+    /// fill through load_car_parts gave a car with no engine and no tyres,
+    /// because the record alone is a car without its parts.
     /// </summary>
     public static void RaceBuilt(CpuContext c, IMemory m)
     {
         if (_race is not { } race) return;
+
+        var entrant = new byte[EntrantSize];
+        for (int i = 0; i < EntrantSize; i++)
+            entrant[i] = m.ReadU8(RaceBlock + FirstEntrant + (uint)i);
 
         if (!RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
         {
@@ -287,29 +287,29 @@ public static class DirectRace
             return;
         }
 
-        if (!CarInfo.TryEncodeCode(race.Car, out uint packed)) return;
+        for (int i = 0; i < EntrantSize; i++)
+            m.WriteU8(RaceBlock + FirstEntrant + (uint)i, entrant[i]);
 
-        c.A0 = packed;
-        c.A1 = 0u;
-        Call(c, m, FindCarRecord);
-        uint record = c.V0;
-
-        if (record is < 0x80000000u or >= 0x80200000u)
-        {
-            Console.Error.WriteLine(
-                $"[direct] {race.Car} has no car record (got 0x{record:X8}) - its figures will be the capture's");
-            return;
-        }
-
-        c.A0 = record;
-        c.A1 = RaceBlock + FirstEntrant;
-        Call(c, m, LoadCarParts);
-        Console.Error.WriteLine($"[direct] the entrant is filled from {race.Car}'s own record at 0x{record:X8}");
-
-        // The VBlank callback list is sound here and nonsense a moment later,
-        // so this is where a watch on it wants to start looking.
-        RecompOne.Runtime.Memory.MemoryWatch.Arm();
+        Console.Error.WriteLine(
+            $"[direct] the race is supplied from a capture, keeping the entrant the game built for {race.Car}");
     }
+
+    /// <summary>
+    /// Post-hook on the pre-race screen's own "should I keep going?" method,
+    /// answering zero the first time it is asked.
+    ///
+    /// That screen is what kills a launched race. It renders, and a pointer it
+    /// renders through is wrong on this path - the writes land on a VBlank
+    /// callback node at 0x801C949C, and the handler then calls whatever a
+    /// primitive left where the callback was. Finding the pointer means reading
+    /// the GTE-heavy drawing code, which is a long way past anything else here.
+    ///
+    /// It is also skippable. It lives half a second in a walked run, and the
+    /// 720-byte block it appears to sit between is byte for byte identical
+    /// either side of it - so it decides nothing a race needs. Ending it at
+    /// once is the same trick that worked on the first screen, and it never
+    /// draws a frame to go wrong in.
+    /// </summary>
 
     /// <summary>
     /// Says how the wait is going, when it changes and once a second besides. A
