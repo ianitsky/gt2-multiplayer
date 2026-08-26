@@ -93,7 +93,7 @@ public static class DirectRace
     static bool _said;
 
     /// <summary>What the lobby settled, kept because the race has to be described.</summary>
-    public sealed record Pending(IReadOnlyList<Player> Players, string Me, string Car, CarCatalogue? Cars);
+    public sealed record Pending(IReadOnlyList<Player> Players, string Me, string Car, string Course, CarCatalogue? Cars);
 
     static Pending? _race;
 
@@ -251,6 +251,39 @@ public static class DirectRace
     }
 
     /// <summary>
+    /// Points the captured block at the room's course.
+    ///
+    /// The capture describes the race it was taken from, Tahiti Road included,
+    /// and the course is the last thing in it that still does. The room carries
+    /// an asset code; the block wants the number the game's own roster pairs
+    /// with that course's name, so the roster is what turns one into the other.
+    /// </summary>
+    static void PutTheRoomsCourseIn(IMemory m)
+    {
+        CourseRoster.Say(m);
+
+        string wanted = CourseWanted.Length > 0
+            ? CourseWanted
+            : CourseTable.DisplayName(_race?.Course ?? "");
+
+        if (wanted.Length == 0)
+        {
+            Console.Error.WriteLine("[course] the room names no course - the capture's will run");
+            return;
+        }
+
+        if (!CourseRoster.TryFind(m, wanted, out uint id))
+        {
+            Console.Error.WriteLine(
+                $"[course] the game has no course called \"{wanted}\" ready - the capture's will run");
+            return;
+        }
+
+        m.WriteU32(Parameters + ChosenCourse, id);
+        Console.Error.WriteLine($"[course] the race is set to {wanted} (0x{id:X8})");
+    }
+
+    /// <summary>
     /// Runs one of the game's own functions from inside a hook and puts every
     /// register back, returning what the call left in V0.
     ///
@@ -295,6 +328,24 @@ public static class DirectRace
     /// </summary>
     const uint ChosenCar = 0x0Cu;
     const uint ChosenCarAgain = 0x10u;
+
+    /// <summary>
+    /// Where the parameter block names the course.
+    ///
+    /// Not as text. The builder hands this u32 to 0x8005E590, which stores it
+    /// at [race+0x40] and looks it up in the roster the game keeps at
+    /// 0x801E18E0 to get the name it copies into [race+0x20] - which is why a
+    /// captured block reads "Tahiti Road" at +0xB8 and yet carries no course
+    /// code anywhere in it. See CourseRoster.
+    /// </summary>
+    const uint ChosenCourse = 0x1B8u;
+
+    /// <summary>
+    /// A course to run instead of the room's, when GT2_COURSE names one the way
+    /// the game names it. The room is the real source; this is how the roster
+    /// gets tried against a track without hosting a lobby to pick it.
+    /// </summary>
+    static readonly string CourseWanted = Environment.GetEnvironmentVariable("GT2_COURSE") ?? "";
 
     /// <summary>
     /// Pre-hook on the arcade parameter builder.
@@ -347,6 +398,8 @@ public static class DirectRace
                 $"[direct] the race parameters are supplied from a capture,"
                 + $" but {car} is not a car id - the capture's car will drive");
         }
+
+        PutTheRoomsCourseIn(m);
 
         Say(m, "as supplied");
         SilenceTheArcade(c, m);
