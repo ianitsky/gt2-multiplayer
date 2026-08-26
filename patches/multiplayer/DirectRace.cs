@@ -73,6 +73,32 @@ public static class DirectRace
         Console.Error.WriteLine($"[direct] a race is waiting: {players} player(s), {me} in {car}");
     }
 
+    static byte _step;
+    static DateTime _lastSaid;
+
+    /// <summary>
+    /// Says how the wait is going, when it changes and once a second besides.
+    ///
+    /// A car that does not arrive is a loader step that stops advancing, and
+    /// the step separates the two things this could be: the load never starts,
+    /// or it starts and stalls somewhere. Saying it only once - which is what
+    /// this did - describes neither.
+    /// </summary>
+    static void Waiting(IMemory m)
+    {
+        byte step = CarLoad.StepIn(m, 0);
+        var now = DateTime.UtcNow;
+
+        if (_said && step == _step && now - _lastSaid < TimeSpan.FromSeconds(1)) return;
+
+        _said = true;
+        _step = step;
+        _lastSaid = now;
+        Console.Error.WriteLine(
+            $"[direct] holding the arcade's screen: the loader is on step {step}"
+            + $" after {(now - _armedAt).TotalSeconds:F1}s");
+    }
+
     /// <summary>
     /// Pre-hook on the first screen's "should I keep going?" method. Returns
     /// true to let the screen answer for itself, false to answer zero for it,
@@ -91,9 +117,7 @@ public static class DirectRace
         bool ready = CarLoad.TheRoomsCarIsLoaded(m);
         if (!ready && DateTime.UtcNow - _armedAt < CarPatience)
         {
-            if (_said) return true;
-            _said = true;
-            Console.Error.WriteLine("[direct] holding the arcade's first screen while the car loads");
+            Waiting(m);
             return true;
         }
 
