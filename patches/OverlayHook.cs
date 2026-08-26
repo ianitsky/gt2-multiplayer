@@ -23,6 +23,9 @@ public static partial class OverlayHook
     static readonly HashSet<uint> Unknown = new();
 
     /// <summary>gt2_01, the overlay that runs a race.</summary>
+    /// <summary>gt2_03's entry point - the arcade.</summary>
+    const uint ArcadeEntryPoint = 0x80011750u;
+
     const uint RaceOverlayEntry = 0x80011F64u;
 
     public static void ActivateFromEntry(CpuContext c, IMemory m)
@@ -45,6 +48,12 @@ public static partial class OverlayHook
             Multiplayer.RaceClock.Begin();
             Multiplayer.ModeHook.ApplyRaceGrid(m);
         }
+
+        // Boot writes to almost everything, so a watch that is live from the
+        // start spends its budget long before anything worth seeing. The
+        // arcade arriving is late enough for both paths and early enough to
+        // catch the menus filling the race block.
+        if (entry == ArcadeEntryPoint) RecompOne.Runtime.Memory.MemoryWatch.Arm();
 
         if (ByEntryPoint.TryGetValue(entry, out var name))
         {
