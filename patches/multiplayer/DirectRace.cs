@@ -53,7 +53,24 @@ public static class DirectRace
     const uint Initialise = 0x80011954u;
     const uint PrepareScreenObject = 0x80013B7Cu;
     const uint ConstructFirstScreen = 0x80013BD8u;
-    const uint FirstScreenVtable = 0x800521C0u;
+
+    /// <summary>What the arcade hands the constructor as its second argument.</summary>
+    const uint FirstScreenSetup = 0x800521C0u;
+
+    /// <summary>
+    /// The init that installs the two car request records.
+    ///
+    /// Nothing calls it by address: the arcade reaches it through a pointer on
+    /// the first frame of its first screen, four milliseconds after the entry
+    /// point. That frame is one this never runs, so without calling it here the
+    /// request slots hold whatever was in memory - a first attempt read
+    /// 0x8005DB7C out of one, which is code, and asked the game to load a car
+    /// through it.
+    ///
+    /// Its argument is the screen object, which the ordering probe reported
+    /// directly rather than leaving to be guessed.
+    /// </summary>
+    const uint InstallCarRequestRecords = 0x80013BE4u;
 
     const uint Seed = 0x8007D23Cu;
     const uint SeedStep = 0x80083AE0u;
@@ -157,8 +174,12 @@ public static class DirectRace
             c.A0 = screen;
             Call(c, m, PrepareScreenObject);
             c.A0 = screen;
-            c.A1 = FirstScreenVtable;
+            c.A1 = FirstScreenSetup;
             Call(c, m, ConstructFirstScreen);
+
+            c.A0 = screen;
+            Call(c, m, InstallCarRequestRecords);
+            RefuseAnImpossibleRequest(m);
 
             // Here the arcade would run its first screen and then switch on the
             // exit byte. Exit 1 is the race, and what follows is exit 1.
@@ -215,6 +236,27 @@ public static class DirectRace
         {
             c.SP = caller;
         }
+    }
+
+    /// <summary>
+    /// Stops if the request slots do not hold what a request record looks like.
+    ///
+    /// Asking the game to load a car through a bad pointer does not fail where
+    /// it is asked: the enqueue writes a file index and two lengths through it
+    /// and the damage surfaces later, in the drive, as an address that is not
+    /// memory. Better to say which pointer was wrong while that is still the
+    /// question being asked.
+    /// </summary>
+    static void RefuseAnImpossibleRequest(IMemory m)
+    {
+        uint request = CarLoad.RequestIn(m, 0);
+
+        // The records live in data, well below the code the overlays load at
+        // and well below the stack. Anything else is not one.
+        if (request is >= 0x80020000u and < 0x801F0000u) return;
+
+        throw new InvalidOperationException(
+            $"the car request slot holds 0x{request:X8}, which is not a request record");
     }
 
     /// <summary>
