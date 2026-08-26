@@ -46,7 +46,17 @@ public static class ArcadeSetupWatch
     public static void ObjectBuilt(CpuContext c, IMemory m)
     {
         if (!Watching) return;
-        Dump(m, Built, Copied, "arcade-as-built.bin", "as built, before any screen");
+
+        // Named by which path built it, because the earlier comparison did not
+        // ask this question. It captured the block as built and again as
+        // copied, and both of those are after the first screen - so it showed
+        // that the second screen leaves the block alone, and was read as
+        // showing the screens leave it alone. The first screen is the one being
+        // ended early, and whether the block depends on it is exactly what was
+        // never tested.
+        string how = DirectRace.EndedTheScreen ? "launched" : "walked";
+        Dump(m, Built, Copied, $"arcade-params-{how}.bin",
+             $"the race parameters as built, {how}");
     }
 
     /// <summary>
