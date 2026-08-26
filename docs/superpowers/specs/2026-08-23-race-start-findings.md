@@ -508,6 +508,57 @@ facts, so `LoadTrace` now reports them: a pre-hook runs before the callee
 spills anything, so at the moment the game asks for a car file the caller's S1
 is the record, S3 the owner and S2 the unpack destination.
 
+### Asking for a car, end to end
+
+Tracing a real arcade race caught the record itself:
+
+```
+request at 0x800EF4A8, owned by 0x801FF9F0, unpacking into 0x801FFC14
+  +0x04 index 4091   +0x10 step 2   +0x48 model -> 0x800BF4A8   +0x4C textures -> 0x800CF4A8
+```
+
+Every one of those numbers is now accounted for.
+
+**The requests are static.** gt2_03 sets them up at `0x80013E8C`: `0x800EF4A8`
+and, `0x448` further on, `0x800EF8F0`, installed into `[owner + 0x228]` and
+`[owner + 0x22C]` and initialised by `func_80016234`, which copies six buffer
+addresses into `+0x40..+0x54` - among them `0x800BF4A8` and `0x800CF4A8`,
+matching the trace exactly - and then zeroes `+0x04` and `+0x10`. So the
+initialiser prepares a request; it does not ask for anything.
+
+**`func_800162C0(request, owner, packedCarId)` is the ask.** It is the whole
+enqueue:
+
+```
+0x8005D950(packedCarId)      binary search of the table at 0x801DF5D0,
+                             8 bytes an entry, id at +0x00, count at
+                             0x801D0000-0x6C38; returns the entry
+0x800165E8(request, owner)   cancel whatever the request was doing
+[request+0x04] = entry[+0x04]    the file index
+[request+0x28] = size of that file
+[request+0x30] = size of the next one
+[request+0x10] = 1               step 1: go
+```
+
+From there `entry_800141B8` ticks both slots every frame through
+`func_80016640`, which walks the eight steps and leaves the car in memory.
+
+**So the port does not have to build a loader, resolve an index, or know the
+buffer layout. It has to make one call.** The car id it needs is the room's
+own five-character code, packed - which `CarInfo` already does.
+
+`VolArchive.TryIndexOf` is what proved this mapping - resolving
+`carobj/ccrcn.cdo.gz` offline gave the 4091 the trace had caught - but it is
+not on this path, since the game's own table answers the same question and
+gives the file sizes too. It stays as a way to check a car exists before
+asking the game for it.
+
+**What a cold launch still lacks is the owner.** At `0x801FF9F0` it is on the
+main stack, not in static memory: a local of the arcade's own flow, alive for
+as long as the arcade is. A launch that skipped the arcade entirely would have
+to construct it, and nothing so far says what most of its 0x294+ bytes mean.
+A launch that lets gt2_03 initialise and then injects has the owner already.
+
 ## What phase 2 looks like from here
 
 Not a design, a direction, and it rests on the block above being sufficient:
