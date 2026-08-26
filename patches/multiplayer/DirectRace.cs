@@ -31,14 +31,8 @@ namespace GT2Port.Multiplayer;
 /// </summary>
 public static class DirectRace
 {
-    /// <summary>Stack this claims while it prepares the race.</summary>
-    const uint Scratch = 0x40;
-
     // ---- what the arcade's race case does, in the order it does it ----
 
-    const uint Seed = 0x8007D23Cu;
-    const uint SeedStep = 0x80083AE0u;
-    const uint BuildParameters = 0x80010C84u;
     const uint Parameters = 0x801C3350u;
     const int ParametersSize = 0x2D0;
 
@@ -178,53 +172,58 @@ public static class DirectRace
     /// </summary>
     static void StartTheRace(CpuContext c, IMemory m)
     {
-        // A frame of this function's own, because the seed values are handed
-        // over through memory rather than registers and need somewhere to sit
-        // that nothing else is using.
-        uint caller = c.SP;
-        c.SP = caller - Scratch;
-        uint scratch = c.SP + 0x10u;
+        if (!TryWriteParameters(m)) return;
 
-        try
-        {
-            c.A0 = 0u;
-            Call(c, m, Seed);
-            m.WriteU32(scratch, c.V0);
+        // The two flags the arcade raises just before its copy.
+        m.WriteU8(Flags + 1u, 1);
+        m.WriteU8(Flags + 2u, 1);
 
-            c.A0 = scratch;
-            Call(c, m, SeedStep);
-            uint first = c.V0;
+        // Sixteen bytes at a time and then one word more, which is 0x2D4
+        // rather than the 0x2D0 the loop bound suggests.
+        for (uint i = 0; i < ParametersSize + 4; i += 4)
+            m.WriteU32(ParametersGoTo + i, m.ReadU32(Parameters + i));
 
-            c.A0 = scratch;
-            Call(c, m, SeedStep);
-
-            c.A0 = first;
-            c.A1 = c.V0;
-            c.A2 = Parameters;
-            Call(c, m, BuildParameters);
-
-            // The two flags the arcade raises just before its copy.
-            m.WriteU8(Flags + 1u, 1);
-            m.WriteU8(Flags + 2u, 1);
-
-            // Sixteen bytes at a time and then one word more, which is 0x2D4
-            // rather than the 0x2D0 the loop bound suggests.
-            for (uint i = 0; i < ParametersSize + 4; i += 4)
-                m.WriteU32(ParametersGoTo + i, m.ReadU32(Parameters + i));
-
-            c.A0 = 3u;
-            Call(c, m, LoadOverlayDefault);
-        }
-        finally
-        {
-            c.SP = caller;
-        }
+        c.A0 = 3u;
+        Call(c, m, LoadOverlayDefault);
 
         Console.Error.WriteLine("[direct] loading the race overlay");
         c.A0 = RaceOverlayIndex;
         c.A1 = RaceOverlayEntry;
         c.A2 = 0u;
         Call(c, m, LoadOverlay);
+    }
+
+    static readonly string ParametersPath = Path.Combine("config", "race-params.bin");
+
+    static byte[]? _parameters;
+
+    /// <summary>
+    /// Writes the race parameters from a captured race.
+    ///
+    /// The game builds these with 0x80010C84, and calling it here produces 720
+    /// zero bytes: the block is assembled from what the arcade's first screen
+    /// decided, and a launch that ends that screen early decided none of it.
+    /// The block holds the course - "Tahiti Road" reads out of it in plain text
+    /// at +0xB8 - so there is nothing to compute from what the room knows until
+    /// the room's track can be resolved to whatever this wants.
+    ///
+    /// So it is supplied rather than built, the same way the race block at
+    /// 0x801D585C already is. The cost is honest and worth stating: every
+    /// launched race runs the course the capture was taken on, whatever the
+    /// room says.
+    /// </summary>
+    static bool TryWriteParameters(IMemory m)
+    {
+        _parameters ??= File.Exists(ParametersPath) ? File.ReadAllBytes(ParametersPath) : null;
+        if (_parameters is not { Length: >= ParametersSize })
+        {
+            Console.Error.WriteLine($"[direct] no race parameters at {ParametersPath}");
+            return false;
+        }
+
+        for (int i = 0; i < ParametersSize; i++)
+            m.WriteU8(Parameters + (uint)i, _parameters[i]);
+        return true;
     }
 
     static void Call(CpuContext c, IMemory m, uint address) =>
