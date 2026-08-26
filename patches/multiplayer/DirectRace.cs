@@ -60,8 +60,13 @@ public static class DirectRace
     static DateTime _lastSaid;
     static bool _said;
 
+    /// <summary>What the lobby settled, kept because the race has to be described.</summary>
+    public sealed record Pending(IReadOnlyList<Player> Players, string Me, string Car, CarCatalogue? Cars);
+
+    static Pending? _race;
+
     /// <summary>Called by the lobby when a race has been agreed and is to start.</summary>
-    public static void Expect(int players, string me, string car)
+    public static void Expect(Pending race)
     {
         if (!Enabled)
         {
@@ -69,10 +74,12 @@ public static class DirectRace
             return;
         }
 
+        _race = race;
         _armed = true;
         _armedAt = DateTime.UtcNow;
         _said = false;
-        Console.Error.WriteLine($"[direct] a race is waiting: {players} player(s), {me} in {car}");
+        Console.Error.WriteLine(
+            $"[direct] a race is waiting: {race.Players.Count} player(s), {race.Me} in {race.Car}");
     }
 
     /// <summary>
@@ -170,6 +177,14 @@ public static class DirectRace
         for (int i = 0; i < ParametersSize; i++)
             m.WriteU8(Parameters + (uint)i, _parameters[i]);
         Console.Error.WriteLine("[direct] the race parameters are supplied from a captured race");
+
+        // And the race itself. These two blocks describe one race between them
+        // and neither is any use alone: without this one the race has no
+        // description at all, and the engine sound it looks up comes out as
+        // /engine/00000.es - a file whose decompression walks off the end of
+        // memory. Both were captured from the same run.
+        if (_race is { } race && !RaceLauncher.TryPrepare(m, race.Players, race.Me, race.Cars))
+            Console.Error.WriteLine("[direct] the race block could not be written - the race will be wrong");
 
         // The VBlank callback list is sound here and nonsense a moment later,
         // so this is where a watch on it wants to start looking.
