@@ -144,7 +144,7 @@ public static class DirectRace
             : $"[direct] the car did not load in {CarPatience.TotalSeconds:F0}s - starting anyway"
               + $" (the loader stopped on step {CarLoad.StepIn(m, 0)})");
 
-        StartTheRace(c, m);
+        StartTheRace(c, m, c.A0);
 
         // Not reached: loading an overlay jumps to its entry point rather than
         // returning, which is how the arcade's own race case ends too.
@@ -170,8 +170,26 @@ public static class DirectRace
     /// is the point the whole exercise was aiming at: one call, with everything
     /// it needs already in memory.
     /// </summary>
-    static void StartTheRace(CpuContext c, IMemory m)
+    /// <summary>
+    /// Where a screen's vtable keeps the method the loop calls once it has
+    /// stopped - the one that puts back whatever the screen took.
+    /// </summary>
+    const int TeardownSlot = 0x1C;
+
+    static void StartTheRace(CpuContext c, IMemory m, uint screen)
     {
+        // The loop calls this after its last pass. Never returning to the loop
+        // means never reaching it, and it is where a screen gives up what it
+        // holds - display state among it, which is what a VBlank DMA follows
+        // into an address that is not memory.
+        uint vtable = m.ReadU32(screen);
+        uint teardown = m.ReadU32(vtable + TeardownSlot);
+        if (teardown != 0u)
+        {
+            c.A0 = screen;
+            Call(c, m, teardown);
+        }
+
         if (!TryWriteParameters(m)) return;
 
         // The two flags the arcade raises just before its copy.
