@@ -889,19 +889,19 @@
         },
         {
           "address": "0x80015F48",
-          "name": "entry_80015F48"
+          "name": "gt2_ovr1_screen_call_load_then_run_then_unload_slots"
         },
         {
           "address": "0x80015FB0",
-          "name": "entry_80015FB0"
+          "name": "gt2_ovr1_arcade_race_loop_decide_next_phase_from_code"
         },
         {
           "address": "0x80015FEC",
-          "name": "entry_80015FEC"
+          "name": "gt2_ovr1_arcade_race_loop_load_slot_does_nothing"
         },
         {
           "address": "0x80015FF8",
-          "name": "entry_80015FF8"
+          "name": "gt2_ovr1_arcade_race_loop_run_phase_state_machine"
         },
         {
           "address": "0x80016010",
@@ -1053,11 +1053,11 @@
         },
         {
           "address": "0x80016B78",
-          "name": "entry_80016B78"
+          "name": "gt2_ovr1_arcade_race_loop_construct_with_vtable_8002F000"
         },
         {
           "address": "0x80016BD8",
-          "name": "entry_80016BD8"
+          "name": "gt2_ovr1_arcade_race_loop_destroy"
         },
         {
           "address": "0x80016C40",
@@ -1081,7 +1081,7 @@
         },
         {
           "address": "0x80016F88",
-          "name": "entry_80016F88"
+          "name": "gt2_ovr1_race_construct_run_teardown_then_pick_next_overlay"
         },
         {
           "address": "0x80017048",
@@ -2853,6 +2853,12 @@
       "overlay": "gt2_03",
       "address": "0x80010000",
       "target": "GT2Port.Multiplayer.CarFillWatch.ResolvingRecord",
+      "mode": "pre"
+    },
+    {
+      "overlay": "gt2_01",
+      "address": "0x80015FB0",
+      "target": "GT2Port.Multiplayer.RacePhases.PhaseDecided",
       "mode": "pre"
     }
   ],

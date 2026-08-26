@@ -145,6 +145,24 @@ public static class ModeHook
     }
 
     /// <summary>
+    /// Holds this machine until every player in the room has reached the same
+    /// point, wherever the caller has decided that point is.
+    ///
+    /// Separate from <see cref="ApplyRaceGrid"/> because the two want different
+    /// moments. The grid has to be written while the race block is being built;
+    /// the barrier has to be as late as the race allows, and everything between
+    /// the two - the course, the opponents, the sounds - takes a different
+    /// length of time on every machine. Holding at the earlier moment is what
+    /// let two machines report a short wait and still start apart.
+    /// </summary>
+    public static void HoldAtTheLine()
+    {
+        var room = _session?.Current;
+        if (room == null) return;
+        HoldForTheStart(room);
+    }
+
+    /// <summary>
     /// The host's address as it was while the lobby was still running, which
     /// is the only time anything answers for it.
     /// </summary>

@@ -143,18 +143,22 @@ public static class DirectRace
     /// draws a frame to go wrong in.
     /// </summary>
     /// <summary>
-    /// Whether to skip the pre-race screen. On unless GT2_KEEP_PRERACE says
-    /// otherwise.
+    /// Whether to skip the pre-race screen. Off unless GT2_SKIP_PRERACE says
+    /// otherwise, because it is the game's own way out of the arcade.
     ///
-    /// Letting it run was worth one try: it was first skipped for rendering
-    /// through a wrong pointer, and that was found before the race block turned
-    /// out not to be written at all - a screen drawing a race out of an empty
-    /// block is what a wrong pointer looks like. With the block written it
-    /// still dies, earlier than before and before the engine sounds load, so
-    /// the fault is its own and skipping it is the better of the two.
+    /// It was skipped twice, both times for rendering through a pointer that
+    /// landed on the sound callback node at 0x801C949C - and both times the
+    /// race block it draws from was wrong, because the parameter builder was
+    /// falling through its branch on a clobbered A2. A screen drawing a race
+    /// out of a block nobody filled is exactly what a wrong pointer looks like.
+    /// With the builder fixed the reason to skip it is gone, and its own code
+    /// says what it is for: slot 0x24 counts down a frame budget and sets the
+    /// state at +0x19A to 3 every pass, which is a fade. Skipping the fade is
+    /// what left the sound sequencer running into an overlay that had already
+    /// replaced its stream.
     /// </summary>
     static readonly bool SkipPreRace =
-        Environment.GetEnvironmentVariable("GT2_KEEP_PRERACE") is (null or "");
+        Environment.GetEnvironmentVariable("GT2_SKIP_PRERACE") is not (null or "");
 
     public static void PreRaceScreenAnswered(CpuContext c, IMemory m)
     {
@@ -182,8 +186,26 @@ public static class DirectRace
     /// Removing the callback stops the reading rather than stopping the music,
     /// so a launched race may be quiet until that is found.
     /// </summary>
+    /// <summary>
+    /// Off unless GT2_SILENCE_ARCADE asks for it.
+    ///
+    /// Nothing in the game calls 0x80068708. The matching register runs once at
+    /// boot, from 0x80010E54, and the callback it installs is the sound
+    /// driver's whole tick - so taking it off is not "stopping the arcade's
+    /// music", it is stopping every sound the process will ever make, for good.
+    /// That is why a launched race was silent.
+    ///
+    /// It was worth having while the pre-race screen was skipped, since with
+    /// nothing fading the music out the sequencer read on into an overlay that
+    /// had replaced its stream. The screen runs again now, so the game does its
+    /// own fade and this stays off.
+    /// </summary>
+    static readonly bool SilenceArcade =
+        Environment.GetEnvironmentVariable("GT2_SILENCE_ARCADE") is not (null or "");
+
     static void SilenceTheArcade(CpuContext c, IMemory m)
     {
+        if (!SilenceArcade) return;
         Call(c, m, UnregisterSoundCallback);
         Console.Error.WriteLine("[direct] the sound sequencer is taken off the VBlank list");
     }
