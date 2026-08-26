@@ -54,6 +54,23 @@ public static class CarFillWatch
             + $" +0x18=0x{m.ReadU32(c.SP + 0x18u):X8})");
     }
 
+    /// <summary>
+    /// Pre-hook on the record lookup, which the builder reaches only on the
+    /// branch that fills a car in.
+    ///
+    /// The block says that branch should be taken - mode 4, +0x06 negative, the
+    /// room's car id - and func_80010554 is never called, so the reading of the
+    /// branch and what the game does disagree. This settles which: if the
+    /// lookup runs inside the builder the branch was taken and the failure is
+    /// past it, and if it does not the branch was not taken and the reading is
+    /// wrong.
+    /// </summary>
+    public static void ResolvingRecord(CpuContext c, IMemory m)
+    {
+        if (!Watching || _reported >= MostReports) return;
+        Console.Error.WriteLine($"[fill]     0x80010000(id=0x{c.A0:X8}, 0x{c.A1:X8})");
+    }
+
     /// <summary>Pre-hook on load_car_parts, to see which entrant it is aimed at.</summary>
     public static void LoadingParts(CpuContext c, IMemory m)
     {
