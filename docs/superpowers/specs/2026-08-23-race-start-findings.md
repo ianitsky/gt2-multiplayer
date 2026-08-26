@@ -559,19 +559,59 @@ as long as the arcade is. A launch that skipped the arcade entirely would have
 to construct it, and nothing so far says what most of its 0x294+ bytes mean.
 A launch that lets gt2_03 initialise and then injects has the owner already.
 
-## What phase 2 looks like from here
+## Phase 2, as it turned out
 
-Not a design, a direction, and it rests on the block above being sufficient:
+Phase 2 was: the race starts at the same moment for everyone, and every
+player's car sits in its own grid slot. Both hold, confirmed on two machines
+on 2026-08-26.
 
-1. ~~Prove the block.~~ Done - see above. The remaining unknown is starting a
-   race cold rather than riding the demo into one.
-2. Fill it from the room. The car ids are already the right identifiers; the
-   course needs its asset code resolved to whatever the block wants.
-3. Start together. The host sends a start message naming the entrants and a
-   deadline; every client assembles the same block and starts on the same tick.
-   The lobby's session channel already carries whole-state messages and is the
-   obvious place for it.
-4. Grid slots by room order, and check each player's own car is in its own slot.
+1. ~~Prove the block.~~ The race is one block in RAM and writing it reaches the
+   race.
+2. ~~Fill it from the room.~~ The car ids are the same five-character codes the
+   lobby carries, so nothing is translated. What each machine *drives* is a
+   separate question from what the block *says*: the arcade menus load whatever
+   car the local player picked there, so CarLoad asks the game again for the one
+   the room agreed on.
+3. ~~Start together.~~ A barrier at the moment the race overlay loads. Players
+   report in, the host releases them together, and nobody's clock has to match
+   anybody else's for a message to say "now". Measured: the host absorbed a
+   1.50s difference in load times and both machines were released within the
+   resolution of the clock.
+4. ~~Grid slots by room order.~~ `+0x8D` per entrant, dealt out in the room's
+   order, which every machine shares.
+
+Three things went wrong on the way, and all three were the same shape - a
+message that could not arrive, with nothing saying so:
+
+- `HostSaidGo` was set only by `ClientTick`, which nothing calls once the lobby
+  has exited. The client waited on a flag nobody could raise.
+- The client reported at the line only if discovery could name the host, and
+  discovery forgets a host three seconds after its last announcement - which
+  the host stops sending when the lobby ends. By the time the race overlay had
+  loaded, the address was gone and the client's whole branch was skipped.
+- Before either, `SendGo` had nobody to send to.
+
+Each of them looked from the outside like "the race did not start together",
+and none of them printed anything. The barrier now reports who it is holding
+for, how long it waited, and why it gave up - which is what made the last one
+findable in one run instead of three.
+
+## What is still open
+
+- **The two hitches**, at the end of the countdown and the end of the race.
+  About one to three seconds, a complete freeze, recovers on its own. Not the
+  task scheduler: that had a real defect, it was fixed, and these survived it.
+  Deliberately parked.
+- **Skipping the arcade menus.** `func_800162C0` loads a car and is proved, but
+  a launch that skips the arcade has no owner to pass it - the owner is a local
+  of the arcade's own flow on the main stack. Riding the arcade and injecting
+  works; launching cold needs that object built.
+- **The course.** The room's track does not propagate: the course name has not
+  been mapped to its asset code, so everyone races wherever the host went in
+  the menus.
+- **Seeing each other move.** Every machine runs its own simulation, so the
+  cars start right and then drift - the opponents are driven by the local AI.
+  That is rollback, and a later cycle.
 
 Every machine will run its own simulation. Everyone starts together with the
 right cars in the right places, and then drifts — the other cars are driven by
