@@ -878,6 +878,33 @@ So "the launched race never asks for the course" was the instrument's limit
 rather than a finding. The course arrives by some other route, and seeing it
 needs tracing at the drive rather than at the archive.
 
+### Who fills an entrant's car data
+
+Watching the entrant's +0x44 through a walked race names the chain:
+
+```
+gt2_ovr3_arcade_build_race_parameters_block_720_bytes
+  func_80010554                                     A3 is the car's record
+    gt2_main_shared_arcaderace_load_car_parts       0x80076FC0
+      clears the entrant
+      gt2_main_copyfunc0(0x80092BB4, record, entrant)   copies field by field
+```
+
+`load_car_parts(record, entrant)` does the whole job, driven by a descriptor
+table at 0x80092BB4, and `func_80010554` takes the record as its fourth
+argument - `[SP+0xAC]` against a frame of 0xA0.
+
+That moves the target. The game already calls this on a launched path, since
+the builder runs; it fills from the wrong car because nothing ever said which
+car the player chose. So the fix is not to copy fifty bytes into the entrant,
+it is to set the one value the menus set - after which the game fills the
+entrant, and probably the 720-byte block that is supplied from a capture
+today.
+
+The first watch on this reported six writes and all six were the same memset
+clearing the field. Reporting each distinct caller once rather than each write
+is what let the filler through.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.
