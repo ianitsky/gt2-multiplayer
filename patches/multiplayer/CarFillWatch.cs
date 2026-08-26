@@ -38,6 +38,14 @@ public static class CarFillWatch
     {
         if (!Watching || _reported++ >= MostReports) return;
 
+        // The block the builder reads the chosen car out of, printed beside the
+        // record it resolved: if the id there is the room's and the record is
+        // still not, the resolution is the thing that failed, and if the id is
+        // not the room's then the patch never stuck.
+        Console.Error.WriteLine(
+            $"[fill]     the parameter block names 0x{m.ReadU32(0x801C3350u + 0x0Cu):X8}"
+            + $" / 0x{m.ReadU32(0x801C3350u + 0x10u):X8}");
+
         Console.Error.WriteLine(
             $"[fill] {_reported}. func_80010554("
             + $"A0=0x{c.A0:X8} A1=0x{c.A1:X8} A2=0x{c.A2:X8} A3=0x{c.A3:X8}"
