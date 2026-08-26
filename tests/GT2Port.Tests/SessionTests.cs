@@ -70,12 +70,27 @@ public class SessionTests
         Assert.Null(session.Current);
     }
 
+    /// <summary>
+    /// A room of one may start. It is not multiplayer, but it is the same path
+    /// - the same block, the same grid, the same launch - with nobody to wait
+    /// for, and requiring a second player to exercise it means two machines for
+    /// every test of something neither of them shares.
+    /// </summary>
     [Fact]
-    public void Start_needs_more_than_one_player()
+    public void A_host_alone_may_start()
     {
         var session = NewSession();
         session.Host("room", "track", "special");
         session.SetReady("ian", true);
+
+        Assert.True(session.CanStart);
+    }
+
+    [Fact]
+    public void A_host_alone_and_not_ready_may_not_start()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special");
 
         Assert.False(session.CanStart);
     }

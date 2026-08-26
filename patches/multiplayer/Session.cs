@@ -49,10 +49,18 @@ public sealed class Session
         return true;
     }
 
+    /// <summary>
+    /// Whether the host may start the race.
+    ///
+    /// A room of one is allowed. It is not multiplayer, but it is the same
+    /// path - the same block, the same grid, the same launch - with nobody to
+    /// wait for, and requiring a second player to exercise it means two
+    /// machines for every test of something neither of them shares.
+    /// </summary>
     public bool CanStart =>
         Phase == SessionPhase.Hosting &&
         Current is { } room &&
-        room.Players.Count > 1 &&
+        room.Players.Count > 0 &&
         room.Players.All(p => p.Ready);
 
     /// <summary>
