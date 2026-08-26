@@ -2631,6 +2631,26 @@
         {
           "address": "0x80019E30",
           "name": "entry_80019E30"
+        },
+        {
+          "address": "0x80011750",
+          "name": "gt2_ovr3_arcade_entrypoint_run_menus_then_load_chosen_overlay"
+        },
+        {
+          "address": "0x80016234",
+          "name": "gt2_ovr3_car_request_init_with_unpack_buffers"
+        },
+        {
+          "address": "0x800162C0",
+          "name": "gt2_ovr3_car_request_begin_loading_car_by_packed_id"
+        },
+        {
+          "address": "0x800165E8",
+          "name": "gt2_ovr3_car_request_cancel_in_flight_load"
+        },
+        {
+          "address": "0x80016640",
+          "name": "gt2_ovr3_car_request_advance_one_load_step"
         }
       ]
     },
@@ -3534,6 +3554,14 @@
     {
       "address": "0x8008BE74",
       "name": "setjmp_resume_8008BE74"
+    },
+    {
+      "address": "0x8005D950",
+      "name": "gt2_main_car_table_find_entry_by_packed_id"
+    },
+    {
+      "address": "0x8005D79C",
+      "name": "gt2_main_vol_get_file_data_length"
     }
   ]
 }
