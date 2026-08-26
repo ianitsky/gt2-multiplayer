@@ -39,6 +39,7 @@ RecompOne.Runtime.Runtime.FramePatch = m =>
 {
     GT2Port.RuntimePatches.Apply(m);
     GT2Port.RaceWatch.Tick(m);
+    GT2Port.Multiplayer.RaceClock.Tick();
 };
 
 cd.LoadToMemory(BootExe, LoadAddr, ExeOffset, ExeSize);

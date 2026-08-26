@@ -40,7 +40,11 @@ public static partial class OverlayHook
 
         // The race overlay arriving is the moment the race is settled: the menu
         // has stopped rewriting the block and nothing has read it yet.
-        if (entry == RaceOverlayEntry) Multiplayer.ModeHook.ApplyRaceGrid(m);
+        if (entry == RaceOverlayEntry)
+        {
+            Multiplayer.RaceClock.Begin();
+            Multiplayer.ModeHook.ApplyRaceGrid(m);
+        }
 
         if (ByEntryPoint.TryGetValue(entry, out var name))
         {

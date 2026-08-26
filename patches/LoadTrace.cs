@@ -29,6 +29,14 @@ public static class LoadTrace
     static uint _lastCaller;
 
     /// <summary>
+    /// How many files have been read, counted whether or not anyone is
+    /// tracing. A race is loading for as long as this keeps moving and has
+    /// finished when it stops, which is the only cheap way to tell one from
+    /// the other from outside the game.
+    /// </summary>
+    public static int Reads => _reads;
+
+    /// <summary>
     /// Pre-hook on gt2_main_vol_get_file_data_sector_offset.
     ///
     /// The return address matters as much as the index: knowing which file a
@@ -39,9 +47,9 @@ public static class LoadTrace
     /// </summary>
     public static void Reading(CpuContext c, IMemory m)
     {
+        _reads++;
         if (!Tracing) return;
 
-        _reads++;
         if (c.A0 == _lastIndex && c.RA == _lastCaller) return;
         _lastIndex = c.A0;
         _lastCaller = c.RA;
