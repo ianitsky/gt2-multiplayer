@@ -63,6 +63,30 @@ public static class ArcadeSetupWatch
         Dump(m, CopiedTo, Copied, "arcade-copied-to.bin", "where the arcade copies it");
     }
 
+    /// <summary>How much of the screen object to capture.</summary>
+    const int ScreenObjectSize = 0x300;
+
+    /// <summary>
+    /// Pre-hook on the constructor the race case runs once its first screen has
+    /// ended - which happens in a normal arcade run and in a launched one, and
+    /// is the moment their states can be compared.
+    ///
+    /// The launched one crashes shortly after this, in the screen this builds.
+    /// The likeliest reason is something the first screen decides that this one
+    /// needs and that ending it early never decided - the track above all,
+    /// which the room does not yet propagate. Which field, though, is a guess
+    /// until the two are laid side by side, so each writes its own file and the
+    /// difference answers it.
+    /// </summary>
+    public static void PreRaceScreen(CpuContext c, IMemory m)
+    {
+        if (!Watching) return;
+
+        string how = DirectRace.EndedTheScreen ? "launched" : "walked";
+        Dump(m, c.A0, ScreenObjectSize, $"arcade-screen-{how}.bin",
+             $"the screen object as the race case found it, {how}");
+    }
+
     static void Dump(IMemory m, uint at, int length, string path, string what)
     {
         var bytes = new byte[length];

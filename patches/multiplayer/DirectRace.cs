@@ -54,6 +54,9 @@ public static class DirectRace
     public static bool Enabled { get; } =
         Environment.GetEnvironmentVariable("GT2_DIRECT_LAUNCH") is not (null or "");
 
+    /// <summary>Whether this ended the arcade's first screen rather than the player.</summary>
+    public static bool EndedTheScreen { get; private set; }
+
     static bool _armed;
     static DateTime _armedAt;
     static bool _said;
@@ -122,6 +125,7 @@ public static class DirectRace
         }
 
         _armed = false;
+        EndedTheScreen = true;
         m.WriteU8(ExitByte, TheRace);
 
         // Answered rather than returned: a false from the hook only skips the
