@@ -31,11 +31,29 @@ namespace GT2Port.Multiplayer;
 /// </summary>
 public static class DirectRace
 {
-    /// <summary>The byte the arcade switches on when its first screen ends.</summary>
-    const uint ExitByte = 0x801EF5F4u;
+    /// <summary>Stack this claims while it prepares the race.</summary>
+    const uint Scratch = 0x40;
 
-    /// <summary>The exit that is the race, read out of the table at 0x800267DC.</summary>
-    const byte TheRace = 1;
+    // ---- what the arcade's race case does, in the order it does it ----
+
+    const uint Seed = 0x8007D23Cu;
+    const uint SeedStep = 0x80083AE0u;
+    const uint BuildParameters = 0x80010C84u;
+    const uint Parameters = 0x801C3350u;
+    const int ParametersSize = 0x2D0;
+
+    /// <summary>Where the arcade copies the parameters on its way into the race.</summary>
+    const uint ParametersGoTo = 0x801D5FA0u;
+
+    /// <summary>Two flags the arcade raises just before the copy.</summary>
+    const uint Flags = 0x801EF5F0u;
+
+    const uint LoadOverlayDefault = 0x8005DA3Cu;
+    const uint LoadOverlay = 0x8005DA7Cu;
+
+    /// <summary>gt2_01, both as the table at 0x80091174 numbers it and by entry.</summary>
+    const uint RaceOverlayIndex = 0u;
+    const uint RaceOverlayEntry = 0x80011F64u;
 
     /// <summary>
     /// How long to let the car load before starting anyway.
@@ -126,16 +144,89 @@ public static class DirectRace
 
         _armed = false;
         EndedTheScreen = true;
-        m.WriteU8(ExitByte, TheRace);
-
-        // Answered rather than returned: a false from the hook only skips the
-        // body, and what the screen's loop inspects is V0.
-        c.V0 = 0u;
 
         Console.Error.WriteLine(ready
-            ? "[direct] the car is loaded - ending the arcade's screen for the race"
+            ? "[direct] the car is loaded - starting the race"
             : $"[direct] the car did not load in {CarPatience.TotalSeconds:F0}s - starting anyway"
               + $" (the loader stopped on step {CarLoad.StepIn(m, 0)})");
+
+        StartTheRace(c, m);
+
+        // Not reached: loading an overlay jumps to its entry point rather than
+        // returning, which is how the arcade's own race case ends too.
         return false;
     }
+
+    /// <summary>
+    /// Does what the arcade's race case does, without its screen.
+    ///
+    /// The arcade builds a block of race parameters, runs a screen over the
+    /// object, copies the block out and loads the race overlay. Only the last
+    /// three of those prepare anything: the parameters were shown to be byte
+    /// for byte identical before and after the screen, so the screen decides
+    /// nothing a race needs.
+    ///
+    /// Letting the arcade run its own race case instead is what does not work.
+    /// Its screen expects a record of the navigation that brought the player
+    /// there, six menu nodes deep, and a launch that never navigated leaves
+    /// that as whatever the stack held - which the screen follows into a DMA
+    /// with an address that is not memory.
+    ///
+    /// So the preparation happens here and the race is loaded from here. This
+    /// is the point the whole exercise was aiming at: one call, with everything
+    /// it needs already in memory.
+    /// </summary>
+    static void StartTheRace(CpuContext c, IMemory m)
+    {
+        // A frame of this function's own, because the seed values are handed
+        // over through memory rather than registers and need somewhere to sit
+        // that nothing else is using.
+        uint caller = c.SP;
+        c.SP = caller - Scratch;
+        uint scratch = c.SP + 0x10u;
+
+        try
+        {
+            c.A0 = 0u;
+            Call(c, m, Seed);
+            m.WriteU32(scratch, c.V0);
+
+            c.A0 = scratch;
+            Call(c, m, SeedStep);
+            uint first = c.V0;
+
+            c.A0 = scratch;
+            Call(c, m, SeedStep);
+
+            c.A0 = first;
+            c.A1 = c.V0;
+            c.A2 = Parameters;
+            Call(c, m, BuildParameters);
+
+            // The two flags the arcade raises just before its copy.
+            m.WriteU8(Flags + 1u, 1);
+            m.WriteU8(Flags + 2u, 1);
+
+            // Sixteen bytes at a time and then one word more, which is 0x2D4
+            // rather than the 0x2D0 the loop bound suggests.
+            for (uint i = 0; i < ParametersSize + 4; i += 4)
+                m.WriteU32(ParametersGoTo + i, m.ReadU32(Parameters + i));
+
+            c.A0 = 3u;
+            Call(c, m, LoadOverlayDefault);
+        }
+        finally
+        {
+            c.SP = caller;
+        }
+
+        Console.Error.WriteLine("[direct] loading the race overlay");
+        c.A0 = RaceOverlayIndex;
+        c.A1 = RaceOverlayEntry;
+        c.A2 = 0u;
+        Call(c, m, LoadOverlay);
+    }
+
+    static void Call(CpuContext c, IMemory m, uint address) =>
+        RecompOne.Runtime.Dispatch.Dispatcher.Call(c, m, address);
 }
