@@ -1127,3 +1127,37 @@ load slower.
 - **~166ms at the countdown and ~370ms on the race's first frame.** Both
   sample inside gt2_01 rather than the CD loop, so both are the game doing its
   own work.
+
+## How many cars a human drives
+
+`gt2_ovr1_race_setup_one_viewport_per_human_player` (0x8001882C) reads the race
+block's mode byte and counts humans from it:
+
+```
+V0 = [race + 0x0A]
+S5 = 1
+if (V0 == 0) S5 = 2        ; mode 0 is two players
+...
+S3 = 0x5C                  ; the first entrant
+loop S4 < S5:
+    S0 = S3 + race         ; this player's entrant
+    S3 += 0xD0             ; the next one
+    ...allocates a viewport and its buffers...
+```
+
+So GT2's split screen is exactly the flag predicted from the absence of any
+two-player class: **mode 0 in the race block gives two pad-driven entrants**,
+and the loop hands each one a viewport.
+
+That confirms the game can drive more than one entrant from outside its AI,
+and it is where the input plumbing can be read from. It is **not** the shape a
+LAN race wants: mode 0 splits the screen, and each machine needs one full
+viewport with the other cars driven by what arrives over the wire.
+
+The builder's mode 0 is also a different branch entirely (0x80010D1C), reading
+per-entrant fields at +0xB0/+0xB2/+0xB6 and the course at +0xA0/+0xA4, none of
+which the captured mode-4 block carries.
+
+So the target for pad synchronisation stays: find where the AI decides an
+entrant's steering, throttle and brake, and put the network's answer there for
+the entrants belonging to remote players.
