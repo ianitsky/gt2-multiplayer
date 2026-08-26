@@ -596,6 +596,66 @@ and none of them printed anything. The barrier now reports who it is holding
 for, how long it waited, and why it gave up - which is what made the last one
 findable in one run instead of three.
 
+## The arcade's own way into a race
+
+`gt2_ovr3_arcade_entrypoint_run_menus_then_load_chosen_overlay` at 0x80011750
+is the whole arcade in one function. It runs a menu, reads one byte, and
+switches on it to pick one of five exits.
+
+The byte is at **0x801EF5F4** and the table at 0x800267DC, read out of
+`ovl_bin/gt2_03.bin`:
+
+```
+[0] -> 0x800117E4   load_overlay_default(1) and leave
+[1] -> 0x8001184C   the race
+[2] -> 0x80011804   load 0x800114E0 with A2=1
+[3] -> 0x80011828   load 0x800114E0 with A2=0
+[4] -> 0x800117D4   load 0x8001172C - gt2_ovr2_start_replay
+```
+
+Watching the byte through a real arcade run shows it going 0 then 1, and 1 is
+the race. So **1 is the lever**.
+
+The race case does this, and only this:
+
+```
+0x8007D23C, 0x80083AE0 x2      seeds
+0x80010C84(..., 0x801C3350)    builds an object there
+0x80014898(SP+0x10)            enters a second screen
+loop on gt2_main_call_vtable_slot_0c_and_report_zero    car and track
+0x800148CC(SP+0x10, 2)
+copy 0x2D0 bytes from 0x801C3350 to 0x801D5FA0
+gt2_load_overlay_default(3)
+gt2_load_overlay(0, 0x80011F64, 0)      the race
+```
+
+### The menu loops are not spins
+
+Both loops read as "keep calling until the answer is at least two", which would
+never end, since the function called always reports zero. The comparison is the
+other way round: the loop repeats **while** the answer is two or more and falls
+through on zero. So one call is enough to leave.
+
+What runs the menu for all those frames is the function reached through the
+vtable, which does not return while the screen is alive - it longjmps, which in
+this game is a task switch. The loop falls through once the screen is genuinely
+finished.
+
+That matters for skipping the menus: there is no result value to fake. Getting
+past a screen means not entering it.
+
+### What a direct launch would have to replay
+
+Every step above is visible, so a launch that skips the menus is a known
+sequence with the two screens removed rather than a new thing to discover. The
+owner of the car loader, which was the blocker, stops being one: the arcade's
+own initialisation builds it before either screen runs.
+
+The risk that remains is what the screens leave behind. They draw, but they
+also fill state, and the 0x2D0 bytes copied out of 0x801C3350 are assembled
+somewhere. If part of that only exists because a screen ran, a direct launch
+dies the way the old one did - but this time the place to look is named.
+
 ## What is still open
 
 - **The two hitches**, at the end of the countdown and the end of the race.

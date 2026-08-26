@@ -3562,6 +3562,10 @@
     {
       "address": "0x8005D79C",
       "name": "gt2_main_vol_get_file_data_length"
+    },
+    {
+      "address": "0x800833E8",
+      "name": "gt2_main_call_vtable_slot_0c_and_report_zero"
     }
   ]
 }
