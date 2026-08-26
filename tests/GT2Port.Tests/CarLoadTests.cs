@@ -126,4 +126,63 @@ public class CarLoadTests
         // And a slot with no request at all - the second one, here.
         Assert.True(CarLoad.DoneIn(m, 1));
     }
+
+    const int FileIndex = 0x04;
+
+    /// <summary>ccrcn, the car a real arcade run was seen to load.</summary>
+    const int SomeOtherCar = 4091;
+
+    /// <summary>n24vn, standing for whatever the room agreed on instead.</summary>
+    const int TheRoomsCar = 5975;
+
+    [Fact]
+    public void Leaves_the_arcade_alone_until_a_room_names_a_car()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        m.WriteU16(Request + FileIndex, SomeOtherCar);
+
+        Assert.False(CarLoad.WantsTheRoomsCar(m));
+    }
+
+    [Fact]
+    public void Wants_its_own_car_when_the_arcade_loaded_another()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        m.WriteU16(Request + FileIndex, SomeOtherCar);
+
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        Assert.True(CarLoad.WantsTheRoomsCar(m));
+    }
+
+    [Fact]
+    public void Is_content_once_the_right_car_is_being_fetched()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        m.WriteU16(Request + FileIndex, TheRoomsCar);
+
+        Assert.False(CarLoad.WantsTheRoomsCar(m));
+    }
+
+    [Fact]
+    public void Stops_wanting_anything_once_the_race_has_the_car()
+    {
+        var (c, m) = Fresh();
+        m.WriteU32(Owner + FirstSlot, Request);
+        Tick(c, m, Owner);
+        m.WriteU16(Request + FileIndex, SomeOtherCar);
+        CarLoad.Drive("n24vn", TheRoomsCar);
+
+        CarLoad.StopDriving();
+
+        Assert.False(CarLoad.WantsTheRoomsCar(m));
+    }
 }

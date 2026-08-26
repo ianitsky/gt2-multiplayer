@@ -58,6 +58,34 @@ public static class CarLoad
     static bool _reported;
 
     /// <summary>
+    /// The car this machine's player is to drive, as a five-character code,
+    /// and the file index that code resolves to.
+    ///
+    /// The two are not the same question. The code is what to ask for; the
+    /// index is what the request record holds once the ask has gone through,
+    /// so comparing against it is how this tells "already loading the right
+    /// car" from "still loading the arcade's". Resolving it needs the archive
+    /// rather than the game, which is why the caller supplies it.
+    /// </summary>
+    static string _driving = "";
+    static int _drivingIndex = -1;
+
+    /// <summary>Where a request records the file it is fetching.</summary>
+    const int FileIndex = 0x04;
+
+    /// <summary>
+    /// How many times a car may be asked for before this gives up.
+    ///
+    /// The arcade asks for its own car whenever the player changes it, and
+    /// this asks back - two pieces of code writing one record. They settle
+    /// once the player stops choosing, but a cap means a disagreement that
+    /// does not settle reports itself instead of asking for ever.
+    /// </summary>
+    const int Insistence = 8;
+
+    static int _insisted;
+
+    /// <summary>
     /// Pre-hook on func_80016640, whose second argument is the owner.
     ///
     /// Cheaper than it looks: the loader is ticked once per request per frame,
@@ -67,6 +95,8 @@ public static class CarLoad
     public static void Ticking(CpuContext c, IMemory m)
     {
         _owner = c.A1;
+        Insist(c, m);
+
         if (Wanted.Length == 0) return;
 
         // Only on the tick that belongs to the slot being asked about, since
@@ -83,6 +113,80 @@ public static class CarLoad
         if (_reported || !DoneIn(m, 0)) return;
         _reported = true;
         Console.Error.WriteLine($"[car] {Wanted} finished loading");
+    }
+
+    /// <summary>
+    /// Says which car this machine's player is to drive, so that whatever the
+    /// arcade loaded gets replaced by the one the room agreed on.
+    ///
+    /// The lobby and the arcade menus ask two different questions and the
+    /// player answers both, so the car on the track is whichever was asked for
+    /// last. Left alone that is the arcade's, which is not the one the other
+    /// players were told about.
+    /// </summary>
+    public static void Drive(string code, int fileIndex)
+    {
+        _driving = code;
+        _drivingIndex = fileIndex;
+        _insisted = 0;
+    }
+
+    /// <summary>Stops replacing the arcade's car, once the race has it.</summary>
+    public static void StopDriving()
+    {
+        _driving = "";
+        _drivingIndex = -1;
+    }
+
+    /// <summary>
+    /// Asks again for the car the room agreed on, whenever the record holds a
+    /// different one. Runs on the loader's own tick, which is the only moment
+    /// the record is certain to be between steps.
+    /// </summary>
+    static void Insist(CpuContext c, IMemory m)
+    {
+        // Only on the tick belonging to the slot being replaced: the record is
+        // certain to be between steps then, and asking during another slot's
+        // turn would reset a record that is not the one meant.
+        if (c.A0 != RequestIn(m, 0)) return;
+
+        if (GaveUp(m))
+        {
+            _insisted++;
+            Console.Error.WriteLine(
+                $"[car] gave up asking for {_driving}; the arcade keeps loading"
+                + $" file {m.ReadU16(RequestIn(m, 0) + FileIndex)} instead of {_drivingIndex}");
+            return;
+        }
+
+        if (!WantsTheRoomsCar(m)) return;
+
+        _insisted++;
+        TryAsk(c, m, 0, _driving);
+    }
+
+    /// <summary>
+    /// Whether slot 0 is fetching something other than the car the room agreed
+    /// on, and there is still patience left to say so.
+    /// </summary>
+    internal static bool WantsTheRoomsCar(IMemory m)
+    {
+        if (_driving.Length == 0 || _drivingIndex < 0) return false;
+
+        uint request = RequestIn(m, 0);
+        if (request == 0u) return false;
+        if (m.ReadU16(request + FileIndex) == _drivingIndex) return false;
+
+        return _insisted < Insistence;
+    }
+
+    /// <summary>The one tick on which giving up is worth saying out loud.</summary>
+    static bool GaveUp(IMemory m)
+    {
+        if (_driving.Length == 0 || _drivingIndex < 0 || _insisted != Insistence) return false;
+
+        uint request = RequestIn(m, 0);
+        return request != 0u && m.ReadU16(request + FileIndex) != _drivingIndex;
     }
 
     /// <summary>Whether a tick has been seen, which is what knowing the owner takes.</summary>
@@ -154,5 +258,8 @@ public static class CarLoad
         _owner = 0u;
         _asked = false;
         _reported = false;
+        _driving = "";
+        _drivingIndex = -1;
+        _insisted = 0;
     }
 }

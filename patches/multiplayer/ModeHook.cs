@@ -117,6 +117,11 @@ public static class ModeHook
         Console.Error.WriteLine(
             $"[grid] {room.Players.Count} player(s) put on the grid, {_session.PlayerName} driving");
 
+        // The race has the car now, so stop replacing what the arcade loads.
+        // Leaving it on would have the next visit to the menus fighting a
+        // choice from a room that is no longer running.
+        CarLoad.StopDriving();
+
         HoldForTheStart(room);
     }
 
@@ -235,6 +240,8 @@ public static class ModeHook
         // race overlay instead and it walks into a race it never built - which
         // is what turns Start into a race rather than into a menu tour.
         var room = _session.Current;
+        if (room != null) DriveTheRoomsCar(room);
+
         if (RaceLauncher.Enabled && room != null
             && RaceLauncher.TryPrepare(m, room.Players, _session.PlayerName, _carCatalogue))
         {
@@ -243,6 +250,34 @@ public static class ModeHook
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Tells CarLoad which car this machine's player agreed to drive.
+    ///
+    /// The lobby and the arcade menus ask the same player the same question
+    /// and only one answer reaches the track - the arcade's, since it is asked
+    /// last. That is fine for whoever is driving the menus and wrong for
+    /// everyone else, who were told a different car over the wire.
+    ///
+    /// The file index comes from the archive rather than the game: CarLoad
+    /// needs it to tell a request already fetching the right car from one
+    /// still fetching the arcade's, and asking the game that question would
+    /// mean running its lookup every tick.
+    /// </summary>
+    static void DriveTheRoomsCar(Room room)
+    {
+        var mine = room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName);
+        if (mine is null || string.IsNullOrEmpty(mine.Car)) return;
+
+        if (_archive is null || !_archive.TryIndexOf($"carobj/{mine.Car}.cdo.gz", out int index))
+        {
+            Console.Error.WriteLine($"[car] no file in the archive for {mine.Car}");
+            return;
+        }
+
+        Console.Error.WriteLine($"[car] {_session!.PlayerName} is to drive {mine.Car} (file {index})");
+        CarLoad.Drive(mine.Car, index);
     }
 
     /// <summary>
