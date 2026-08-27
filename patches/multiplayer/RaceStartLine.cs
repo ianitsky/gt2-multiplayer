@@ -107,6 +107,8 @@ public static class RaceStartLine
         var now = DateTime.UtcNow;
         int reads = LoadTrace.Reads;
 
+        SecondDriver.DrivePadOne(m);
+
         var gc = Collector();
         string? whereItWas = StallWatch.WhereItWas();
         StallWatch.FrameBegins();

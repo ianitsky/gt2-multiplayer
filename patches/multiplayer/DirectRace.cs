@@ -459,6 +459,7 @@ public static class DirectRace
         if (!RaceGrid.TryApply(m, race.Players, race.Me, race.Cars))
             Console.Error.WriteLine("[direct] the race is not built yet - the room was not applied");
 
+        SecondDriver.HandTheSecondCarOver(m);
         SayTheRacesCourse(m);
 
         // The VBlank callback list is sound here and nonsense a moment later,

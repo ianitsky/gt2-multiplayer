@@ -57,10 +57,18 @@ public static class PadWatch
             + $" (callback 0x{c.A2:X8})");
     }
 
-    /// <summary>How often to report a decode, in frames, once one has been seen.</summary>
+    /// <summary>How often to report a decode, per pad.</summary>
     const int Every = 120;
 
-    static int _decodes;
+    /// <summary>
+    /// Counted per pad, not across both.
+    ///
+    /// The callback decodes pad 1 and then pad 0 every frame, so a single
+    /// counter with an even period lands on the same pad every time - the first
+    /// run of this reported pad 1 forty times and pad 0 never, and that was the
+    /// counter, not the game.
+    /// </summary>
+    static readonly Dictionary<int, int> _decodes = [];
 
     /// <summary>
     /// Pre-hook on the decoder: A0 is the reader record about to be filled.
@@ -72,10 +80,14 @@ public static class PadWatch
     public static void PadDecoded(CpuContext c, IMemory m)
     {
         if (!Watching || c.A0 == 0u) return;
-        if (_decodes++ % Every != 0) return;
 
         uint record = c.A0;
         int pad = (short)m.ReadU16(record + PadIndexIn);
+
+        int seen = _decodes.TryGetValue(pad, out int count) ? count : 0;
+        _decodes[pad] = seen + 1;
+        if (seen % Every != 0) return;
+
         uint raw = FirstRawBuffer + (uint)(pad * RawBufferStride);
 
         Console.Error.WriteLine(
