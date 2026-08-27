@@ -108,6 +108,8 @@ public static class RaceStartLine
         int reads = LoadTrace.Reads;
 
         SecondDriver.DrivePadOne(m);
+        SecondDriver.CheckItStuck(m);
+        CarHunt.FrameBegins(m);
 
         var gc = Collector();
         string? whereItWas = StallWatch.WhereItWas();

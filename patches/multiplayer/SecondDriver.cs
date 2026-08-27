@@ -59,6 +59,28 @@ public static class SecondDriver
     const ushort Cross = 0x4000;
 
     static bool _said;
+    static bool _checked;
+
+    /// <summary>
+    /// Reads the flag back once the race is running.
+    ///
+    /// The write happens in gt2_03, before the race overlay is even loaded, and
+    /// this session has had two "it should have worked" that turned out to be
+    /// a write that never survived. So the conclusion that IsAi is not the
+    /// selector only stands if the flag still reads as cleared here.
+    /// </summary>
+    public static void CheckItStuck(IMemory m)
+    {
+        if (!Enabled || _checked) return;
+        _checked = true;
+
+        uint entrant = Block + (uint)(FirstEntrant + SecondEntrant * EntrantSize);
+        Console.Error.WriteLine(
+            $"[second] at the race's first frame entrant {SecondEntrant} reads"
+            + $" IsAi={m.ReadU8(entrant + IsAi)} skill={m.ReadU8(entrant + AiSkill)}"
+            + $" (entrant 0 reads IsAi={m.ReadU8(Block + FirstEntrant + IsAi)}"
+            + $" skill={m.ReadU8(Block + FirstEntrant + AiSkill)})");
+    }
 
     /// <summary>Takes the AI off the second entrant, once the race is built.</summary>
     public static void HandTheSecondCarOver(IMemory m)
