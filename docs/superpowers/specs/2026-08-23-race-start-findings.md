@@ -1226,14 +1226,25 @@ Found by differing, after reading failed twice. CarHunt compared two megabytes
 against the previous frame for 240 race frames and counted how often each word
 changed. Six runs came out identical in shape:
 
-| car | moving state begins |
-|-----|---------------------|
-| 0 | 0x800AA12C |
-| 1 | 0x800AAC6C |
-| 2 | 0x800AB7AC |
-| 3 | 0x800AC2EC |
-| 4 | 0x800ACE2C |
-| 5 | 0x800AD96C |
+| car | object |
+|-----|--------|
+| 0 | **0x800A9B04** |
+| 1 | 0x800AA644 |
+| 2 | 0x800AB184 |
+| 3 | 0x800ABCC4 |
+| 4 | 0x800AC804 |
+| 5 | 0x800AD344 |
+
+Confirmed by laying six windows of 0xB40 against that base and counting moving
+words in each: **130, 139, 149, 127, 127, 130**. Six of a kind is what says the
+base and the stride are right; the first attempt reported the display lists at
++0x628 into the object and mistook those for the cars.
+
+128 offsets move in at least four of the six, dense between +0x018 and +0x3F7.
+The longest contiguous blocks are **+0x254..+0x2A3 (20 words)**, +0x2C0..+0x2DB
+and +0x3D4..+0x3EF (7 each), and +0x1D4..+0x1EB (6). What each is remains to be
+read off values: "this word moves" is equally true of a position, a velocity, a
+wheel angle and a lap timer.
 
 **116 bytes each, stride 0xB40.** Six of a kind, evenly spaced. The race object
 `gt2_ovr1_entrypoint` builds sits at 0x800A9500, 0xC2C below the first of them.
