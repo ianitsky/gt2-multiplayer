@@ -1219,3 +1219,48 @@ predicate that reads both the mode and an entrant flag
 record as it is registered, and every hundred and twentieth decode with the raw
 bytes beside it. A race with that on names the record the driver is read from,
 and from there the consumer is one watch away.
+
+## The six cars
+
+Found by differing, after reading failed twice. CarHunt compared two megabytes
+against the previous frame for 240 race frames and counted how often each word
+changed. Six runs came out identical in shape:
+
+| car | moving state begins |
+|-----|---------------------|
+| 0 | 0x800AA12C |
+| 1 | 0x800AAC6C |
+| 2 | 0x800AB7AC |
+| 3 | 0x800AC2EC |
+| 4 | 0x800ACE2C |
+| 5 | 0x800AD96C |
+
+**116 bytes each, stride 0xB40.** Six of a kind, evenly spaced, moving every
+frame that the cars move. The objects themselves begin earlier - a car's mass
+and gear ratios do not change and so did not show up - and the race object
+`gt2_ovr1_entrypoint` builds sits at 0x800A9500, 0xC2C below car zero.
+
+The 2272-byte run at 0x801FC560 and its neighbours are all in 0x801Fxxxx, the
+stack and display lists, and are not cars.
+
+## What IsAi is not yet known not to be
+
+An experiment cleared IsAi and the AI skill on entrant 1 and held cross on pad
+1; the second car raced normally. That looked like a negative result and is
+not one: the check that reads the flag back fired once per process, a walked
+arcade race consumed it, and the launched race that followed was never looked
+at. A test that had not run read as a test that had failed.
+
+The walked race did give the fields for free, and they match what RaceGrid
+writes: **entrant 0 reads IsAi=0 skill=0, entrant 1 reads IsAi=1 skill=100.**
+
+## Why the pad route stalled
+
+- `S5`, the count of human drivers, is a **local** in
+  `gt2_ovr1_race_setup_one_viewport_per_human_player`, recomputed from the race
+  mode byte at every use. There is no field to write.
+- The mode byte has **66 readers** in gt2_01 covering rendering, the HUD, the
+  camera and the timing, so it cannot be flipped to buy a second driver.
+- The decoded button fields are reached through a register the caller supplies,
+  so they cannot be tied to the race's pad reader records - 0x800A9528 for pad
+  0 and 0x800A95D8 for pad 1 - by reading alone.

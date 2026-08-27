@@ -110,6 +110,7 @@ public static class RaceStartLine
         SecondDriver.DrivePadOne(m);
         SecondDriver.CheckItStuck(m);
         CarHunt.FrameBegins(m);
+        CarState.FrameBegins(m);
 
         var gc = Collector();
         string? whereItWas = StallWatch.WhereItWas();

@@ -87,6 +87,13 @@ public static class SecondDriver
     {
         if (!Enabled) return;
 
+        // Per race, not per process. The first version checked once, a walked
+        // arcade race consumed the check, and the launched race that followed
+        // was never looked at - so a test that had not run read as a test that
+        // had failed.
+        _checked = false;
+        _said = false;
+
         uint entrant = Block + (uint)(FirstEntrant + SecondEntrant * EntrantSize);
         m.WriteU8(entrant + IsAi, 0);
         m.WriteU8(entrant + AiSkill, 0);
