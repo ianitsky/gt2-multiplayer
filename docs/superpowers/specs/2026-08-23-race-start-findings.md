@@ -1235,10 +1235,21 @@ changed. Six runs came out identical in shape:
 | 4 | 0x800ACE2C |
 | 5 | 0x800AD96C |
 
-**116 bytes each, stride 0xB40.** Six of a kind, evenly spaced, moving every
-frame that the cars move. The objects themselves begin earlier - a car's mass
-and gear ratios do not change and so did not show up - and the race object
-`gt2_ovr1_entrypoint` builds sits at 0x800A9500, 0xC2C below car zero.
+**116 bytes each, stride 0xB40.** Six of a kind, evenly spaced. The race object
+`gt2_ovr1_entrypoint` builds sits at 0x800A9500, 0xC2C below the first of them.
+
+The **stride is the finding**; the 116 bytes are not the physics. Printing them
+five times across a race shows a pointer (0x80148C00), then 0x40000006 and
+0x00FFFFFF, and the same ten-word shape twice over 0x90 apart - GPU primitives,
+rebuilt every frame.
+
+That is the measurement's own fault. The window began at the race's first frame,
+so most of its 240 frames were loading and the countdown with the cars sitting
+still, and only what moves while a car does not could pass a "changed in 75% of
+frames" test. A car's position moves every frame it is driven and none before,
+so the countdown has to be behind the window rather than inside it. CarHunt now
+skips a configurable number of frames first and reports each run's offset within
+the 0xB40 stride, which is what would name the same field across six cars.
 
 The 2272-byte run at 0x801FC560 and its neighbours are all in 0x801Fxxxx, the
 stack and display lists, and are not cars.

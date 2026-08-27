@@ -35,6 +35,20 @@ public static class CarHunt
     static readonly int Frames =
         int.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_HUNT_FRAMES"), out int n) ? n : 240;
 
+    /// <summary>
+    /// How many frames to let pass before watching at all.
+    ///
+    /// The first run started at the race's first frame, so most of its window
+    /// was loading and the countdown with the cars sitting still. Only things
+    /// that move while a car does not - display lists, timers - survived the
+    /// test, and the six runs it found turned out to be GPU primitives: a
+    /// pointer, then 0x40000006 and 0x00FFFFFF, twice over. A car's position
+    /// moves every frame it is driven and none of the frames before that, so
+    /// the countdown has to be behind the window rather than inside it.
+    /// </summary>
+    static readonly int After =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_HUNT_AFTER"), out int a) ? a : 420;
+
     /// <summary>Where the guest's RAM begins, and how much of it there is.</summary>
     const uint RamBase = 0x80000000u;
     const int RamSize = 0x00200000;
@@ -44,7 +58,9 @@ public static class CarHunt
     /// frame: a car's height barely changes on a straight, and a strict test
     /// would drop the very fields that say a car is a car.
     /// </summary>
-    const double Often = 0.75;
+    static readonly double Often =
+        double.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_HUNT_OFTEN"),
+            System.Globalization.CultureInfo.InvariantCulture, out double o) ? o : 0.5;
 
     /// <summary>How many runs to name, longest first.</summary>
     const int Longest = 12;
@@ -55,12 +71,18 @@ public static class CarHunt
     static byte[]? _before;
     static int[]? _changed;
     static int _frames;
+    static int _skipped;
     static bool _reported;
+
+    /// <summary>What the six runs said the cars are spaced by.</summary>
+    const uint CarZero = 0x800AA12Cu;
+    const int CarStride = 0xB40;
 
     /// <summary>Called once per race frame, before anything else looks at RAM.</summary>
     public static void FrameBegins(IMemory m)
     {
         if (!Hunting || _reported || m is not PSMemory ps) return;
+        if (_skipped++ < After) return;
 
         var now = ps.Ram;
         if (_before is null)
@@ -115,10 +137,21 @@ public static class CarHunt
             + $" {Often:P0} of them, in {runs.Count} run(s):");
 
         foreach (var run in runs.OrderByDescending(r => r.Words).Take(Longest))
+        {
+            uint at = RamBase + (uint)(run.Start * 4);
+
+            // Where it falls inside a car, when it falls inside one at all.
+            // Six runs sharing an offset are the same field of six cars, which
+            // is the shape being looked for and is not readable from addresses.
+            string inCar = at >= CarZero - (uint)CarStride && at < CarZero + (uint)(CarStride * 6)
+                ? $"  car {(int)(at - (CarZero - (uint)CarStride)) / CarStride - 1}"
+                  + $" +0x{(at - CarZero) % (uint)CarStride:X3}"
+                : "";
+
             Console.Error.WriteLine(
-                $"[hunt]   0x{RamBase + (uint)(run.Start * 4):X8}"
-                + $" .. 0x{RamBase + (uint)(run.End * 4 + 3):X8}"
-                + $"  {(run.End - run.Start + 1) * 4} bytes, {run.Words} of them moving");
+                $"[hunt]   0x{at:X8} .. 0x{RamBase + (uint)(run.End * 4 + 3):X8}"
+                + $"  {(run.End - run.Start + 1) * 4} bytes, {run.Words} moving{inCar}");
+        }
 
         // The stride between runs is what says whether they are six of a kind.
         var order = runs.OrderBy(r => r.Start).ToList();
