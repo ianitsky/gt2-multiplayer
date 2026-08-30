@@ -47,4 +47,36 @@ public class RemoteCarsTests
 
         Assert.Equal(new RemoteCars.Place(1, 2, 3), RemoteCars.Read(m, 0));
     }
+
+    /// <summary>
+    /// A transform is nine words - the place and then a 3x3 with its rows
+    /// padded to eight bytes - and the game keeps the whole of it twice.
+    /// Copying only the place gave a ghost that drove where the player drove
+    /// while still facing wherever it had started.
+    /// </summary>
+    [Fact]
+    public void CarriesTheRotationAsWellAsThePlace()
+    {
+        var m = new PSMemory();
+        var transform = new uint[RemoteCars.TransformWords];
+        for (int i = 0; i < transform.Length; i++) transform[i] = (uint)(0x1000 + i);
+
+        RemoteCars.WriteTransform(m, 4, transform);
+
+        Assert.Equal(transform, RemoteCars.ReadTransform(m, 4));
+    }
+
+    [Fact]
+    public void WritesTheWholeTransformIntoBothCopies()
+    {
+        var m = new PSMemory();
+        uint at = RemoteCars.FirstCar + 1u * RemoteCars.CarStride + RemoteCars.Transform;
+        var transform = new uint[RemoteCars.TransformWords];
+        for (int i = 0; i < transform.Length; i++) transform[i] = (uint)(500 + i);
+
+        RemoteCars.WriteTransform(m, 1, transform);
+
+        for (uint i = 0; i < RemoteCars.TransformWords; i++)
+            Assert.Equal(500u + i, m.ReadU32(at + RemoteCars.SecondCopy + i * 4u));
+    }
 }

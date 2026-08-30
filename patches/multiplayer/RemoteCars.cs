@@ -28,11 +28,36 @@ public static class RemoteCars
     public const int CarStride = 0xB40;
     public const int Cars = 6;
 
-    /// <summary>Where a car keeps its place, and where it keeps it again.</summary>
+    /// <summary>
+    /// Where a car keeps its transform, and how big one is.
+    ///
+    /// The ghost proved position works and showed what it misses: a car
+    /// following another kept its heading. The rotation sits directly after
+    /// the place, as a 3x3 of sixteen-bit values with each row padded to eight
+    /// bytes - the diagonal falls on shorts 0, 5 and 10, and a car going
+    /// straight reads
+    ///
+    ///     [ 4095   -13     37 ]
+    ///     [  -11  -4092  -151 ]
+    ///     [  -37   -149   4093 ]
+    ///
+    /// which is very nearly the identity, with m22 negative because the game
+    /// counts Y downwards. So a transform is nine words:
+    ///
+    ///     +0x20C  X, Z, Y
+    ///     +0x218  rotation, six words
+    ///
+    /// and the whole of it is kept twice, 0x24 apart - which is why 0x24 was
+    /// already the right distance for the position alone.
+    /// </summary>
+    public const uint Transform = 0x20Cu;
+    public const int TransformWords = 9;
+    public const uint SecondCopy = 0x24u;
+
+    /// <summary>Where the place sits inside a transform, for callers that only want it.</summary>
     public const uint X = 0x20Cu;
     public const uint Z = 0x210u;
     public const uint Y = 0x214u;
-    public const uint SecondCopy = 0x24u;
 
     /// <summary>
     /// Whether to make car one shadow car zero. Off unless GT2_GHOST is set;
@@ -64,7 +89,7 @@ public static class RemoteCars
     /// <summary>
     /// Puts a car somewhere, both copies.
     ///
-    /// Both, because the game keeps the position twice and writing one would
+    /// Both, because the game keeps the transform twice and writing one would
     /// leave whichever reads the other disagreeing about where the car is.
     /// </summary>
     public static void Write(IMemory m, int car, Place place)
@@ -78,18 +103,41 @@ public static class RemoteCars
         }
     }
 
+    /// <summary>A car's whole transform: where it is and which way it faces.</summary>
+    public static uint[] ReadTransform(IMemory m, int car)
+    {
+        uint at = FirstCar + (uint)(car * CarStride) + Transform;
+        var words = new uint[TransformWords];
+        for (int i = 0; i < words.Length; i++) words[i] = m.ReadU32(at + (uint)(i * 4));
+        return words;
+    }
+
+    /// <summary>Puts a whole transform on a car, in both copies.</summary>
+    public static void WriteTransform(IMemory m, int car, uint[] words)
+    {
+        uint at = FirstCar + (uint)(car * CarStride) + Transform;
+        foreach (uint copy in new[] { 0u, SecondCopy })
+            for (int i = 0; i < words.Length && i < TransformWords; i++)
+                m.WriteU32(at + copy + (uint)(i * 4), words[i]);
+    }
+
     /// <summary>Called once per race frame.</summary>
     public static void FrameBegins(IMemory m)
     {
         if (!Ghosting) return;
 
-        var mine = Read(m, 0);
-        Write(m, 1, mine with { Z = mine.Z + Beside });
+        // The whole transform, not just the place. Copying the place alone
+        // gave a car that went where the player went and kept facing whatever
+        // way it had been pointing.
+        var mine = ReadTransform(m, 0);
+        mine[1] = unchecked((uint)((int)mine[1] + Beside));
+        WriteTransform(m, 1, mine);
 
         if (_said) return;
         _said = true;
+        var place = Read(m, 0);
         Console.Error.WriteLine(
-            $"[ghost] car 1 is following car 0, {Beside} to one side"
-            + $" (car 0 is at {mine.X}, {mine.Z}, {mine.Y})");
+            $"[ghost] car 1 is following car 0 whole, {Beside} to one side"
+            + $" (car 0 is at {place.X}, {place.Z}, {place.Y})");
     }
 }
