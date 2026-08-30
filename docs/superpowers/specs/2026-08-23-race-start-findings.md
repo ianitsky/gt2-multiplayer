@@ -1388,3 +1388,24 @@ Position, read off the launched race's samples, sits at **+0x20C (X), +0x210
 (Z), +0x214 (Y)** with a second copy at +0x230, and eight contact-point pairs
 from +0x264 to +0x2A0. Those offsets are into the 0xB40 array and still want
 confirming against six cars that are all moving.
+
+
+## A car's motion, confirmed on six
+
+Six cars racing, three samples, all six distinct and all six moving:
+
+| offset | field | car 0 across three samples |
+|--------|-------|----------------------------|
+| **+0x20C** | **X** | 603221 -> 1069008 -> 1362356 |
+| **+0x210** | **Z** | 1529339 -> 1527201 -> 1428150 |
+| **+0x214** | **Y** | 1030 -> 2177 -> 9533 |
+| +0x230/+0x234/+0x238 | the same place again | tracks the first copy |
+| +0x264 .. +0x2A0 | eight points around the centre | wheels or corners |
+| +0x1B4 | climbs, never falls, per car | distance travelled |
+| +0x304 | 0x3B000000 -> 0x4B000000 -> 0x5F000000 | rises with speed |
+
+Orientation is not isolated yet. +0x25C and +0x218 both change per car and are
+large enough to be angles, but nothing confirms either.
+
+These are offsets into the **0x800A9B04 / 0xB40** array, not the 0x8015F894 /
+0x5000 one.
