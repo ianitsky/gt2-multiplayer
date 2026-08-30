@@ -5,26 +5,23 @@ namespace GT2Port.Multiplayer;
 /// <summary>
 /// Prints the six cars so their fields can be read for what they mean.
 ///
-/// The differ settled where they are. Six windows of 0xB40 laid against
-/// 0x800A9B04 came back with 130, 139, 149, 127, 127 and 130 moving words -
-/// six of a kind, which is what says the base and the stride are right:
+/// Where they are was deduced, not recognised. Five attempts to spot a car by
+/// the shape of its numbers found display lists three times, a stray 4096 once
+/// and a decompression buffer once. So instead a read watch was pointed at the
+/// entrant at 0x801D58B8 - a fixed address whatever the heap does - and it
+/// named entry_80028DDC, which walks the entrants during the race screen's
+/// first pass and builds a car from each:
 ///
-///     car 0  0x800A9B04      car 3  0x800ABCC4
-///     car 1  0x800AA644      car 4  0x800AC804
-///     car 2  0x800AB184      car 5  0x800AD344
+///     T0 = 0x801D585C                    the race block
+///     S1 = [SP+0x44] + T0                the entrant, from +0x5C, stride 0xD0
+///     A0 = [S1]                          its car id
+///     S4 = [SP+0x40] + 0x000B6394 + 0x800A9500
+///     [screen] = S4                      the live car
 ///
-/// What it cannot settle is meaning. "This word moves" is true of a position,
-/// a velocity, a wheel angle, an engine note and a lap timer alike. Values
-/// tell them apart: a coordinate is large and drifts smoothly and differs
-/// between cars by where they are on the track; a velocity swings through
-/// zero; a heading wraps; a counter only ever climbs.
-///
-/// So this prints a window of every car at a few moments, and the reading is
-/// done outside. Six cars beside each other is the point - a field that holds
-/// six different values that all change is a per-car quantity, and a field
-/// that holds the same value in all six is the track or the weather.
-///
-/// Off unless GT2_CAR_STATE is set.
+/// and at the foot of the loop [SP+0x44] += 0xD0, [SP+0x40] += 0x5000, and the
+/// pointer array walks on by four. So the cars are 0x5000 apart from
+/// 0x8015F894, and that comes from the game's own arithmetic rather than from
+/// a pattern that happened to hold in one race.
 /// </summary>
 public static class CarState
 {
@@ -32,8 +29,8 @@ public static class CarState
         Environment.GetEnvironmentVariable("GT2_CAR_STATE") is not (null or "");
 
     /// <summary>Where car zero's object begins, and how far to the next.</summary>
-    public const uint FirstCar = 0x800A9B04u;
-    public const int CarStride = 0xB40;
+    public const uint FirstCar = 0x8015F894u;
+    public const int CarStride = 0x5000;
     public const int Cars = 6;
 
     /// <summary>How much of each car to print. The moving offsets end by +0x400.</summary>

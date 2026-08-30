@@ -1316,3 +1316,44 @@ So the array is not trusted. `CarFind` scans RAM for the shape instead - a
 plausible X and Z, a small Y, and 4096 twenty bytes on - and reports every
 address that matches. Where they land, and what they are spaced by, is what
 says where the cars really are.
+
+
+## The live cars, deduced
+
+Five attempts to recognise a car by the shape of its numbers failed: display
+lists three times, a stray 4096 once, and a decompression buffer once. The way
+out was to stop recognising and start deducing.
+
+A **read** watch on the entrant at 0x801D58B8 - fixed whatever the heap does -
+named `entry_80028DDC`, reached from the race screen's first pass. It walks
+the entrants and builds a car from each:
+
+```
+T0 = 0x801D585C                                the race block
+S1 = [SP+0x44] + T0                            the entrant, from +0x5C
+A0 = [S1]                                      its car id
+S4 = [SP+0x40] + 0x000B6394 + 0x800A9500       the live car
+[pointers] = S4                                kept in an array
+...
+[SP+0x44] += 0xD0      the next entrant
+[SP+0x40] += 0x5000    the next car
+[SP+0x3C] += 4         the next pointer
+```
+
+So, from the game's own arithmetic:
+
+| car | address |
+|-----|---------|
+| 0 | **0x8015F894** |
+| 1 | 0x80164894 |
+| 2 | 0x80169894 |
+| 3 | 0x8016E894 |
+| 4 | 0x80173894 |
+| 5 | 0x80178894 |
+
+**Stride 0x5000.** The loop runs while the index is below the entrant count at
+0x800AF231, and the pointers are kept in an array four bytes apart starting at
+whatever the screen passed in.
+
+Everything said before this about cars at 0x800A9B04 or 0x800AA12C was wrong;
+those were display lists and a load buffer.
