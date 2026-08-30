@@ -97,6 +97,9 @@ public static class DirectRace
 
     static Pending? _race;
 
+    /// <summary>The race the lobby agreed, while one is running.</summary>
+    public static Pending? Racing => _race;
+
     /// <summary>Called by the lobby when a race has been agreed and is to start.</summary>
     public static void Expect(Pending race)
     {

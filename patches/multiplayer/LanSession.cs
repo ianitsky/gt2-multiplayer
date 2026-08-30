@@ -358,6 +358,78 @@ public sealed class LanSession : IDisposable
     void SendRoomState(Room room, IPEndPoint to) =>
         Send(RoomState.Serialise(room), to);
 
+    /// <summary>Where a car is, as one player says it is.</summary>
+    const byte Place = 3;
+
+    /// <summary>
+    /// How wide a place message is: the magic, the kind, whose it is, and
+    /// three coordinates.
+    /// </summary>
+    const int PlaceBytes = 3 + 12;
+
+    /// <summary>
+    /// Where every other player says their car is, by their seat in the room.
+    ///
+    /// Keyed by the room's own ordering rather than by address or by name,
+    /// because that ordering is the one thing every machine already agrees on:
+    /// the host published it, and each machine rotates its own player to the
+    /// front of it locally. A seat number survives that rotation; a slot
+    /// number would not.
+    /// </summary>
+    readonly Dictionary<byte, (int X, int Z, int Y)> _places = [];
+
+    public IReadOnlyDictionary<byte, (int X, int Z, int Y)> Places => _places;
+
+    /// <summary>Tells everyone where this machine's car is.</summary>
+    public void SendPlace(byte seat, int x, int z, int y, IPAddress? host = null)
+    {
+        if (_disposed) return;
+
+        var data = new byte[PlaceBytes];
+        data[0] = StartMagic;
+        data[1] = Place;
+        data[2] = seat;
+        BitConverter.TryWriteBytes(data.AsSpan(3), x);
+        BitConverter.TryWriteBytes(data.AsSpan(7), z);
+        BitConverter.TryWriteBytes(data.AsSpan(11), y);
+
+        if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
+        foreach (var player in _known.Union(_atTheLine)) Send(data, player);
+    }
+
+    /// <summary>
+    /// Drains the socket, keeping the latest place from each seat.
+    ///
+    /// The latest, not every one: a place is a snapshot and an old one is of no
+    /// use to anybody. Anything that is not a place is dropped - the room is
+    /// settled by the time cars are moving, and answering lobby traffic now
+    /// would reopen a negotiation that is over.
+    /// </summary>
+    public void CollectPlaces()
+    {
+        if (_disposed) return;
+
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        {
+            IPEndPoint? from = null;
+            byte[] data;
+            try
+            {
+                data = _socket.Receive(ref from);
+            }
+            catch (SocketException)
+            {
+                return;
+            }
+
+            if (data.Length < PlaceBytes || data[0] != StartMagic || data[1] != Place) continue;
+
+            _places[data[2]] = (BitConverter.ToInt32(data, 3),
+                                BitConverter.ToInt32(data, 7),
+                                BitConverter.ToInt32(data, 11));
+        }
+    }
+
     void Send(byte[] data, IPEndPoint to)
     {
         try

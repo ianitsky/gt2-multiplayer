@@ -33,6 +33,33 @@ public static class RaceGrid
     const int CarName = 0x90;
     const int CarNameRoom = 0x18;      // how much space the name has
 
+    /// <summary>
+    /// The entrants in the order this machine writes them.
+    ///
+    /// The human always drives entrant 0 - proven by putting the local player
+    /// anywhere else and watching them drive entrant 0's car regardless - so
+    /// each machine leads with its own player and the rest keep the room's
+    /// order behind them. Every machine therefore holds the same six cars in a
+    /// different rotation, which is why anything sent between them has to be
+    /// keyed by a seat in the room rather than by a slot in the race.
+    /// </summary>
+    public static List<Player> Order(IReadOnlyList<Player> players, string me, int racing)
+    {
+        var order = players.Take(racing).ToList();
+        int mine = order.FindIndex(p => p.Name == me);
+        if (mine > 0)
+        {
+            var self = order[mine];
+            order.RemoveAt(mine);
+            order.Insert(0, self);
+        }
+        return order;
+    }
+
+    /// <summary>Which slot this machine drives <paramref name="who"/> in, or -1.</summary>
+    public static int SlotFor(IReadOnlyList<Player> players, string me, string who) =>
+        Order(players, me, Math.Min(players.Count, Slots)).FindIndex(p => p.Name == who);
+
     /// <summary>The most entrants the block has room for.</summary>
     public const int Slots = 6;
 
@@ -60,14 +87,7 @@ public static class RaceGrid
         // regardless of which entrant was marked. So each machine leads with
         // its own player, and the entrant order differs from machine to
         // machine by exactly that rotation.
-        var order = players.Take(racing).ToList();
-        int mine = order.FindIndex(p => p.Name == me);
-        if (mine > 0)
-        {
-            var self = order[mine];
-            order.RemoveAt(mine);
-            order.Insert(0, self);
-        }
+        var order = Order(players, me, racing);
 
         for (int i = 0; i < racing; i++)
         {

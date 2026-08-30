@@ -180,6 +180,18 @@ public static class ModeHook
     /// </summary>
     static System.Net.IPAddress? _raceHost;
 
+    /// <summary>
+    /// What the race needs to talk to the other machines: the session, the
+    /// host to answer when this machine is a client, and the room it is
+    /// racing. Exposed rather than passed around because the code that moves
+    /// cars runs from a per-frame hook, which has nowhere to be handed
+    /// anything.
+    /// </summary>
+    public static LanSession? Wire => _lanSession;
+
+    public static System.Net.IPAddress? HostToAnswer =>
+        _session?.Phase == SessionPhase.Hosting ? null : _raceHost;
+
     /// <summary>How long to wait for everyone before starting anyway.</summary>
     static readonly TimeSpan StartPatience = TimeSpan.FromSeconds(20);
 

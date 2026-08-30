@@ -113,6 +113,7 @@ public static class RaceStartLine
         CarState.FrameBegins(m);
         CarFind.FrameBegins(m);
         RemoteCars.FrameBegins(m);
+        CarSync.FrameBegins(m);
 
         var gc = Collector();
         string? whereItWas = StallWatch.WhereItWas();
