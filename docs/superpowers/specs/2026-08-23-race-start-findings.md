@@ -1286,3 +1286,33 @@ writes: **entrant 0 reads IsAi=0 skill=0, entrant 1 reads IsAi=1 skill=100.**
 - The decoded button fields are reached through a register the caller supplies,
   so they cannot be tied to the race's pad reader records - 0x800A9528 for pad
   0 and 0x800A95D8 for pad 1 - by reading alone.
+
+
+## A car's position
+
+Read off three samples of the live slot at 0x800A9B04. Relative to the object:
+
+| offset | field | car 0 across three samples | the idle slot |
+|--------|-------|----------------------------|---------------|
+| +0x20C | X | -897217 -> -868584 -> -203673 | -790539 |
+| +0x210 | Z | -2103103 -> -2872423 -> -3411982 | -1081600 |
+| +0x214 | Y | 486 -> 7642 -> 17938 | 551 |
+| +0x22C | scale | 4096 | 4096 |
+| +0x218 | orientation | -267125119 -> -43708472 | -266207746 |
+
+4096 is 1.0 in the twelve-bit fixed point the PS1 uses. +0x230/+0x234/+0x238
+holds a second copy of the same three words. The eight (x, z) pairs from +0x264
+to +0x2A0 all sit within about ten thousand of the centre - contact points.
+
+### The six-of-a-kind was the display lists again
+
+Only two of the six 0xB40 slots hold any of this: 0x800A9B04 moves, the one
+0xB40 after it holds a valid unmoving position, and the four after that read as
+zeroes through +0x400. The 130-odd moving words CarHunt counted in each of the
+six were the display lists at +0x628, which every drawn car updates every frame.
+That is the third time the differ has counted display lists and been believed.
+
+So the array is not trusted. `CarFind` scans RAM for the shape instead - a
+plausible X and Z, a small Y, and 4096 twenty bytes on - and reports every
+address that matches. Where they land, and what they are spaced by, is what
+says where the cars really are.
