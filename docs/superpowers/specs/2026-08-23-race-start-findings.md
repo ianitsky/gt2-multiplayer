@@ -1357,3 +1357,34 @@ whatever the screen passed in.
 
 Everything said before this about cars at 0x800A9B04 or 0x800AA12C was wrong;
 those were display lists and a load buffer.
+
+
+## Two arrays, not one
+
+The hunt kept confusing them.
+
+| array | stride | what it holds |
+|-------|--------|---------------|
+| **0x8015F894** | 0x5000 | what a car **is** - model, appearance, setup |
+| **0x800A9B04** | 0xB40 | what a car is **doing** - about 1000 moving bytes each |
+
+`entry_80028DDC` builds the first: it walks the entrants from 0x801D585C and
+lays a car out every 0x5000. Printing all six showed them populated and all
+different from each other, and the differ then found **not one moving word** in
+the whole 0x5000 of any of them across a race being driven.
+
+The motion is in the second, where the differ found five of six slots moving
+about a thousand bytes each, at 0xB40 apart with the sixth simply not reported.
+
+That second array was dismissed twice on bad readings, both worth recording:
+
+- Its slots 2 to 5 read as zeroes - but that was a **launched** race, which
+  RaceGrid gives one entrant, not six.
+- A write watch on 0x800A9D10 caught `CD_getsector` and `gzip_decompress` and
+  said "buffer, not a field" - but the watch was armed during loading. The
+  address is a load buffer *until the race reuses it*.
+
+Position, read off the launched race's samples, sits at **+0x20C (X), +0x210
+(Z), +0x214 (Y)** with a second copy at +0x230, and eight contact-point pairs
+from +0x264 to +0x2A0. Those offsets are into the 0xB40 array and still want
+confirming against six cars that are all moving.

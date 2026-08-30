@@ -5,23 +5,24 @@ namespace GT2Port.Multiplayer;
 /// <summary>
 /// Prints the six cars so their fields can be read for what they mean.
 ///
-/// Where they are was deduced, not recognised. Five attempts to spot a car by
-/// the shape of its numbers found display lists three times, a stray 4096 once
-/// and a decompression buffer once. So instead a read watch was pointed at the
-/// entrant at 0x801D58B8 - a fixed address whatever the heap does - and it
-/// named entry_80028DDC, which walks the entrants during the race screen's
-/// first pass and builds a car from each:
+/// There are two per-car arrays and they were confused for each other twice.
 ///
-///     T0 = 0x801D585C                    the race block
-///     S1 = [SP+0x44] + T0                the entrant, from +0x5C, stride 0xD0
-///     A0 = [S1]                          its car id
-///     S4 = [SP+0x40] + 0x000B6394 + 0x800A9500
-///     [screen] = S4                      the live car
+/// entry_80028DDC builds one of them: it walks the entrants from 0x801D585C
+/// and lays a car out every 0x5000 from 0x8015F894. Printing all six showed
+/// them populated and all different - a pointer apiece, 0x888888 three times -
+/// and the differ then found **not one moving word** in the whole 0x5000 of
+/// any of them across a race being driven. That array is the car's model and
+/// setup.
 ///
-/// and at the foot of the loop [SP+0x44] += 0xD0, [SP+0x40] += 0x5000, and the
-/// pointer array walks on by four. So the cars are 0x5000 apart from
-/// 0x8015F894, and that comes from the game's own arithmetic rather than from
-/// a pattern that happened to hold in one race.
+/// The motion is in the other one, at 0x800A9B04 every 0xB40, where the same
+/// differ found about a thousand moving bytes per car. That array was
+/// dismissed earlier on two bad readings: its slots 2 to 5 read as zeroes in a
+/// launched race, which had one entrant rather than six; and a write watch
+/// armed during loading caught CD_getsector and gzip filling 0x800A9D10, which
+/// made it look like a buffer. It is a buffer, until the race reuses it.
+///
+/// So: 0x8015F894 stride 0x5000 is what a car is; 0x800A9B04 stride 0xB40 is
+/// what it is doing.
 /// </summary>
 public static class CarState
 {
@@ -29,8 +30,8 @@ public static class CarState
         Environment.GetEnvironmentVariable("GT2_CAR_STATE") is not (null or "");
 
     /// <summary>Where car zero's object begins, and how far to the next.</summary>
-    public const uint FirstCar = 0x8015F894u;
-    public const int CarStride = 0x5000;
+    public const uint FirstCar = 0x800A9B04u;
+    public const int CarStride = 0xB40;
     public const int Cars = 6;
 
     /// <summary>How much of each car to print. The moving offsets end by +0x400.</summary>
