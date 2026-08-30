@@ -94,8 +94,15 @@ public static class RemoteCars
     /// <summary>One in the game's twelve-bit fixed point.</summary>
     const int One = 4096;
 
-    /// <summary>How far to turn the spinning ghost each frame, in degrees.</summary>
-    const double PerFrame = 3.0;
+    /// <summary>
+    /// How far to turn the spinning ghost each frame.
+    ///
+    /// Three degrees was half a turn a second, fast enough that a steady spin
+    /// and a stuttering one look alike. GT2_GHOST_SPIN_RATE moves it.
+    /// </summary>
+    static readonly double PerFrame =
+        double.TryParse(Environment.GetEnvironmentVariable("GT2_GHOST_SPIN_RATE"),
+            System.Globalization.CultureInfo.InvariantCulture, out double r) ? r : 0.75;
 
     static double _turned;
 
@@ -128,7 +135,6 @@ public static class RemoteCars
 
     static bool _said;
     static uint[]? _wrote;
-    static bool _checked;
 
     /// <summary>
     /// Whether what was written last frame is still there this frame.
@@ -141,20 +147,42 @@ public static class RemoteCars
     /// </summary>
     static void SayWhatStuck(IMemory m)
     {
-        if (_checked || _wrote is null) return;
-        _checked = true;
+        if (_wrote is null || _checks >= MostChecks) return;
 
-        var now = ReadTransform(m, 1);
+        // Both copies, and on more than one frame. The first version read only
+        // the copy at +0x20C and only once, so a second copy being rebuilt -
+        // or a rebuild that happens on some frames and not others - would have
+        // gone unreported while the answer read "still as written".
+        uint at = FirstCar + CarStride + Transform;
         var lost = new List<string>();
-        for (int i = 0; i < now.Length; i++)
-            if (now[i] != _wrote[i])
-                lost.Add($"+0x{Transform + (uint)(i * 4):X3} written {(int)_wrote[i]} now {(int)now[i]}");
+        for (int i = 0; i < TransformWords; i++)
+            foreach (uint copy in new[] { 0u, SecondCopy })
+            {
+                uint now = m.ReadU32(at + copy + (uint)(i * 4));
+                if (now != _wrote[i])
+                    lost.Add($"+0x{Transform + copy + (uint)(i * 4):X3}"
+                             + $" written {(int)_wrote[i]} now {(int)now}");
+            }
 
-        Console.Error.WriteLine(lost.Count == 0
-            ? "[ghost] a frame later the whole transform is still as written"
-            : $"[ghost] a frame later {lost.Count} of {now.Length} words were put back:");
+        if (lost.Count == 0)
+        {
+            if (_clean++ == 0)
+                Console.Error.WriteLine("[ghost] both copies are still as written");
+            return;
+        }
+
+        _checks++;
+        Console.Error.WriteLine(
+            $"[ghost] frame {_frames}: {lost.Count} of {TransformWords * 2} put back:");
         foreach (string one in lost) Console.Error.WriteLine($"[ghost]   {one}");
     }
+
+    /// <summary>How many frames of disagreement to report before stopping.</summary>
+    const int MostChecks = 6;
+
+    static int _checks;
+    static int _clean;
+    static int _frames;
 
     public sealed record Place(int X, int Z, int Y);
 
@@ -231,6 +259,7 @@ public static class RemoteCars
     {
         if (!Ghosting) return;
 
+        _frames++;
         SayWhatStuck(m);
         if (!AfterTheFrame) Put(m);
     }
