@@ -129,7 +129,8 @@ public static class RemoteCars
     /// term is negative because the game counts Y downwards, which is how a
     /// car going straight reads -4092 there rather than 4092.
     /// </summary>
-    internal static uint[] YawFor(double degrees) => Yaw(degrees);
+    /// <summary>A yaw as the game stores one, for whatever needs to build one.</summary>
+    public static uint[] YawFor(double degrees) => Yaw(degrees);
 
     static uint[] Yaw(double degrees)
     {
