@@ -88,6 +88,23 @@ public static class RemoteCars
     /// straight settles that in a second, without anyone having to compare two
     /// headings by eye.
     /// </summary>
+    /// <summary>
+    /// Whether to copy the whole 0xB40 of a car rather than its transform.
+    ///
+    /// The transform sticks - both copies, every frame checked - and the car
+    /// still does not turn, so the renderer reads its heading from somewhere
+    /// other than +0x218. Guessing which offset that is has been wrong five
+    /// times in this hunt, so this splits the question instead of answering
+    /// it: copy everything, and if the ghost then mirrors the player's heading
+    /// the answer is inside this structure and can be bisected. If it still
+    /// does not turn, the heading is outside it and the search moves.
+    ///
+    /// Blunt on purpose. It may well copy a pointer that belongs to car zero
+    /// and draw the wrong thing or fall over; that is a result too.
+    /// </summary>
+    static readonly bool Wholesale =
+        Environment.GetEnvironmentVariable("GT2_GHOST_WHOLE") is not (null or "");
+
     static readonly bool Spinning =
         Environment.GetEnvironmentVariable("GT2_GHOST_SPIN") is not (null or "");
 
@@ -267,6 +284,13 @@ public static class RemoteCars
     /// <summary>Puts the player's transform on the ghost, offset to one side.</summary>
     static void Put(IMemory m)
     {
+        if (Wholesale)
+        {
+            uint from = FirstCar;
+            uint to = FirstCar + CarStride;
+            for (uint i = 0; i < CarStride; i += 4) m.WriteU32(to + i, m.ReadU32(from + i));
+        }
+
         var mine = ReadTransform(m, 0);
         mine[1] = unchecked((uint)((int)mine[1] + Beside));
 
@@ -285,6 +309,7 @@ public static class RemoteCars
         var place = Read(m, 0);
         Console.Error.WriteLine(
             $"[ghost] car 1 is following car 0 whole, {Beside} to one side"
+            + (Wholesale ? $", the whole 0x{CarStride:X} of it" : "")
             + $" (car 0 is at {place.X}, {place.Z}, {place.Y})");
     }
 }
