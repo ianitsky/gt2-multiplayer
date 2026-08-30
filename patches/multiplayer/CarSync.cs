@@ -5,13 +5,18 @@ namespace GT2Port.Multiplayer;
 /// <summary>
 /// Keeps the other players' cars where their owners say they are.
 ///
-/// Only the place travels, and that is a decision rather than an omission. A
-/// car's heading at +0x218 is derived: the physics rebuilds it every frame
-/// from the car's own state, before the display list that draws it is built,
-/// so a heading written from outside is either undone or arrives too late. A
-/// car moved along its owner's path orients itself to that path, which is why
-/// the first ghost "followed the direction and the speed" while facing its own
-/// way. Approximately right for free beats exactly right never.
+/// A whole transform travels: where the car is and which way it faces.
+///
+/// The heading took two wrong turns to get right. It was left out at first, on
+/// the belief that a rotation written from outside could not reach the
+/// renderer - the physics rebuilds +0x218 every frame, and a readback taken a
+/// frame later showed it rebuilt. That readback could not tell "never drawn"
+/// from "drawn and then rebuilt", and the second is what was happening.
+///
+/// Then it was worked out from two places a frame apart, which turned every
+/// remote car to face the way it was travelling. Close to right, and not
+/// right: a car that is sliding points one way and moves another. The owner
+/// knows exactly which way its car faces, so the owner sends it.
 ///
 /// What travels is a seat in the room, not a slot in the race. Every machine
 /// rotates its own player to entrant 0 - the human always drives that one - so
@@ -24,37 +29,6 @@ public static class CarSync
 {
     public static bool Enabled { get; } =
         Environment.GetEnvironmentVariable("GT2_CAR_SYNC") is not (null or "");
-
-    /// <summary>
-    /// Where each seat's car was last seen, so a heading can be worked out.
-    ///
-    /// A remote car is teleported along its owner's path, but its own physics
-    /// keeps simulating an AI driving somewhere else, and the heading it draws
-    /// with is that simulation's - which is why a car that moves correctly
-    /// still faces the wrong way. Nothing is sent about heading and nothing
-    /// needs to be: two places a frame apart say which way a car is going.
-    /// </summary>
-    static readonly Dictionary<byte, RemoteCars.Place> _wasAt = [];
-
-    /// <summary>
-    /// How far a car must have moved before its heading is worth recomputing.
-    ///
-    /// A car sitting still has no direction of travel, and atan2 of nothing is
-    /// noise - a stationary car would spin on the spot.
-    /// </summary>
-    const int Moved = 200;
-
-    /// <summary>
-    /// The heading a car has when its rotation reads as the identity.
-    ///
-    /// Taken from the measurement rather than assumed: car zero's matrix was
-    /// within a few units of the identity while it travelled 465787 along X
-    /// and 2138 along Z, so a car pointing down +X is a rotation of nothing.
-    /// The row that ends up as the world-space forward axis is (cos, 0, sin),
-    /// which puts +Z at a quarter turn.
-    /// </summary>
-    static double Heading(RemoteCars.Place from, RemoteCars.Place to) =>
-        Math.Atan2(to.Z - from.Z, to.X - from.X) * 180.0 / Math.PI;
 
     static int _sent;
     static int _applied;
@@ -73,8 +47,7 @@ public static class CarSync
         int seat = Seat(race, race.Me);
         if (seat < 0) return;
 
-        var mine = RemoteCars.Read(m, 0);
-        wire.SendPlace((byte)seat, mine.X, mine.Z, mine.Y, ModeHook.HostToAnswer);
+        wire.SendPlace((byte)seat, RemoteCars.ReadTransform(m, 0), ModeHook.HostToAnswer);
         _sent++;
 
         wire.CollectPlaces();
@@ -86,44 +59,11 @@ public static class CarSync
             int slot = RaceGrid.SlotFor(race.Players, race.Me, race.Players[theirSeat].Name);
             if (slot <= 0) continue;
 
-            var now = new RemoteCars.Place(place.X, place.Z, place.Y);
-            PutThere(m, slot, theirSeat, now);
+            RemoteCars.WriteTransform(m, slot, place);
             _applied++;
         }
 
         Say(wire, race);
-    }
-
-    /// <summary>
-    /// Puts a car where its owner says, facing the way it is going.
-    ///
-    /// Written before the frame's work rather than after it. After is where a
-    /// rotation survives in memory, and it is also after whatever draws the
-    /// car, so it survives to no purpose. Before, the physics rebuilds it -
-    /// but it rebuilds it every frame anyway, and this is written every frame
-    /// too, so the car is drawn from whichever won that frame. Position proved
-    /// the point: written before, it draws.
-    /// </summary>
-    static void PutThere(IMemory m, int slot, byte seat, RemoteCars.Place now)
-    {
-        var words = RemoteCars.ReadTransform(m, slot);
-        words[0] = unchecked((uint)now.X);
-        words[1] = unchecked((uint)now.Z);
-        words[2] = unchecked((uint)now.Y);
-
-        if (_wasAt.TryGetValue(seat, out var before)
-            && (Math.Abs(now.X - before.X) > Moved || Math.Abs(now.Z - before.Z) > Moved))
-        {
-            var yaw = RemoteCars.YawFor(Heading(before, now));
-            for (int i = 0; i < yaw.Length; i++) words[3 + i] = yaw[i];
-            _wasAt[seat] = now;
-        }
-        else if (!_wasAt.ContainsKey(seat))
-        {
-            _wasAt[seat] = now;
-        }
-
-        RemoteCars.WriteTransform(m, slot, words);
     }
 
     /// <summary>Which seat in the room a player holds, which is what travels.</summary>

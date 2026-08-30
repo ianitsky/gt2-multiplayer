@@ -85,7 +85,14 @@ public sealed class LanSession : IDisposable
             socket.Dispose();
             throw;
         }
-        return new LanSession(socket, port, port, clock);
+        // The port the socket actually got, not the one that was asked for.
+        // They are the same for a host on its well-known port, and they are
+        // not when the caller passes 0 to mean "any" - and BoundPort exists
+        // precisely so a caller need not know which case it is in. A test
+        // pairing two sessions on ephemeral ports sent everything to port
+        // zero before this.
+        var bound = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
+        return new LanSession(socket, bound, bound, clock);
     }
 
     /// <summary>
@@ -362,10 +369,18 @@ public sealed class LanSession : IDisposable
     const byte Place = 3;
 
     /// <summary>
-    /// How wide a place message is: the magic, the kind, whose it is, and
-    /// three coordinates.
+    /// How wide a place message is: the magic, the kind, whose it is, and a
+    /// whole transform - three coordinates and a 3x3 - as nine words.
+    ///
+    /// The heading was worked out from two places at first, on the belief that
+    /// a rotation written from outside never reached the renderer. It does:
+    /// deriving it turned every remote car to face the way it was travelling,
+    /// which is close to right and not right. A car that is sliding points one
+    /// way and moves another, and the owner already knows which - so the
+    /// owner sends it.
     /// </summary>
-    const int PlaceBytes = 3 + 12;
+    const int TransformWords = 9;
+    const int PlaceBytes = 3 + TransformWords * 4;
 
     /// <summary>
     /// Where every other player says their car is, by their seat in the room.
@@ -376,22 +391,21 @@ public sealed class LanSession : IDisposable
     /// front of it locally. A seat number survives that rotation; a slot
     /// number would not.
     /// </summary>
-    readonly Dictionary<byte, (int X, int Z, int Y)> _places = [];
+    readonly Dictionary<byte, uint[]> _places = [];
 
-    public IReadOnlyDictionary<byte, (int X, int Z, int Y)> Places => _places;
+    public IReadOnlyDictionary<byte, uint[]> Places => _places;
 
-    /// <summary>Tells everyone where this machine's car is.</summary>
-    public void SendPlace(byte seat, int x, int z, int y, IPAddress? host = null)
+    /// <summary>Tells everyone where this machine's car is and which way it faces.</summary>
+    public void SendPlace(byte seat, uint[] transform, IPAddress? host = null)
     {
-        if (_disposed) return;
+        if (_disposed || transform.Length < TransformWords) return;
 
         var data = new byte[PlaceBytes];
         data[0] = StartMagic;
         data[1] = Place;
         data[2] = seat;
-        BitConverter.TryWriteBytes(data.AsSpan(3), x);
-        BitConverter.TryWriteBytes(data.AsSpan(7), z);
-        BitConverter.TryWriteBytes(data.AsSpan(11), y);
+        for (int i = 0; i < TransformWords; i++)
+            BitConverter.TryWriteBytes(data.AsSpan(3 + i * 4), transform[i]);
 
         if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
@@ -424,9 +438,10 @@ public sealed class LanSession : IDisposable
 
             if (data.Length < PlaceBytes || data[0] != StartMagic || data[1] != Place) continue;
 
-            _places[data[2]] = (BitConverter.ToInt32(data, 3),
-                                BitConverter.ToInt32(data, 7),
-                                BitConverter.ToInt32(data, 11));
+            var transform = new uint[TransformWords];
+            for (int w = 0; w < TransformWords; w++)
+                transform[w] = BitConverter.ToUInt32(data, 3 + w * 4);
+            _places[data[2]] = transform;
         }
     }
 
