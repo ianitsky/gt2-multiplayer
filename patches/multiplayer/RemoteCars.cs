@@ -77,6 +77,55 @@ public static class RemoteCars
     static readonly int Beside =
         int.TryParse(Environment.GetEnvironmentVariable("GT2_GHOST_BESIDE"), out int b) ? b : 22_000;
 
+    /// <summary>
+    /// Whether to spin the ghost instead of copying the player's heading.
+    ///
+    /// Copying it makes the ghost face roughly where the player faces, which
+    /// is exactly the thing that is hard to judge from a replay - and the
+    /// readback says the write survives the frame, so what is in doubt is not
+    /// whether the words stick but whether these are the words the car is
+    /// drawn from. A ghost turning steadily on its own while the player drives
+    /// straight settles that in a second, without anyone having to compare two
+    /// headings by eye.
+    /// </summary>
+    static readonly bool Spinning =
+        Environment.GetEnvironmentVariable("GT2_GHOST_SPIN") is not (null or "");
+
+    /// <summary>One in the game's twelve-bit fixed point.</summary>
+    const int One = 4096;
+
+    /// <summary>How far to turn the spinning ghost each frame, in degrees.</summary>
+    const double PerFrame = 3.0;
+
+    static double _turned;
+
+    /// <summary>
+    /// A yaw as the game stores one: a 3x3 of sixteen-bit values in rows of
+    /// four shorts, so the diagonal lands on shorts 0, 5 and 10. The middle
+    /// term is negative because the game counts Y downwards, which is how a
+    /// car going straight reads -4092 there rather than 4092.
+    /// </summary>
+    internal static uint[] YawFor(double degrees) => Yaw(degrees);
+
+    static uint[] Yaw(double degrees)
+    {
+        double r = degrees * Math.PI / 180.0;
+        short cos = (short)Math.Round(Math.Cos(r) * One);
+        short sin = (short)Math.Round(Math.Sin(r) * One);
+
+        short[] m =
+        [
+            cos, 0, sin, 0,
+            0, (short)-One, 0, 0,
+            (short)-sin, 0, cos, 0,
+        ];
+
+        var words = new uint[6];
+        for (int i = 0; i < words.Length; i++)
+            words[i] = (uint)((ushort)m[i * 2] | ((uint)(ushort)m[i * 2 + 1] << 16));
+        return words;
+    }
+
     static bool _said;
     static uint[]? _wrote;
     static bool _checked;
@@ -163,6 +212,14 @@ public static class RemoteCars
 
         var mine = ReadTransform(m, 0);
         mine[1] = unchecked((uint)((int)mine[1] + Beside));
+
+        if (Spinning)
+        {
+            _turned += PerFrame;
+            var yaw = Yaw(_turned);
+            for (int i = 0; i < yaw.Length; i++) mine[3 + i] = yaw[i];
+        }
+
         WriteTransform(m, 1, mine);
         _wrote = mine;
 

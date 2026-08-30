@@ -79,4 +79,42 @@ public class RemoteCarsTests
         for (uint i = 0; i < RemoteCars.TransformWords; i++)
             Assert.Equal(500u + i, m.ReadU32(at + RemoteCars.SecondCopy + i * 4u));
     }
+
+    /// <summary>
+    /// The game stores a rotation as a 3x3 of sixteen-bit values in rows of
+    /// four shorts, so the diagonal falls on shorts 0, 5 and 10 - which is how
+    /// a car going straight reads 4095, -4092, 4093 there. A yaw of nothing
+    /// has to come out the same shape, or the ghost is being handed nonsense.
+    /// </summary>
+    [Fact]
+    public void BuildsAYawTheWayTheGameStoresOne()
+    {
+        var words = RemoteCars.YawFor(0);
+
+        short[] m = new short[12];
+        for (int i = 0; i < words.Length; i++)
+        {
+            m[i * 2] = (short)(words[i] & 0xFFFF);
+            m[i * 2 + 1] = (short)(words[i] >> 16);
+        }
+
+        Assert.Equal(4096, m[0]);    // the diagonal, at 0, 5 and 10
+        Assert.Equal(-4096, m[5]);   // negative, because Y counts downwards
+        Assert.Equal(4096, m[10]);
+        Assert.Equal(0, m[1]);
+        Assert.Equal(0, m[2]);
+    }
+
+    /// <summary>A quarter turn swaps the two horizontal terms, which is what makes it visible.</summary>
+    [Fact]
+    public void TurnsAQuarterCircleIntoTheOffDiagonal()
+    {
+        var words = RemoteCars.YawFor(90);
+
+        short m00 = (short)(words[0] & 0xFFFF);
+        short m02 = (short)(words[1] & 0xFFFF);
+
+        Assert.Equal(0, m00);
+        Assert.Equal(4096, m02);
+    }
 }
