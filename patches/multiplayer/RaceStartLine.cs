@@ -185,6 +185,7 @@ public static class RaceStartLine
             // as data; asking which function writes a known address is the
             // game answering instead of the port guessing.
             RecompOne.Runtime.Memory.MemoryWatch.Arm();
+            RecompOne.Runtime.Memory.MemoryWatch.ArmReads();
 
             if (HoldsHere)
             {
