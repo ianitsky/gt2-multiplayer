@@ -30,6 +30,24 @@ public static class CarSync
     public static bool Enabled { get; } =
         Environment.GetEnvironmentVariable("GT2_CAR_SYNC") is not (null or "");
 
+    /// <summary>
+    /// A fixed heading to force on every remote car, in degrees, when
+    /// GT2_SYNC_YAW names one.
+    ///
+    /// Two things would look the same from the driver's seat and they need
+    /// opposite fixes: a matrix arriving wrong, and a matrix arriving right
+    /// and not being what the car is drawn from. Sending the owner's own
+    /// matrix should have settled it and did not, so this removes the sender
+    /// from the question entirely. A car forced to a fixed heading either
+    /// points that way wherever it drives - in which case these are the words
+    /// the renderer uses and the fault is in what is being sent - or it keeps
+    /// pointing along its own path, in which case they are not, and every
+    /// reading that suggested otherwise was a coincidence.
+    /// </summary>
+    static readonly double? Forced =
+        double.TryParse(Environment.GetEnvironmentVariable("GT2_SYNC_YAW"),
+            System.Globalization.CultureInfo.InvariantCulture, out double y) ? y : null;
+
     static int _sent;
     static int _applied;
     static bool _said;
@@ -59,11 +77,42 @@ public static class CarSync
             int slot = RaceGrid.SlotFor(race.Players, race.Me, race.Players[theirSeat].Name);
             if (slot <= 0) continue;
 
-            RemoteCars.WriteTransform(m, slot, place);
+            var landing = place;
+            if (Forced is { } degrees)
+            {
+                landing = (uint[])place.Clone();
+                var yaw = RemoteCars.YawFor(degrees);
+                for (int i = 0; i < yaw.Length; i++) landing[3 + i] = yaw[i];
+            }
+
+            RemoteCars.WriteTransform(m, slot, landing);
+            SayWhatArrived(m, slot, theirSeat, landing);
             _applied++;
         }
 
         Say(wire, race);
+    }
+
+    static readonly HashSet<byte> _shown = [];
+
+    /// <summary>
+    /// Says once per seat what was written and what the car reads back, so a
+    /// wire that mangles a matrix can be told from a car that ignores one.
+    /// </summary>
+    static void SayWhatArrived(IMemory m, int slot, byte seat, uint[] written)
+    {
+        if (!_shown.Add(seat)) return;
+
+        var back = RemoteCars.ReadTransform(m, slot);
+        Console.Error.WriteLine(
+            $"[sync] seat {seat} into slot {slot}"
+            + (Forced is { } d ? $", heading forced to {d} degrees" : ""));
+        Console.Error.WriteLine(
+            "[sync]   written " + string.Join(" ", written.Select(w => ((int)w).ToString())));
+        Console.Error.WriteLine(
+            "[sync]   reads   " + string.Join(" ", back.Select(w => ((int)w).ToString())));
+        Console.Error.WriteLine(
+            "[sync]   mine    " + string.Join(" ", RemoteCars.ReadTransform(m, 0).Select(w => ((int)w).ToString())));
     }
 
     /// <summary>Which seat in the room a player holds, which is what travels.</summary>
