@@ -10,7 +10,7 @@ public class LanSessionTests
     // Well clear of LanDiscoveryTests' BasePort+0..13 (34800-34813) and of the
     // extra LanDiscovery/LanSession ports SessionTests binds (34740, 34741,
     // 34742, 34750, 34751, 34752) - see those files for why each test needs
-    // its own port. Offsets below run through BasePort+14.
+    // its own port. Offsets below run through BasePort+21.
     const int BasePort = 34760;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
@@ -447,44 +447,154 @@ public class LanSessionTests
     // ---- the start barrier ----
     //
     // The barrier runs after the lobby has exited, and nothing calls ClientTick
-    // there. A client that learned of Go only through ClientTick would wait for
-    // a flag nobody could raise, sit out its whole patience and start alone -
-    // which is exactly what two instances did.
+    // there. A client that learned of the start only through ClientTick would
+    // wait for a flag nobody could raise, sit out its whole patience and start
+    // alone - which is exactly what two instances did.
+    //
+    // The barrier's own messages are separate from the lobby's on purpose. They
+    // were not, and a measured run of two machines shows the price: the client
+    // arrived carrying the lobby's "the race is on", released itself one
+    // millisecond later, and the host - 2.1s behind - was satisfied by the one
+    // report that client had sent on its way past. The tests below hold each
+    // half of that apart.
 
-    /// <summary>The host's "everyone may start", written out rather than shared.</summary>
-    static readonly byte[] GoDatagram = [0xA5, 2];
+    /// <summary>The host's "the lobby is over", written out rather than shared.</summary>
+    static readonly byte[] LeaveTheLobbyDatagram = [0xA5, 2];
+
+    /// <summary>The host's "everyone is at the line, begin".</summary>
+    static readonly byte[] StartTheRaceDatagram = [0xA5, 4];
+
+    /// <summary>A player's "I have the race loaded and am holding".</summary>
+    static readonly byte[] AtTheLineDatagram = [0xA5, 1];
 
     [Fact]
-    public void A_client_out_of_the_lobby_still_hears_the_hosts_go()
+    public void A_client_holding_at_the_line_hears_the_hosts_start()
     {
         const int hostPort = BasePort + 15;
         using var client = LanSession.ForClient(hostPort, () => _now);
         using var host = new UdpClient(0);
 
-        Assert.False(client.HostSaidGo);
+        Assert.False(client.HostSaidStartTheRace);
 
-        host.Send(GoDatagram, GoDatagram.Length, new IPEndPoint(IPAddress.Loopback, client.BoundPort));
-        WaitForDelivery(client);
-        client.CollectGo();
+        Deliver(host, client, StartTheRaceDatagram);
+        client.CollectTheStart();
 
-        Assert.True(client.HostSaidGo);
+        Assert.True(client.HostSaidStartTheRace);
     }
 
     [Fact]
-    public void Anything_that_is_not_a_go_leaves_the_client_waiting()
+    public void The_message_that_ended_the_lobby_does_not_release_the_line()
     {
         const int hostPort = BasePort + 16;
         using var client = LanSession.ForClient(hostPort, () => _now);
         using var host = new UdpClient(0);
 
-        // A report at the line, which is the other message on this channel and
-        // travels the opposite way - a client must not release itself on one.
-        byte[] atTheLine = [0xA5, 1];
-        host.Send(atTheLine, atTheLine.Length, new IPEndPoint(IPAddress.Loopback, client.BoundPort));
-        WaitForDelivery(client);
-        client.CollectGo();
+        // This is the one that used to. It is the host saying the race is on
+        // and the lobby is over, which every client has already heard by the
+        // time it reaches a line - so a line satisfied by it is a line nobody
+        // ever waits at.
+        Deliver(host, client, LeaveTheLobbyDatagram);
+        client.CollectTheStart();
 
-        Assert.False(client.HostSaidGo);
+        Assert.False(client.HostSaidStartTheRace);
+    }
+
+    [Fact]
+    public void A_report_at_the_line_does_not_release_the_line()
+    {
+        const int hostPort = BasePort + 17;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        // The other message on this channel, travelling the opposite way - a
+        // client must not release itself on one.
+        Deliver(host, client, AtTheLineDatagram);
+        client.CollectTheStart();
+
+        Assert.False(client.HostSaidStartTheRace);
+    }
+
+    [Fact]
+    public void A_car_moving_does_not_release_the_line()
+    {
+        const int hostPort = BasePort + 18;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        // A place carries the same magic and the code next to the start's, so
+        // the only thing keeping them apart is that a place is twenty-one bytes
+        // and a control message is two. A machine already released and driving
+        // must not release the ones still holding.
+        var place = new byte[21];
+        place[0] = 0xA5;
+        place[1] = 3;
+        Deliver(host, client, place);
+        client.CollectTheStart();
+
+        Assert.False(client.HostSaidStartTheRace);
+    }
+
+    [Fact]
+    public void Opening_a_line_forgets_a_start_already_heard()
+    {
+        const int hostPort = BasePort + 19;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        Deliver(host, client, StartTheRaceDatagram);
+        client.CollectTheStart();
+        Assert.True(client.HostSaidStartTheRace);
+
+        // A second race in the same session gets its own line. The start that
+        // released the first one says nothing about this one.
+        client.OpenTheStartLine();
+
+        Assert.False(client.HostSaidStartTheRace);
+    }
+
+    [Fact]
+    public void Opening_a_line_drops_what_was_already_queued()
+    {
+        const int hostPort = BasePort + 20;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        // Arrived before the line opened, and still sitting in the socket:
+        // clearing the flag alone would leave the first collect to undo it.
+        Deliver(host, client, StartTheRaceDatagram);
+        client.OpenTheStartLine();
+        client.CollectTheStart();
+
+        Assert.False(client.HostSaidStartTheRace);
+    }
+
+    [Fact]
+    public void Opening_a_line_forgets_who_was_at_the_previous_one()
+    {
+        const int hostPort = BasePort + 21;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var player = new UdpClient(0);
+
+        // The host counts itself, so one report makes two.
+        Assert.Equal(1, host.WaitingAtTheLine);
+
+        Deliver(player, host, AtTheLineDatagram);
+        host.CollectAtTheLine();
+        Assert.Equal(2, host.WaitingAtTheLine);
+
+        // A player at the previous race's line is not thereby at this one's.
+        // The host believing otherwise is the half of the failure that let it
+        // start on a report sent 2.1 seconds earlier.
+        host.OpenTheStartLine();
+
+        Assert.Equal(1, host.WaitingAtTheLine);
+    }
+
+    /// <summary>Sends one datagram and waits for it to actually arrive.</summary>
+    static void Deliver(UdpClient from, LanSession to, byte[] data)
+    {
+        from.Send(data, data.Length, new IPEndPoint(IPAddress.Loopback, to.BoundPort));
+        WaitForDelivery(to);
     }
 
     /// <summary>

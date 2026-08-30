@@ -163,10 +163,28 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const byte StartMagic = 0xA5;
 
-    const byte AtTheLine = 1;   // a player has the race loaded and is waiting
-    const byte Go = 2;          // the host says everyone may start
+    /// <summary>
+    /// The host says two different things over the race's lifetime, and they
+    /// are two different messages - which they were not.
+    ///
+    /// Leaving the lobby and beginning the race were both A5 02, and the flag
+    /// either raised was never lowered between them. A measured run says what
+    /// that costs: the client reached the barrier with the lobby's go already
+    /// in hand and released itself one millisecond later, and the host -
+    /// arriving 2.1s behind - was satisfied by the single report that client
+    /// had sent on its way past. Two machines, one barrier, no wait, and a
+    /// race that began 2.111 seconds apart.
+    ///
+    /// Three is skipped because <see cref="Place"/> already has it under this
+    /// same magic. The two control messages are two bytes and a place is
+    /// twenty-one, so the length would tell them apart anyway - but a reader
+    /// that forgot to check would raise the start on the first car that moved.
+    /// </summary>
+    const byte AtTheLine = 1;      // a player has the race loaded and is holding
+    const byte LeaveTheLobby = 2;  // the host says the race is on - come to the race
+    const byte StartTheRace = 4;   // the host says everyone is here - begin now
 
-    /// <summary>Where each player that reported in came from, so Go can reach them.</summary>
+    /// <summary>Where each player holding at the line came from, so the start can reach them.</summary>
     readonly HashSet<IPEndPoint> _atTheLine = [];
 
     /// <summary>
@@ -179,8 +197,45 @@ public sealed class LanSession : IDisposable
     /// </summary>
     readonly HashSet<IPEndPoint> _known = [];
 
-    /// <summary>How many players have reported in, the host included.</summary>
+    /// <summary>How many players are holding at the line, the host included.</summary>
     public int WaitingAtTheLine => _atTheLine.Count + 1;
+
+    /// <summary>
+    /// Opens a fresh start line, so nothing said before this moment can
+    /// satisfy the barrier that begins now.
+    ///
+    /// Three things are forgotten and all three have been seen to matter. The
+    /// reports, because a player who was at the previous line is not thereby
+    /// at this one. The start, for the same reason. And whatever is already
+    /// sitting in the socket, because a datagram that arrived before the line
+    /// opened was answering a question nobody had asked yet - without this the
+    /// first collect would undo the reset.
+    ///
+    /// Dropping live reports costs nothing: a player at the line repeats
+    /// theirs every frame until it is answered, so the host hears again within
+    /// a frame, and what it then hears is that they are there now rather than
+    /// that they once were.
+    /// </summary>
+    public void OpenTheStartLine()
+    {
+        if (_disposed) return;
+
+        _atTheLine.Clear();
+        HostSaidStartTheRace = false;
+
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        {
+            IPEndPoint? from = null;
+            try
+            {
+                _socket.Receive(ref from);
+            }
+            catch (SocketException)
+            {
+                return;
+            }
+        }
+    }
 
     /// <summary>Tells the host this machine has the race loaded and is holding.</summary>
     public void ReportAtTheLine(IPAddress hostAddress)
@@ -216,34 +271,55 @@ public sealed class LanSession : IDisposable
         }
     }
 
-    /// <summary>Releases everyone the host has heard from, at the line or not.</summary>
-    public void SendGo()
+    /// <summary>
+    /// Tells everyone the host has heard from that the race is on and the
+    /// lobby is over. Addressed to the lobby's own addresses because at that
+    /// moment nobody has reached a line yet - this is the message that sends
+    /// them to one.
+    /// </summary>
+    public void SendLeaveTheLobby()
     {
         if (_disposed) return;
-        foreach (var player in _known.Union(_atTheLine)) Send([StartMagic, Go], player);
+        foreach (var player in _known.Union(_atTheLine)) Send([StartMagic, LeaveTheLobby], player);
     }
 
     /// <summary>
-    /// Whether the host has said to start.
-    ///
-    /// Set from two places, because there are two periods to cover and they
-    /// have opposite needs. During the lobby <see cref="ClientTick"/> sets it,
-    /// since the client needs every room announcement it is sent and a second
-    /// reader would swallow them. After the lobby, nothing calls ClientTick at
-    /// all - so a barrier relying on it alone waits for a flag nobody can
-    /// raise, and every client sits out its full patience while the host races
-    /// away. <see cref="CollectGo"/> covers that period.
+    /// Releases everyone holding at the line. A different message from
+    /// <see cref="SendLeaveTheLobby"/> on purpose - see the codes above for
+    /// what happened while they were the same one.
     /// </summary>
-    public bool HostSaidGo { get; private set; }
+    public void SendStartTheRace()
+    {
+        if (_disposed) return;
+        foreach (var player in _known.Union(_atTheLine)) Send([StartMagic, StartTheRace], player);
+    }
 
     /// <summary>
-    /// Looks for the host's Go, for a client that has left the lobby.
-    ///
-    /// Room announcements no longer matter here - the room is settled and the
-    /// race is loading - so swallowing them costs nothing, which is what makes
-    /// a second reader safe at this point and not during the lobby.
+    /// Whether the host has ended the lobby. Raised by <see cref="ClientTick"/>,
+    /// which is the only thing reading the socket while the lobby runs - the
+    /// client needs every room announcement it is sent, and a second reader
+    /// would swallow them.
     /// </summary>
-    public void CollectGo()
+    public bool HostSaidLeaveTheLobby { get; private set; }
+
+    /// <summary>
+    /// Whether the host has released the line. Lowered by
+    /// <see cref="OpenTheStartLine"/> and raised only by
+    /// <see cref="CollectTheStart"/>, so it says something about this race
+    /// rather than about the lobby that led to it.
+    /// </summary>
+    public bool HostSaidStartTheRace { get; private set; }
+
+    /// <summary>
+    /// Looks for the host's start, for a client holding at the line.
+    ///
+    /// Nothing calls <see cref="ClientTick"/> by this point, so a barrier
+    /// relying on it would wait for a flag nobody can raise. Room
+    /// announcements no longer matter either - the room is settled and the
+    /// race is loaded - so swallowing them costs nothing, which is what makes
+    /// a second reader safe here and not during the lobby.
+    /// </summary>
+    public void CollectTheStart()
     {
         if (_disposed) return;
 
@@ -260,7 +336,8 @@ public sealed class LanSession : IDisposable
                 return;
             }
 
-            if (data.Length >= 2 && data[0] == StartMagic && data[1] == Go) HostSaidGo = true;
+            if (data.Length == 2 && data[0] == StartMagic && data[1] == StartTheRace)
+                HostSaidStartTheRace = true;
         }
     }
 
@@ -321,9 +398,9 @@ public sealed class LanSession : IDisposable
                 return;
             }
 
-            if (data.Length >= 2 && data[0] == StartMagic && data[1] == Go)
+            if (data.Length >= 2 && data[0] == StartMagic && data[1] == LeaveTheLobby)
             {
-                HostSaidGo = true;
+                HostSaidLeaveTheLobby = true;
                 continue;
             }
 

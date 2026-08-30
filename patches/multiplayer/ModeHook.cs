@@ -221,6 +221,11 @@ public static class ModeHook
         var began = DateTime.UtcNow;
         var until = began + StartPatience;
 
+        // Nothing said before this line can satisfy it. The lobby's own "the
+        // race is on" used to, which is how two machines both walked through
+        // a barrier neither had waited at.
+        _lanSession.OpenTheStartLine();
+
         // Timed, because "the race did not start together" has three different
         // causes and the clock tells them apart: a barrier that was never
         // reached prints nothing, one that worked prints a short wait, and one
@@ -252,11 +257,11 @@ public static class ModeHook
                     // everyone else has already had.
                     for (int i = 0; i < 5; i++)
                     {
-                        _lanSession.SendGo();
+                        _lanSession.SendStartTheRace();
                         Thread.Sleep(16);
                     }
                     Console.Error.WriteLine(
-                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} everyone is at the line - go"
+                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} everyone is at the line - start"
                         + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
                     return;
                 }
@@ -264,11 +269,11 @@ public static class ModeHook
             else if (_raceHost is { } host)
             {
                 _lanSession.ReportAtTheLine(host);
-                _lanSession.CollectGo();
-                if (_lanSession.HostSaidGo)
+                _lanSession.CollectTheStart();
+                if (_lanSession.HostSaidStartTheRace)
                 {
                     Console.Error.WriteLine(
-                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host said go"
+                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host said start"
                         + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
                     return;
                 }
@@ -410,7 +415,8 @@ public static class ModeHook
             // there is nothing left to build the race from.
             while (_panel!.IsOpen
                    && !(started = _panel.TryConsumeStartRequest()
-                        || (_session!.Phase == SessionPhase.Joined && _lanSession?.HostSaidGo == true)))
+                        || (_session!.Phase == SessionPhase.Joined
+                            && _lanSession?.HostSaidLeaveTheLobby == true)))
             {
                 RecompOne.Runtime.Runtime.PumpHost();
                 _discovery!.Tick();
@@ -510,8 +516,7 @@ public static class ModeHook
             if (started && _session!.Phase == SessionPhase.Hosting)
                 for (int i = 0; i < 8; i++)
                 {
-                    _lanSession?.CollectAtTheLine();
-                    _lanSession?.SendGo();
+                    _lanSession?.SendLeaveTheLobby();
                     Thread.Sleep(16);
                 }
 
