@@ -69,13 +69,43 @@ public static class RemoteCars
     /// <summary>
     /// How far to one side to put the ghost, in the game's fixed point.
     ///
-    /// Far enough to see it is not the player's own car, near enough to stay
-    /// on a track: the six cars in a measured race sat within about a hundred
-    /// thousand of each other.
+    /// The contact points around a car sit about eighteen thousand apart, so
+    /// that is roughly a car's width. Sixty thousand was three of them and put
+    /// the ghost too far away to watch - and a thing you cannot see is a thing
+    /// you cannot tell is working. GT2_GHOST_BESIDE moves it.
     /// </summary>
-    const int Beside = 60_000;
+    static readonly int Beside =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_GHOST_BESIDE"), out int b) ? b : 22_000;
 
     static bool _said;
+    static uint[]? _wrote;
+    static bool _checked;
+
+    /// <summary>
+    /// Whether what was written last frame is still there this frame.
+    ///
+    /// Watching a ghost and judging whether it turns is a hard thing to do
+    /// from a replay, and an easy thing for the program to answer: write nine
+    /// words, come back a frame later, and see which of them the game has put
+    /// back. Whatever it overwrites, it recomputes - and recomputed state
+    /// cannot be driven from a wire.
+    /// </summary>
+    static void SayWhatStuck(IMemory m)
+    {
+        if (_checked || _wrote is null) return;
+        _checked = true;
+
+        var now = ReadTransform(m, 1);
+        var lost = new List<string>();
+        for (int i = 0; i < now.Length; i++)
+            if (now[i] != _wrote[i])
+                lost.Add($"+0x{Transform + (uint)(i * 4):X3} written {(int)_wrote[i]} now {(int)now[i]}");
+
+        Console.Error.WriteLine(lost.Count == 0
+            ? "[ghost] a frame later the whole transform is still as written"
+            : $"[ghost] a frame later {lost.Count} of {now.Length} words were put back:");
+        foreach (string one in lost) Console.Error.WriteLine($"[ghost]   {one}");
+    }
 
     public sealed record Place(int X, int Z, int Y);
 
@@ -129,9 +159,12 @@ public static class RemoteCars
         // The whole transform, not just the place. Copying the place alone
         // gave a car that went where the player went and kept facing whatever
         // way it had been pointing.
+        SayWhatStuck(m);
+
         var mine = ReadTransform(m, 0);
         mine[1] = unchecked((uint)((int)mine[1] + Beside));
         WriteTransform(m, 1, mine);
+        _wrote = mine;
 
         if (_said) return;
         _said = true;
