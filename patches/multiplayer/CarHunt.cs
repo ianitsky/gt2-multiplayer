@@ -75,22 +75,25 @@ public static class CarHunt
     static bool _reported;
 
     /// <summary>What the six runs said the cars are spaced by.</summary>
-    const uint CarZero = 0x800AA12Cu;
-    const int CarStride = 0xB40;
+    const uint CarZero = 0x8015F894u;
+    const int CarStride = 0x5000;
 
     /// <summary>
-    /// Where car zero's object is taken to begin.
+    /// Where car zero begins.
     ///
-    /// The display lists that first showed the stride sit at +0x628 into it,
-    /// and the run just below them starts 0x10 past this - so this is the
-    /// object's front, near enough to line six windows up against. It is a
-    /// starting point for the report below, not a claim.
+    /// Deduced rather than recognised: entry_80028DDC builds each car at
+    /// [SP+0x40] + 0x000B6394 + 0x800A9500 and moves that offset on by 0x5000
+    /// per entrant. Printing the first 0x400 of all six showed them populated
+    /// and all different from each other - a pointer apiece, 0x888888 three
+    /// times over - and none of it moving, so the front of a car is its model
+    /// and its appearance. Twenty kilobytes remain, and the differ is pointed
+    /// at them.
     /// </summary>
     static readonly uint CarBase =
         uint.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_BASE"),
             System.Globalization.NumberStyles.HexNumber,
             System.Globalization.CultureInfo.InvariantCulture, out uint b)
-            ? b : CarZero - 0x628u;
+            ? b : CarZero;
 
     /// <summary>How many of the six a field has to move in to be worth naming.</summary>
     const int Most = 4;
