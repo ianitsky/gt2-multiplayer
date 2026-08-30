@@ -179,6 +179,13 @@ public static class RaceStartLine
             // only filled by menus a launch walks past.
             CourseRoster.Say(m, "at the race's first frame");
 
+            // From here, so what a watch catches is the race writing rather
+            // than the overlay setting itself up. Two attempts to recognise a
+            // car by the shape of its numbers have now found code being read
+            // as data; asking which function writes a known address is the
+            // game answering instead of the port guessing.
+            RecompOne.Runtime.Memory.MemoryWatch.Arm();
+
             if (HoldsHere)
             {
                 _held = true;
