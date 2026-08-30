@@ -1409,3 +1409,44 @@ large enough to be angles, but nothing confirms either.
 
 These are offsets into the **0x800A9B04 / 0xB40** array, not the 0x8015F894 /
 0x5000 one.
+
+
+## Cars over the wire
+
+Two machines race with each other's cars on the track, moving as their owners
+move them, with no jitter, no teleporting and no lag. What travels is a seat in
+the room and a whole transform; what is applied is the place.
+
+### What +0x218 is, and is not
+
+It packs as a 3x3 in rows of four shorts. That much is certain: the matrix
+measured off a moving car is orthonormal that way and no other, with a
+determinant of minus one - a left-handed frame, consistent with Y counted
+downwards.
+
+It is **not** a car's orientation in the world. All six cars read within a few
+units of the identity at the same moment, on a track that curves. Six world
+orientations cannot all be the identity at once.
+
+That single fact explains both failed attempts, and they failed differently in
+exactly the way it predicts:
+
+- **Copying the owner's matrix** copies a value relative to the owner's frame.
+  The car is drawn intact and facing wrongly.
+- **Building a world yaw** writes something the game does not mean. The car is
+  drawn stretched and tilted - which is at least proof that these words reach
+  the renderer, against an earlier conclusion that they did not.
+
+The place is relative to nothing, which is why it works.
+
+### Corrections this cost
+
+Worth recording, because each was believed for at least one run:
+
+- "The rotation is derived and cannot be written from outside." It can; the
+  readback that said otherwise compared a frame later, after the physics had
+  rebuilt it, and could not tell "never drawn" from "drawn and then rebuilt".
+- "0x800A9D10 is a buffer, not a field." It is both, at different times - a
+  load buffer until the race reuses the memory.
+- "The six 0xB40 slots are the cars." Three times the differ counted display
+  lists and was believed.
