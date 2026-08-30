@@ -369,18 +369,19 @@ public sealed class LanSession : IDisposable
     const byte Place = 3;
 
     /// <summary>
-    /// How wide a place message is: the magic, the kind, whose it is, and a
-    /// whole transform - three coordinates and a 3x3 - as nine words.
+    /// How wide a place message is: the magic, the kind, whose it is, three
+    /// coordinates as words, and three angles as shorts.
     ///
-    /// The heading was worked out from two places at first, on the belief that
-    /// a rotation written from outside never reached the renderer. It does:
-    /// deriving it turned every remote car to face the way it was travelling,
-    /// which is close to right and not right. A car that is sliding points one
-    /// way and moves another, and the owner already knows which - so the
-    /// owner sends it.
+    /// The nine-word transform this used to carry held the rotation matrix as
+    /// well, which was six words of nothing: the game rebuilds that matrix
+    /// every frame from the three angles, so sending it was sending an answer
+    /// the receiver was about to work out again. The angles are what one
+    /// machine cannot work out about another's car - a car that is sliding
+    /// points one way and moves another, and only its owner knows which.
     /// </summary>
-    const int TransformWords = 9;
-    const int PlaceBytes = 3 + TransformWords * 4;
+    const int PlaceWords = 3;
+    const int PlaceAngles = 3;
+    const int PlaceBytes = 3 + PlaceWords * 4 + PlaceAngles * 2;
 
     /// <summary>
     /// Where every other player says their car is, by their seat in the room.
@@ -391,21 +392,25 @@ public sealed class LanSession : IDisposable
     /// front of it locally. A seat number survives that rotation; a slot
     /// number would not.
     /// </summary>
-    readonly Dictionary<byte, uint[]> _places = [];
+    readonly Dictionary<byte, RemoteCars.Pose> _places = [];
 
-    public IReadOnlyDictionary<byte, uint[]> Places => _places;
+    public IReadOnlyDictionary<byte, RemoteCars.Pose> Places => _places;
 
     /// <summary>Tells everyone where this machine's car is and which way it faces.</summary>
-    public void SendPlace(byte seat, uint[] transform, IPAddress? host = null)
+    public void SendPlace(byte seat, RemoteCars.Pose pose, IPAddress? host = null)
     {
-        if (_disposed || transform.Length < TransformWords) return;
+        if (_disposed) return;
 
         var data = new byte[PlaceBytes];
         data[0] = StartMagic;
         data[1] = Place;
         data[2] = seat;
-        for (int i = 0; i < TransformWords; i++)
-            BitConverter.TryWriteBytes(data.AsSpan(3 + i * 4), transform[i]);
+        BitConverter.TryWriteBytes(data.AsSpan(3), pose.Place.X);
+        BitConverter.TryWriteBytes(data.AsSpan(7), pose.Place.Z);
+        BitConverter.TryWriteBytes(data.AsSpan(11), pose.Place.Y);
+        BitConverter.TryWriteBytes(data.AsSpan(15), pose.AroundX);
+        BitConverter.TryWriteBytes(data.AsSpan(17), pose.AroundY);
+        BitConverter.TryWriteBytes(data.AsSpan(19), pose.AroundZ);
 
         if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
@@ -438,10 +443,14 @@ public sealed class LanSession : IDisposable
 
             if (data.Length < PlaceBytes || data[0] != StartMagic || data[1] != Place) continue;
 
-            var transform = new uint[TransformWords];
-            for (int w = 0; w < TransformWords; w++)
-                transform[w] = BitConverter.ToUInt32(data, 3 + w * 4);
-            _places[data[2]] = transform;
+            _places[data[2]] = new RemoteCars.Pose(
+                new RemoteCars.Place(
+                    BitConverter.ToInt32(data, 3),
+                    BitConverter.ToInt32(data, 7),
+                    BitConverter.ToInt32(data, 11)),
+                BitConverter.ToInt16(data, 15),
+                BitConverter.ToInt16(data, 17),
+                BitConverter.ToInt16(data, 19));
         }
     }
 

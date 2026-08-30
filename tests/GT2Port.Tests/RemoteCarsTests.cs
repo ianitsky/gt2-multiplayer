@@ -81,40 +81,71 @@ public class RemoteCarsTests
     }
 
     /// <summary>
-    /// The game stores a rotation as a 3x3 of sixteen-bit values in rows of
-    /// four shorts, so the diagonal falls on shorts 0, 5 and 10 - which is how
-    /// a car going straight reads 4095, -4092, 4093 there. A yaw of nothing
-    /// has to come out the same shape, or the ghost is being handed nonsense.
+    /// A pose is where a car is and the three angles it faces along, and both
+    /// have to survive the round trip or a remote car is drawn wrong.
     /// </summary>
     [Fact]
-    public void BuildsAYawTheWayTheGameStoresOne()
+    public void ReadsBackTheWholePoseItWrote()
     {
-        var words = RemoteCars.YawFor(0);
+        var m = new PSMemory();
+        var pose = new RemoteCars.Pose(new RemoteCars.Place(-9, 8, -7), 37, 151, -1024);
 
-        short[] m = new short[12];
-        for (int i = 0; i < words.Length; i++)
-        {
-            m[i * 2] = (short)(words[i] & 0xFFFF);
-            m[i * 2 + 1] = (short)(words[i] >> 16);
-        }
+        RemoteCars.WritePose(m, 5, pose);
 
-        Assert.Equal(4096, m[0]);    // the diagonal, at 0, 5 and 10
-        Assert.Equal(-4096, m[5]);   // negative, because Y counts downwards
-        Assert.Equal(4096, m[10]);
-        Assert.Equal(0, m[1]);
-        Assert.Equal(0, m[2]);
+        Assert.Equal(pose, RemoteCars.ReadPose(m, 5));
     }
 
-    /// <summary>A quarter turn swaps the two horizontal terms, which is what makes it visible.</summary>
+    /// <summary>
+    /// The angles are three shorts at +0x1F4, thirty bytes ahead of the place.
+    /// They are read there by the game's own rebuild, so an offset off by two
+    /// would not fail loudly - it would quietly steer by the wrong axis.
+    /// </summary>
     [Fact]
-    public void TurnsAQuarterCircleIntoTheOffDiagonal()
+    public void PutsTheAnglesWhereTheGameRebuildsFrom()
     {
-        var words = RemoteCars.YawFor(90);
+        var m = new PSMemory();
+        uint at = RemoteCars.FirstCar + 2u * RemoteCars.CarStride + RemoteCars.Heading;
 
-        short m00 = (short)(words[0] & 0xFFFF);
-        short m02 = (short)(words[1] & 0xFFFF);
+        RemoteCars.WritePose(m, 2, new RemoteCars.Pose(new RemoteCars.Place(0, 0, 0), 1, 2, 3));
 
-        Assert.Equal(0, m00);
-        Assert.Equal(4096, m02);
+        Assert.Equal(0x1F4u, RemoteCars.Heading);
+        Assert.Equal(1, (short)m.ReadU16(at));
+        Assert.Equal(2, (short)m.ReadU16(at + 2u));
+        Assert.Equal(3, (short)m.ReadU16(at + 4u));
+    }
+
+    /// <summary>
+    /// Half a turn and more reads negative, and the game masks an angle to
+    /// twelve bits before using it - so a heading stored unsigned would come
+    /// back as a different direction entirely.
+    /// </summary>
+    [Fact]
+    public void KeepsAnAngleSignedBothWays()
+    {
+        var m = new PSMemory();
+        var pose = new RemoteCars.Pose(new RemoteCars.Place(0, 0, 0), short.MinValue, -1, 2047);
+
+        RemoteCars.WritePose(m, 0, pose);
+
+        Assert.Equal(pose, RemoteCars.ReadPose(m, 0));
+    }
+
+    /// <summary>
+    /// The rotation at +0x218 is the game's to write, not ours. Writing it as
+    /// well would be writing over the answer with the question - and it is
+    /// what every earlier attempt at a heading did.
+    /// </summary>
+    [Fact]
+    public void LeavesTheRotationForTheGameToRebuild()
+    {
+        var m = new PSMemory();
+        uint at = RemoteCars.FirstCar + RemoteCars.Transform;
+        for (uint i = 0; i < RemoteCars.TransformWords; i++) m.WriteU32(at + i * 4u, 0xABCDEF00u + i);
+
+        RemoteCars.WritePose(m, 0, new RemoteCars.Pose(new RemoteCars.Place(1, 2, 3), 4, 5, 6));
+
+        // The place is ours to write; the six words of rotation after it are not.
+        for (uint i = 3; i < RemoteCars.TransformWords; i++)
+            Assert.Equal(0xABCDEF00u + i, m.ReadU32(at + i * 4u));
     }
 }

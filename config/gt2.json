@@ -725,11 +725,11 @@
         },
         {
           "address": "0x8001336C",
-          "name": "entry_8001336C"
+          "name": "gt2_ovr1_race_car_place_and_rotation_into_a_gte_matrix"
         },
         {
           "address": "0x800133F0",
-          "name": "entry_800133F0"
+          "name": "gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from"
         },
         {
           "address": "0x8001374C",
@@ -2041,11 +2041,11 @@
         },
         {
           "address": "0x8003E8E4",
-          "name": "entry_8003E8E4"
+          "name": "gt2_ovr1_race_step_every_car_then_rebuild_its_rotation"
         },
         {
           "address": "0x8003EBF0",
-          "name": "entry_8003EBF0"
+          "name": "gt2_ovr1_race_run_every_car_physics_pass"
         },
         {
           "address": "0x8003EF18",
@@ -2305,7 +2305,7 @@
         },
         {
           "address": "0x80044EA4",
-          "name": "entry_80044EA4"
+          "name": "gt2_ovr1_race_rotation_matrix_from_three_angles"
         },
         {
           "address": "0x800450A0",
@@ -2937,12 +2937,32 @@
       "name": "entry_800117D0"
     },
     {
+      "address": "0x8005D79C",
+      "name": "gt2_main_vol_get_file_data_length"
+    },
+    {
       "address": "0x8005D810",
       "name": "entry_8005D810"
     },
     {
+      "address": "0x8005D950",
+      "name": "gt2_main_car_table_find_entry_by_packed_id"
+    },
+    {
       "address": "0x8005DA04",
       "name": "setjmp_resume_8005DA04"
+    },
+    {
+      "address": "0x800686C8",
+      "name": "gt2_main_vblank_register_task02_callback"
+    },
+    {
+      "address": "0x80068708",
+      "name": "gt2_main_vblank_unregister_task02_callback"
+    },
+    {
+      "address": "0x8007596C",
+      "name": "gt2_main_multiply_two_twelve_bit_fixed"
     },
     {
       "address": "0x80080A24",
@@ -2953,8 +2973,28 @@
       "name": "entry_80080AC4"
     },
     {
+      "address": "0x800811B0",
+      "name": "gt2_main_three_angles_from_a_rotation_matrix"
+    },
+    {
+      "address": "0x80082DA8",
+      "name": "gt2_main_arcsine_of_a_twelve_bit_fraction"
+    },
+    {
+      "address": "0x80082E14",
+      "name": "gt2_main_arctangent_of_y_over_x"
+    },
+    {
+      "address": "0x80083134",
+      "name": "gt2_main_vblank_run_callback_list"
+    },
+    {
       "address": "0x800833D8",
       "name": "entry_800833D8"
+    },
+    {
+      "address": "0x800833E8",
+      "name": "gt2_main_call_vtable_slot_0c_and_report_zero"
     },
     {
       "address": "0x80083408",
@@ -3743,30 +3783,6 @@
     {
       "address": "0x8008BE74",
       "name": "setjmp_resume_8008BE74"
-    },
-    {
-      "address": "0x8005D950",
-      "name": "gt2_main_car_table_find_entry_by_packed_id"
-    },
-    {
-      "address": "0x8005D79C",
-      "name": "gt2_main_vol_get_file_data_length"
-    },
-    {
-      "address": "0x800833E8",
-      "name": "gt2_main_call_vtable_slot_0c_and_report_zero"
-    },
-    {
-      "address": "0x80083134",
-      "name": "gt2_main_vblank_run_callback_list"
-    },
-    {
-      "address": "0x800686C8",
-      "name": "gt2_main_vblank_register_task02_callback"
-    },
-    {
-      "address": "0x80068708",
-      "name": "gt2_main_vblank_unregister_task02_callback"
     }
   ]
 }

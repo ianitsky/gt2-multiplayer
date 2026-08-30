@@ -41,14 +41,20 @@ public static class RemoteCars
     ///     [  -11  -4092  -151 ]
     ///     [  -37   -149   4093 ]
     ///
-    /// which is very nearly the identity, with m22 negative because the game
-    /// counts Y downwards. So a transform is nine words:
+    /// So a transform is nine words:
     ///
     ///     +0x20C  X, Z, Y
     ///     +0x218  rotation, six words
     ///
     /// and the whole of it is kept twice, 0x24 apart - which is why 0x24 was
     /// already the right distance for the position alone.
+    ///
+    /// The rotation is not a thing to write. The game rebuilds all six of
+    /// those words every frame, for every car, in
+    /// gt2_ovr1_race_step_every_car_then_rebuild_its_rotation - which ends by
+    /// calling gt2_ovr1_race_rotation_matrix_from_three_angles once per car
+    /// with the three angles at <see cref="Heading"/>. Write the angles
+    /// instead and the game builds the matrix itself.
     /// </summary>
     public const uint Transform = 0x20Cu;
     public const int TransformWords = 9;
@@ -58,6 +64,30 @@ public static class RemoteCars
     public const uint X = 0x20Cu;
     public const uint Z = 0x210u;
     public const uint Y = 0x214u;
+
+    /// <summary>
+    /// Which way a car faces: three angles, sixteen bits each, 4096 to a turn.
+    ///
+    /// These are the source and the rotation at +0x218 is the derivative. The
+    /// game builds that matrix as
+    ///
+    ///     row0 = ( cz*sy*sx - sz*cx ,  sz*sy*sx + cz*cx ,  cy*sx )
+    ///     row1 = (      cz*cy       ,       sz*cy       ,   -sy  )
+    ///     row2 = ( cz*sy*cx + sz*sx ,  sz*sy*cx - cz*sx ,  cy*cx )
+    ///
+    /// where s and c are sine and cosine of the angle about each axis, taken
+    /// from one table at 0x80093150 in which cosine is the same table read a
+    /// quarter turn along. Putting the numbers a real car read into that -
+    /// x about half a degree, y about two, z a quarter turn shy of nothing -
+    /// gives back the nine values above to within three parts in four
+    /// thousand, which is what settles that these are the right three shorts.
+    ///
+    /// The third is the heading. Car zero read it near a negative quarter turn
+    /// while it drove down +X; the other two stayed within a couple of degrees
+    /// of nothing, which is a car sitting flat on a road.
+    /// </summary>
+    public const uint Heading = 0x1F4u;
+    public const int HeadingAngles = 3;
 
     /// <summary>
     /// Whether to make car one shadow car zero. Off unless GT2_GHOST is set;
@@ -108,91 +138,47 @@ public static class RemoteCars
     static readonly bool Spinning =
         Environment.GetEnvironmentVariable("GT2_GHOST_SPIN") is not (null or "");
 
-    /// <summary>One in the game's twelve-bit fixed point.</summary>
-    const int One = 4096;
+    /// <summary>A whole turn, in the units the game counts angles in.</summary>
+    public const int WholeTurn = 4096;
 
     /// <summary>
-    /// How far to turn the spinning ghost each frame.
+    /// How far to turn the spinning ghost each frame, in the game's own units.
     ///
-    /// Three degrees was half a turn a second, fast enough that a steady spin
-    /// and a stuttering one look alike. GT2_GHOST_SPIN_RATE moves it.
+    /// Eight of them is about half a turn a second, fast enough that a steady
+    /// spin and a stuttering one look alike. GT2_GHOST_SPIN_RATE moves it.
     /// </summary>
-    static readonly double PerFrame =
-        double.TryParse(Environment.GetEnvironmentVariable("GT2_GHOST_SPIN_RATE"),
-            System.Globalization.CultureInfo.InvariantCulture, out double r) ? r : 0.75;
+    static readonly int PerFrame =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_GHOST_SPIN_RATE"), out int r) ? r : 8;
 
-    static double _turned;
-
-    /// <summary>
-    /// A yaw as the game stores one: a 3x3 of sixteen-bit values in rows of
-    /// four shorts, so the diagonal lands on shorts 0, 5 and 10. The middle
-    /// term is negative because the game counts Y downwards, which is how a
-    /// car going straight reads -4092 there rather than 4092.
-    /// </summary>
-    /// <summary>A yaw as the game stores one, for whatever needs to build one.</summary>
-    public static uint[] YawFor(double degrees) => Yaw(degrees);
-
-    static uint[] Yaw(double degrees)
-    {
-        double r = degrees * Math.PI / 180.0;
-        short cos = (short)Math.Round(Math.Cos(r) * One);
-        short sin = (short)Math.Round(Math.Sin(r) * One);
-
-        short[] m =
-        [
-            cos, 0, sin, 0,
-            0, (short)-One, 0, 0,
-            (short)-sin, 0, cos, 0,
-        ];
-
-        var words = new uint[6];
-        for (int i = 0; i < words.Length; i++)
-            words[i] = (uint)((ushort)m[i * 2] | ((uint)(ushort)m[i * 2 + 1] << 16));
-        return words;
-    }
+    static int _turned;
 
     static bool _said;
-    static uint[]? _wrote;
+    static Pose? _wrote;
 
     /// <summary>
     /// Whether what was written last frame is still there this frame.
     ///
-    /// Watching a ghost and judging whether it turns is a hard thing to do
-    /// from a replay, and an easy thing for the program to answer: write nine
-    /// words, come back a frame later, and see which of them the game has put
-    /// back. Whatever it overwrites, it recomputes - and recomputed state
-    /// cannot be driven from a wire.
+    /// The matrix at +0x218 was watched this way first, and every reading of
+    /// it was ambiguous: a word that comes back changed has been recomputed,
+    /// and a word that comes back whole may only mean the recompute agreed.
+    /// The angles have no such trouble. They are the input, so a frame that
+    /// gives them back unchanged is a frame the game accepted them for.
     /// </summary>
     static void SayWhatStuck(IMemory m)
     {
         if (_wrote is null || _checks >= MostChecks) return;
 
-        // Both copies, and on more than one frame. The first version read only
-        // the copy at +0x20C and only once, so a second copy being rebuilt -
-        // or a rebuild that happens on some frames and not others - would have
-        // gone unreported while the answer read "still as written".
-        uint at = FirstCar + CarStride + Transform;
-        var lost = new List<string>();
-        for (int i = 0; i < TransformWords; i++)
-            foreach (uint copy in new[] { 0u, SecondCopy })
-            {
-                uint now = m.ReadU32(at + copy + (uint)(i * 4));
-                if (now != _wrote[i])
-                    lost.Add($"+0x{Transform + copy + (uint)(i * 4):X3}"
-                             + $" written {(int)_wrote[i]} now {(int)now}");
-            }
-
-        if (lost.Count == 0)
+        var now = ReadPose(m, 1);
+        if (now == _wrote)
         {
             if (_clean++ == 0)
-                Console.Error.WriteLine("[ghost] both copies are still as written");
+                Console.Error.WriteLine("[ghost] the pose written last frame is still there");
             return;
         }
 
         _checks++;
         Console.Error.WriteLine(
-            $"[ghost] frame {_frames}: {lost.Count} of {TransformWords * 2} put back:");
-        foreach (string one in lost) Console.Error.WriteLine($"[ghost]   {one}");
+            $"[ghost] frame {_frames}: written {_wrote}, now {now}");
     }
 
     /// <summary>How many frames of disagreement to report before stopping.</summary>
@@ -246,27 +232,66 @@ public static class RemoteCars
                 m.WriteU32(at + copy + (uint)(i * 4), words[i]);
     }
 
-    /// <summary>Called once per race frame.</summary>
+    /// <summary>
+    /// Where a car is and which way it faces - everything one machine has to
+    /// tell another about a car, and nothing that either can work out alone.
+    ///
+    /// The angles are named for the axis each turns about, because that is all
+    /// the game says about them. AroundZ is the heading; the other two are a
+    /// car's lean on the road and stay within a couple of degrees of nothing.
+    /// </summary>
+    public sealed record Pose(Place Place, short AroundX, short AroundY, short AroundZ);
+
+    /// <summary>Which way a car faces, as the three angles the game rebuilds from.</summary>
+    public static Pose ReadPose(IMemory m, int car)
+    {
+        uint at = FirstCar + (uint)(car * CarStride) + Heading;
+        return new Pose(
+            Read(m, car),
+            (short)m.ReadU16(at),
+            (short)m.ReadU16(at + 2u),
+            (short)m.ReadU16(at + 4u));
+    }
+
+    /// <summary>
+    /// Puts a car somewhere, facing a given way.
+    ///
+    /// Only the place and the angles are written. The rotation at +0x218 is
+    /// left alone on purpose: the game rebuilds it from these three angles
+    /// later in the same frame, so writing it as well would be writing over
+    /// the answer with the question.
+    /// </summary>
+    public static void WritePose(IMemory m, int car, Pose pose)
+    {
+        Write(m, car, pose.Place);
+
+        uint at = FirstCar + (uint)(car * CarStride) + Heading;
+        m.WriteU16(at, (ushort)pose.AroundX);
+        m.WriteU16(at + 2u, (ushort)pose.AroundY);
+        m.WriteU16(at + 4u, (ushort)pose.AroundZ);
+    }
+
     /// <summary>
     /// Whether to write after the frame's work rather than before it.
     ///
-    /// Before it does not hold for a rotation. Copying the player's own
-    /// heading across, three of the six rotation words came back changed by
-    /// about five units in four thousand; giving the ghost a heading of its
-    /// own, all six came back. So the matrix at +0x218 is derived - the physics
-    /// rebuilds it every frame from the car's own state - and a write made
-    /// before that runs is simply undone. What the eye saw was the race
-    /// between the two: a ghost that turned, stopped, and turned back.
+    /// This was how the matrix at +0x218 was chased. Written before the
+    /// frame, three of its six words came back changed by about five units in
+    /// four thousand; written with a heading of the ghost's own, all six came
+    /// back. Both readings were of the same thing - the game rebuilding that
+    /// matrix from the angles, later in the frame - and moving the write after
+    /// it only won the race rather than settling the argument.
     ///
-    /// The place is not like that. It survived either way, which is why a
-    /// ghost written before the frame still followed the player around.
+    /// The angles are the argument's end, and they do not care: they are read
+    /// during the frame, so a write before it is the write that counts. Kept
+    /// because a place written late still lands, and comparing the two moments
+    /// costs nothing.
     ///
     /// On by default; GT2_GHOST_EARLY puts the old moment back for comparison.
     /// </summary>
     static readonly bool AfterTheFrame =
         Environment.GetEnvironmentVariable("GT2_GHOST_EARLY") is (null or "");
 
-    /// <summary>Called after the frame's work, which is where a rotation holds.</summary>
+    /// <summary>Called after the frame's work.</summary>
     public static void FrameEnds(IMemory m)
     {
         if (Ghosting && AfterTheFrame) Put(m);
@@ -282,7 +307,7 @@ public static class RemoteCars
         if (!AfterTheFrame) Put(m);
     }
 
-    /// <summary>Puts the player's transform on the ghost, offset to one side.</summary>
+    /// <summary>Puts the player's pose on the ghost, offset to one side.</summary>
     static void Put(IMemory m)
     {
         if (Wholesale)
@@ -292,25 +317,25 @@ public static class RemoteCars
             for (uint i = 0; i < CarStride; i += 4) m.WriteU32(to + i, m.ReadU32(from + i));
         }
 
-        var mine = ReadTransform(m, 0);
-        mine[1] = unchecked((uint)((int)mine[1] + Beside));
+        var mine = ReadPose(m, 0);
+        mine = mine with { Place = mine.Place with { Z = mine.Place.Z + Beside } };
 
         if (Spinning)
         {
-            _turned += PerFrame;
-            var yaw = Yaw(_turned);
-            for (int i = 0; i < yaw.Length; i++) mine[3 + i] = yaw[i];
+            _turned = (_turned + PerFrame) % WholeTurn;
+            mine = mine with { AroundZ = (short)_turned };
         }
 
-        WriteTransform(m, 1, mine);
+        WritePose(m, 1, mine);
         _wrote = mine;
 
         if (_said) return;
         _said = true;
-        var place = Read(m, 0);
+        var place = mine.Place;
         Console.Error.WriteLine(
-            $"[ghost] car 1 is following car 0 whole, {Beside} to one side"
+            $"[ghost] car 1 is following car 0, {Beside} to one side"
             + (Wholesale ? $", the whole 0x{CarStride:X} of it" : "")
-            + $" (car 0 is at {place.X}, {place.Z}, {place.Y})");
+            + $" (car 0 faces {mine.AroundX}, {mine.AroundY}, {mine.AroundZ}"
+            + $" and sits at {place.X}, {place.Z}, {place.Y})");
     }
 }

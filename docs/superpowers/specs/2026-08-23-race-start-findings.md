@@ -1415,38 +1415,118 @@ These are offsets into the **0x800A9B04 / 0xB40** array, not the 0x8015F894 /
 
 Two machines race with each other's cars on the track, moving as their owners
 move them, with no jitter, no teleporting and no lag. What travels is a seat in
-the room and a whole transform; what is applied is the place.
+the room and a **pose**: three coordinates and three angles.
 
-### What +0x218 is, and is not
+### A car's rotation is not stored, it is rebuilt
 
-It packs as a 3x3 in rows of four shorts. That much is certain: the matrix
-measured off a moving car is orthonormal that way and no other, with a
-determinant of minus one - a left-handed frame, consistent with Y counted
-downwards.
+This is the answer seven attempts missed, and it took no experiment to find -
+only reading the race overlay from the car array outwards.
 
-It is **not** a car's orientation in the world. All six cars read within a few
-units of the identity at the same moment, on a track that curves. Six world
-orientations cannot all be the identity at once.
+The array of cars starts at **0x800A9688** with a stride of **0xB40**, which is
+where `gt2_ovr1_race_run_every_car_physics_pass` (0x8003EBF0) points before it
+calls each pass, and how many there are is the byte at 0x800AF231. Every offset
+below is from that base; `RemoteCars` counts from 0x800A9B04, which is 0x47C on.
 
-That single fact explains both failed attempts, and they failed differently in
-exactly the way it predicts:
+Every frame, for every car, the last loop of
+`gt2_ovr1_race_step_every_car_then_rebuild_its_rotation` (0x8003E8E4) calls
 
-- **Copying the owner's matrix** copies a value relative to the owner's frame.
-  The car is drawn intact and facing wrongly.
-- **Building a world yaw** writes something the game does not mean. The car is
-  drawn stretched and tilted - which is at least proof that these words reach
-  the renderer, against an earlier conclusion that they did not.
+```
+gt2_ovr1_race_rotation_matrix_from_three_angles(
+    &car[0x694], &car[0x69C], &car[0x6A4],      the three rows it writes
+    car[0x670], car[0x672], car[0x674])          the three angles it reads
+```
 
-The place is relative to nothing, which is why it works.
+so the nine values at **+0x694** - the six words `RemoteCars` calls +0x218 -
+are output, recomputed from scratch, every frame, from three shorts thirty
+bytes earlier. They are not state. Nothing outside the game can usefully write
+them.
+
+The rebuild masks each angle to twelve bits and reads sine and cosine from one
+table at 0x80093150, in which cosine is the same table a quarter turn along; so
+**4096 is a whole turn**. Every product goes through
+`gt2_main_multiply_two_twelve_bit_fixed` (0x8007596C). What it writes is
+
+```
+row0 = ( cz*sy*sx - sz*cx ,  sz*sy*sx + cz*cx ,  cy*sx )
+row1 = (      cz*cy       ,       sz*cy       ,   -sy  )
+row2 = ( cz*sy*cx + sz*sx ,  sz*sy*cx - cz*sx ,  cy*cx )
+```
+
+Then, once per car, `gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from`
+(0x800133F0) calls
+`gt2_ovr1_race_car_place_and_rotation_into_a_gte_matrix` (0x8001336C) twice -
+once for `car[0x81C]` from `car[0x688]`, once for `car[0x83C]` from
+`car[0x6AC]`. That function is short and worth reading whole: it shifts the
+three coordinates left four into a PSY-Q `MATRIX`'s translation, and permutes
+the nine rotation values into its 3x3, negating three of them. Those matrices
+are what the GTE draws from.
+
+So the chain, end to end:
+
+```
+three angles  +0x670   ->  3x3  +0x694  ->  GTE MATRIX  +0x81C  ->  screen
+place         +0x688   ------------------->            (translation, <<4)
+```
+
+The place enters at the second step and is copied through. The rotation enters
+at the first. Writing at the second step is writing over the answer with the
+question, which is exactly what every attempt did.
+
+### The angles, confirmed against a car that was driving
+
+The matrix car zero read at +0x218 while it drove down +X was
+
+```
+[ 4095   -13     37 ]
+[  -11  -4092  -151 ]
+[  -37   -149   4093 ]
+```
+
+Putting that formula through every angle triple in a wide search, exactly one
+reproduces it, to within two parts in four thousand:
+
+```
+about X    6      half a degree
+about Y   24      two degrees
+about Z  -1026    a quarter turn shy of nothing
+```
+
+A car sitting flat on a road, pointing where it was going. The third angle is
+the heading; the other two are its lean. This is `CarSyncHeadingTests`, and it
+is the load-bearing evidence - it says the three shorts are the right three, in
+the right order, signed.
+
+It also disposes of the observation that stopped the last attempt. All six cars
+read near the identity at once **because they were all nearly flat**: the
+near-identity is the lean, and the heading was never in those numbers at all -
+it is in row 1, which reads `(cz*cy, sz*cy, -sy)` and had already gone to
+`(-11, -4092, ...)` for a car a quarter turn round.
+
+### What travels now
+
+A pose: `X, Z, Y` as words and three angles as shorts, twenty-one bytes with
+the header. The six words of rotation came off the wire; they were an answer
+the receiver was about to work out again.
+
+`RemoteCars.WritePose` writes the place into both copies and the angles once,
+and deliberately leaves +0x218 alone. `CarSync` applies it in the pre-hook on
+0x80015B64, before the frame's work - which is the right moment now, because
+the rebuild that reads the angles runs later in that same frame.
 
 ### Corrections this cost
 
 Worth recording, because each was believed for at least one run:
 
-- "The rotation is derived and cannot be written from outside." It can; the
-  readback that said otherwise compared a frame later, after the physics had
-  rebuilt it, and could not tell "never drawn" from "drawn and then rebuilt".
+- "The rotation is derived and cannot be written from outside." Half right for
+  the wrong reason, and then abandoned. It **is** derived - but from three
+  angles that can be written, not from something unreachable.
+- "+0x218 is not a car's orientation in the world." It is. The six cars reading
+  near the identity were six cars sitting flat; the heading lives in a row that
+  was not looked at.
 - "0x800A9D10 is a buffer, not a field." It is both, at different times - a
   load buffer until the race reuses the memory.
 - "The six 0xB40 slots are the cars." Three times the differ counted display
   lists and was believed.
+
+The through-line: every one of these came from watching memory and reasoning
+about what changed. The answer came from reading the code that changes it.

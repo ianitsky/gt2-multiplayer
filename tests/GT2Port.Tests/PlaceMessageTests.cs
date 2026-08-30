@@ -5,10 +5,11 @@ using Xunit;
 namespace GT2Port.Tests;
 
 /// <summary>
-/// A place message carries a whole transform - three coordinates and a 3x3 -
-/// and it is the only thing that moves between machines during a race. If a
-/// word were lost or reordered on the way, a remote car would be drawn
-/// somewhere it is not or facing a way it is not.
+/// A place message carries a pose - three coordinates and the three angles the
+/// game rebuilds a car's rotation from - and it is the only thing that moves
+/// between machines during a race. If a field were lost or reordered on the
+/// way, a remote car would be drawn somewhere it is not or facing a way it is
+/// not.
 /// </summary>
 public class PlaceMessageTests
 {
@@ -20,14 +21,17 @@ public class PlaceMessageTests
     }
 
     [Fact]
-    public void CarriesAWholeTransformFromOneMachineToTheOther()
+    public void CarriesAWholePoseFromOneMachineToTheOther()
     {
         var (host, client) = Pair();
         using (host)
         using (client)
         {
-            var sent = new uint[9];
-            for (int i = 0; i < sent.Length; i++) sent[i] = unchecked((uint)(-1_400_000 + i * 7919));
+            // Negative on every field: a course runs either side of its origin
+            // and a heading past half a turn reads negative, so a field widened
+            // or read unsigned would show up here and nowhere else.
+            var sent = new RemoteCars.Pose(
+                new RemoteCars.Place(-1_400_000, 987_654, -3), -2048, 17, -1000);
 
             client.SendPlace(3, sent, IPAddress.Loopback);
             Thread.Sleep(60);
@@ -49,9 +53,8 @@ public class PlaceMessageTests
         using (host)
         using (client)
         {
-            var older = new uint[9];
-            var newer = new uint[9];
-            for (int i = 0; i < 9; i++) { older[i] = 1u; newer[i] = 2u; }
+            var older = new RemoteCars.Pose(new RemoteCars.Place(1, 1, 1), 1, 1, 1);
+            var newer = new RemoteCars.Pose(new RemoteCars.Place(2, 2, 2), 2, 2, 2);
 
             client.SendPlace(1, older, IPAddress.Loopback);
             client.SendPlace(1, newer, IPAddress.Loopback);
