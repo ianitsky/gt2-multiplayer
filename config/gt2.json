@@ -2902,6 +2902,12 @@
       "address": "0x8007FC30",
       "target": "GT2Port.Multiplayer.PadWatch.PadDecoded",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_01",
+      "address": "0x80015B64",
+      "target": "GT2Port.Multiplayer.RaceStartLine.FrameDone",
+      "mode": "post"
     }
   ],
   "debug": false,

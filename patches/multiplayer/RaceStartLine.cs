@@ -218,6 +218,16 @@ public static class RaceStartLine
                 + $"  frame {_frame,3}  {reads} files read");
     }
 
+    /// <summary>
+    /// Post-hook on the same per-frame method, which is after the physics has
+    /// rebuilt what it derives.
+    ///
+    /// A rotation written before the frame does not survive it. This is where
+    /// one has to go, and the two moments are kept apart so the difference can
+    /// be measured rather than assumed.
+    /// </summary>
+    public static void FrameDone(CpuContext c, IMemory m) => RemoteCars.FrameEnds(m);
+
     /// <summary>Whether this held the room, which is what the log line reports.</summary>
     public static bool Held => _held;
 }

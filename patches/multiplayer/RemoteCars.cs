@@ -201,15 +201,43 @@ public static class RemoteCars
     }
 
     /// <summary>Called once per race frame.</summary>
+    /// <summary>
+    /// Whether to write after the frame's work rather than before it.
+    ///
+    /// Before it does not hold for a rotation. Copying the player's own
+    /// heading across, three of the six rotation words came back changed by
+    /// about five units in four thousand; giving the ghost a heading of its
+    /// own, all six came back. So the matrix at +0x218 is derived - the physics
+    /// rebuilds it every frame from the car's own state - and a write made
+    /// before that runs is simply undone. What the eye saw was the race
+    /// between the two: a ghost that turned, stopped, and turned back.
+    ///
+    /// The place is not like that. It survived either way, which is why a
+    /// ghost written before the frame still followed the player around.
+    ///
+    /// On by default; GT2_GHOST_EARLY puts the old moment back for comparison.
+    /// </summary>
+    static readonly bool AfterTheFrame =
+        Environment.GetEnvironmentVariable("GT2_GHOST_EARLY") is (null or "");
+
+    /// <summary>Called after the frame's work, which is where a rotation holds.</summary>
+    public static void FrameEnds(IMemory m)
+    {
+        if (Ghosting && AfterTheFrame) Put(m);
+    }
+
+    /// <summary>Called once per race frame, before the frame's work.</summary>
     public static void FrameBegins(IMemory m)
     {
         if (!Ghosting) return;
 
-        // The whole transform, not just the place. Copying the place alone
-        // gave a car that went where the player went and kept facing whatever
-        // way it had been pointing.
         SayWhatStuck(m);
+        if (!AfterTheFrame) Put(m);
+    }
 
+    /// <summary>Puts the player's transform on the ghost, offset to one side.</summary>
+    static void Put(IMemory m)
+    {
         var mine = ReadTransform(m, 0);
         mine[1] = unchecked((uint)((int)mine[1] + Beside));
 
