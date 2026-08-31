@@ -512,6 +512,11 @@ public static class DirectRace
         if (!RaceGrid.TryApply(m, race.Players, race.Me, race.Cars))
             Console.Error.WriteLine("[direct] the race is not built yet - the room was not applied");
 
+        // After the grid, because what it changes is a race the room has
+        // already been written into - the question is how that race is
+        // presented, not who is in it.
+        ReplayView.RaceIsBuilt(m);
+
         SecondDriver.HandTheSecondCarOver(m);
         SayTheRacesCourse(m);
 
