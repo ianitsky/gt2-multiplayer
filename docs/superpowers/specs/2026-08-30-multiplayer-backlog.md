@@ -58,9 +58,36 @@ says where the next one goes.
 
 ## 2. Start goes straight to loading, not through the arcade menu
 
-Pressing Start in the lobby shows the arcade's own screens for a few seconds
-before the race loads. `DirectRace` already walks the arcade for us; it should
-walk it without drawing it.
+**Status: written, not yet seen on screen.**
+
+The arcade has to run. Its first screen's step method is what ticks the car
+loader through its eight steps, so the screen stays up until the room's car is
+in memory - 1.9s in the measured run, all of it a menu the player did not open
+and cannot use.
+
+So the screen keeps running and only the picture goes.
+
+**Not by blanking the console.** GP1(03) is the display-enable bit and the game
+owns it: `gt2_main_gpu_set_display_enable` (0x8007F830) is the only function in
+the whole game that writes it, and the display environment goes up again every
+frame, so a curtain held there would be lifted and redrawn all the way through.
+`HostWindow.OutputHidden` is held by the host instead, where the game cannot
+reach it, and the GPU carries on drawing into VRAM behind it - the hidden
+frames are real frames, and nothing has to be caught up when it lifts.
+
+`ArcadeCurtain` raises it in `DirectRace.Expect`, which runs while the lobby's
+own overlay hook is still on the stack, so the arcade never gets a frame on
+screen at all. It drops it where `DirectRace` ends the arcade screen, which is
+the game moving to its own pre-race screen - the loading step, and the one the
+player is meant to see.
+
+In its place, a small centred window says what is being fetched and which of
+the loader's eight steps it is on. That window is also what lifts a curtain
+nobody else lifted: it draws every frame whatever the game is doing, so a path
+this did not expect cannot leave the screen black.
+
+`GT2_SHOW_ARCADE` puts the arcade back on screen, which is the only reason to
+want those frames.
 
 ## 3. Car colour is chosen in the lobby
 

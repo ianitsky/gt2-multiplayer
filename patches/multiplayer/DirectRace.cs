@@ -115,6 +115,11 @@ public static class DirectRace
         _said = false;
         Console.Error.WriteLine(
             $"[direct] a race is waiting: {race.Players.Count} player(s), {race.Me} in {race.Car}");
+
+        // Here rather than at the arcade's entry point, which is a frame or
+        // two later: this runs while the lobby's overlay hook is still on the
+        // stack, so the arcade never gets a frame on screen at all.
+        ArcadeCurtain.Raise($"{race.Me} in {race.Car}");
     }
 
     /// <summary>
@@ -150,6 +155,10 @@ public static class DirectRace
             ? "[direct] the car is loaded - letting the arcade screen finish"
             : $"[direct] the car did not load in {CarPatience.TotalSeconds:F0}s - going anyway"
               + $" (the loader stopped on step {CarLoad.StepIn(m, 0)})");
+
+        // The arcade is done; what draws from here is the game's own pre-race
+        // screen, which is the loading step and is meant to be seen.
+        ArcadeCurtain.Drop(ready ? "the car is loaded" : "the car never loaded");
     }
 
     /// <summary>
@@ -507,6 +516,12 @@ public static class DirectRace
     {
         byte step = CarLoad.StepIn(m, 0);
         var now = DateTime.UtcNow;
+
+        // Every frame, not only when the log says something: the curtain is
+        // what the player is looking at, and a number that only moves once a
+        // second looks like a number that has stopped.
+        ArcadeCurtain.Doing = $"fetching {_race?.Car ?? "the car"} - step {step} of 8";
+
         if (_said && step == _step && now - _lastSaid < TimeSpan.FromSeconds(1)) return;
 
         _said = true;

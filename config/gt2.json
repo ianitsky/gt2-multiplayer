@@ -2965,6 +2965,10 @@
       "name": "gt2_main_multiply_two_twelve_bit_fixed"
     },
     {
+      "address": "0x8007F830",
+      "name": "gt2_main_gpu_set_display_enable"
+    },
+    {
       "address": "0x80080A24",
       "name": "entry_80080A24"
     },
