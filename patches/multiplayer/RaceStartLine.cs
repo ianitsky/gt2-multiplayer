@@ -225,6 +225,11 @@ public static class RaceStartLine
             }
         }
 
+        // Every frame, and its own switch: what a remote car is missing is
+        // what the game derives from a car's own state, and the first thing to
+        // know is which fields those are.
+        CarDriving.Tick(m, RaceGrid.Slots);
+
         if (!Watching) return;
 
         if (reads != _readsWhenQuiet)
@@ -272,5 +277,6 @@ public static class RaceStartLine
         _frame = 0;
         _held = false;
         _saidQuiet = false;
+        CarDriving.Forget();
     }
 }
