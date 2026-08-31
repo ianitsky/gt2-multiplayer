@@ -290,13 +290,52 @@ car +0x668/+0x670/+0x678 out of three angles at +0x644/+0x646/+0x648, through
 rotation goes through. But +0x644 is also read by the physics stepper, so those
 are the car's fields rather than a camera's.
 
-### The next probe
+### Asking which code consumes the pad
 
-Ask which code consumes the pad. The race registers its pad readers at
-0x800A9528 and 0x800A95D8 on its first frame, and a read watch on the first of
-them names everything that acts on a button - which has to include whatever
-changes the camera, and is also the question `SecondDriver` was written to
-answer and never could.
+A read watch on the race's own pad reader record at 0x800A9528, armed 300 frames
+in, came back with thirty-eight distinct stacks of which **exactly two** are
+consumers - every other one is the decoder filling the record from the VBlank:
+
+```
+entry_80014BB4                                    reads +0x02
+gt2_ovr1_race_screen_step_one_frame_...           reads +0x03
+```
+
+`entry_80014BB4(A0 = the pad reader record)` is now
+`gt2_ovr1_race_read_one_pad_according_to_its_controller_type`. The byte at
++0x02 is not a button: it is compared against 2, 5, 6, 7 and 0x0E, which are
+controller types - digital, analogue, dual shock, wheel. The function then
+copies +0x48..+0x58 to +0x78..+0x88, this frame's input over last frame's.
+
+So the record is about 0xB0 bytes - pad 1's sits exactly 0xB0 further on - and
+the twenty-byte span only covered its header. **Steering reads +0x48 and up,
+which is why it never appeared.** A wider span would name it, and that is the
+answer `SecondDriver` has been waiting for.
+
+It also gives a viewer a clean way not to drive: neutralise the record this one
+function reads, rather than hunting for a flag on an entrant.
+
+### Why the camera target has not turned up
+
+Because a GT2 race very likely has no such thing. In a race the player cycles
+the camera's **position** - chase, bonnet - and never its **subject**. Following
+a different car is a replay control, and the replay does not run standalone
+(see above). Everything found agrees: the view is tied to the player's car
+structurally, not through a variable that names which car it is.
+
+So mid-race switching is not a variable to find. It has to be built, and there
+is a way to build it out of pieces that already work:
+
+- the **pose** of the driver being watched goes into car slot 0 every frame,
+  which is what the camera follows and what `RemoteCars` already knows how to
+  write;
+- on a switch, slot 0's **body** is changed to the watched driver's car, by
+  calling the game's own `load_car_parts` (0x80076FC0) the way the arcade's
+  builder calls it - `DirectRace.Call` already knows how to call game code from
+  a hook and put every register back.
+
+That second half is unproven. It is a call into the game mid-race, which is
+exactly the shape of thing this port has been bitten by before.
 
 ## 5. The end of a race returns to the lobby
 
