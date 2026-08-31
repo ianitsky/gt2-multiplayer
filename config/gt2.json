@@ -2918,6 +2918,12 @@
       "address": "0x800133F0",
       "target": "GT2Port.Multiplayer.CarDriving.MatricesBeingBuilt",
       "mode": "pre"
+    },
+    {
+      "overlay": "gt2_01",
+      "address": "0x800133F0",
+      "target": "GT2Port.Multiplayer.CarSync.WheelsAreBeingDrawn",
+      "mode": "post"
     }
   ],
   "debug": false,

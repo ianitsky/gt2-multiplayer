@@ -626,15 +626,55 @@ public class LanSessionTests
     // a place and the game's own driver takes it over, which is what four
     // players on one screen looked like.
 
-    /// <summary>A place message: the magic, the kind, a seat, and twelve bytes of pose.</summary>
+    /// <summary>
+    /// A place message: the magic, the kind, a seat, three coordinates, three
+    /// angles, and one angle per wheel.
+    ///
+    /// Sized from the real thing rather than written out as a number - a place
+    /// shorter than the reader expects is dropped in silence, and building one
+    /// by hand at the old width is exactly how that would go unnoticed.
+    /// </summary>
     static byte[] PlaceFrom(byte seat)
     {
-        var data = new byte[21];
-        data[0] = 0xA5;
-        data[1] = 3;
-        data[2] = seat;
-        BitConverter.TryWriteBytes(data.AsSpan(3), 1234);
-        return data;
+        var pose = new RemoteCars.Pose(
+            new RemoteCars.Place(1234, 5678, 9012),
+            AroundX: 11, AroundY: 22, AroundZ: 33,
+            Wheels: new RemoteCars.Wheels(101, 202, 303, 404));
+
+        using var sender = LanSession.ForClient(0, () => DateTime.UtcNow);
+        using var listener = new UdpClient(0);
+        var at = (IPEndPoint)listener.Client.LocalEndPoint!;
+        sender.KnowsAbout(new IPEndPoint(IPAddress.Loopback, at.Port));
+        sender.SendPlace(seat, pose);
+
+        listener.Client.ReceiveTimeout = 1000;
+        IPEndPoint? from = null;
+        return listener.Receive(ref from);
+    }
+
+    /// <summary>
+    /// The wheels ride along with the place, unchanged. They are the one thing
+    /// a machine cannot work out about somebody else's car - the game derives a
+    /// wheel's angle from the car's own physics, and a car this port teleports
+    /// has none - so a place that arrived without them would leave four wheels
+    /// turned to whatever the local guess was.
+    /// </summary>
+    [Fact]
+    public void A_place_carries_what_the_wheels_are_doing()
+    {
+        const int hostPort = BasePort + 25;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var client = new UdpClient(0);
+
+        var place = PlaceFrom(seat: 4);
+        client.Send(place, place.Length, new IPEndPoint(IPAddress.Loopback, host.BoundPort));
+        WaitForDelivery(host);
+        host.CollectPlaces();
+
+        Assert.Equal(
+            new RemoteCars.Wheels(101, 202, 303, 404),
+            host.Places[4].Wheels);
+        Assert.Equal(new RemoteCars.Place(1234, 5678, 9012), host.Places[4].Place);
     }
 
     [Fact]

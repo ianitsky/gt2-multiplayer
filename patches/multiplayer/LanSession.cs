@@ -499,7 +499,16 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const int PlaceWords = 3;
     const int PlaceAngles = 3;
-    const int PlaceBytes = 3 + PlaceWords * 4 + PlaceAngles * 2;
+
+    /// <summary>
+    /// And one angle per wheel, which is the other thing a machine cannot work
+    /// out about somebody else's car: the game derives a wheel's angle from the
+    /// car's own physics, and a car this port teleports has none worth the
+    /// name.
+    /// </summary>
+    const int PlaceWheels = RemoteCars.WheelsOnACar;
+
+    const int PlaceBytes = 3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2;
 
     /// <summary>
     /// Where every other player says their car is, by their seat in the room.
@@ -529,6 +538,8 @@ public sealed class LanSession : IDisposable
         BitConverter.TryWriteBytes(data.AsSpan(15), pose.AroundX);
         BitConverter.TryWriteBytes(data.AsSpan(17), pose.AroundY);
         BitConverter.TryWriteBytes(data.AsSpan(19), pose.AroundZ);
+        for (int wheel = 0; wheel < PlaceWheels; wheel++)
+            BitConverter.TryWriteBytes(data.AsSpan(21 + wheel * 2), pose.Wheels[wheel]);
 
         if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
@@ -577,7 +588,12 @@ public sealed class LanSession : IDisposable
                     BitConverter.ToInt32(data, 11)),
                 BitConverter.ToInt16(data, 15),
                 BitConverter.ToInt16(data, 17),
-                BitConverter.ToInt16(data, 19));
+                BitConverter.ToInt16(data, 19),
+                new RemoteCars.Wheels(
+                    BitConverter.ToInt16(data, 21),
+                    BitConverter.ToInt16(data, 23),
+                    BitConverter.ToInt16(data, 25),
+                    BitConverter.ToInt16(data, 27)));
         }
     }
 

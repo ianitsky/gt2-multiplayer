@@ -1,3 +1,4 @@
+using RecompOne.Runtime.Context;
 using RecompOne.Runtime.Memory;
 
 namespace GT2Port.Multiplayer;
@@ -75,6 +76,10 @@ public static class CarSync
             // Before the frame, on purpose: the rebuild that turns these three
             // angles into the matrix the car is drawn from runs later in it.
             RemoteCars.WritePose(m, slot, pose);
+
+            // And the wheels after it, for the mirror image of that reason -
+            // see WheelsAreBeingDrawn.
+            _wheels[slot] = pose.Wheels;
             _applied++;
         }
 
@@ -140,6 +145,42 @@ public static class CarSync
     }
 
     /// <summary>
+    /// What each slot's owner has their wheels turned to, as of the last place
+    /// heard from them, or null for a slot nobody has spoken for.
+    /// </summary>
+    static readonly RemoteCars.Wheels?[] _wheels = new RemoteCars.Wheels?[RaceGrid.Slots];
+
+    /// <summary>
+    /// Post-hook on gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from,
+    /// which takes the car in A0 and is where a wheel's angle is worked out.
+    ///
+    /// It has to be here and it has to be after. A wheel's angle is derived
+    /// every frame from the car's own physics, and a remote car has no physics
+    /// worth the name - this port teleports it and tells it nothing - so what
+    /// the game works out for one is wrong however early it is corrected.
+    /// Writing after the function that derives it is the only moment the write
+    /// survives to be drawn.
+    ///
+    /// The car is named by the pointer the game passes rather than by anything
+    /// this port counts, which is how the array's own base was found in the
+    /// first place.
+    /// </summary>
+    public static void WheelsAreBeingDrawn(CpuContext c, IMemory m)
+    {
+        if (!Enabled) return;
+        if (DirectRace.Racing is null) return;
+
+        long from = (long)c.A0 - RemoteCars.FirstCarObject;
+        if (from < 0 || from % RemoteCars.CarStride != 0) return;
+
+        long slot = from / RemoteCars.CarStride;
+        if (slot < 0 || slot >= _wheels.Length) return;
+        if (_wheels[slot] is not { } wheels) return;
+
+        RemoteCars.WriteWheels(m, (int)slot, wheels);
+    }
+
+    /// <summary>
     /// Forgets the race just run, so the next one reports its own grid and
     /// counts its own places.
     /// </summary>
@@ -149,6 +190,7 @@ public static class CarSync
         _applied = 0;
         _said = false;
         _stood = false;
+        Array.Clear(_wheels);
     }
 
     static void Say(LanSession wire, DirectRace.Pending race)

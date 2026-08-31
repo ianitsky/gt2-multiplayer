@@ -237,6 +237,65 @@ public static class RemoteCars
         }
     }
 
+    /// <summary>
+    /// The one live angle each wheel is drawn at, four wheels, 0x10 apart.
+    ///
+    /// gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from writes three
+    /// angles per wheel here, and only the middle one ever moves: it is a
+    /// per-axle angle less the value at +0x49C, which is the first wheel's own
+    /// physics block. Counted over 1200 frames of driving, these four moved on
+    /// three frames in four while the other eight shorts of the four triples
+    /// never moved at all.
+    ///
+    /// Counted from the start of a car, so from <see cref="FirstCarObject"/>
+    /// rather than from <see cref="FirstCar"/>.
+    /// </summary>
+    public const uint WheelAngle = 0x7C6u;
+    public const uint WheelStride = 0x10u;
+    public const int WheelsOnACar = 4;
+
+    /// <summary>
+    /// What a car's four wheels are doing, which is one number each.
+    ///
+    /// A struct rather than an array so a pose stays a value: two poses that
+    /// say the same thing are the same pose, and an array would make them two
+    /// different ones.
+    /// </summary>
+    public readonly record struct Wheels(short A, short B, short C, short D)
+    {
+        public short this[int wheel] => wheel switch
+        {
+            0 => A, 1 => B, 2 => C, _ => D,
+        };
+    }
+
+    /// <summary>What the game has this car's wheels turned to, this frame.</summary>
+    public static Wheels ReadWheels(IMemory m, int car)
+    {
+        uint at = FirstCarObject + (uint)(car * CarStride) + WheelAngle;
+        return new Wheels(
+            (short)m.ReadU16(at),
+            (short)m.ReadU16(at + WheelStride),
+            (short)m.ReadU16(at + WheelStride * 2u),
+            (short)m.ReadU16(at + WheelStride * 3u));
+    }
+
+    /// <summary>
+    /// Turns a car's wheels to where their owner has them.
+    ///
+    /// Has to run after the game has worked its own out, not before: these are
+    /// derived every frame from the car's physics, and a remote car's physics
+    /// is whatever is left after this port teleports it. Written before the
+    /// derivation, this would be overwritten by it - the same lesson the
+    /// rotation at +0x218 already taught.
+    /// </summary>
+    public static void WriteWheels(IMemory m, int car, Wheels wheels)
+    {
+        uint at = FirstCarObject + (uint)(car * CarStride) + WheelAngle;
+        for (int wheel = 0; wheel < WheelsOnACar; wheel++)
+            m.WriteU16(at + WheelStride * (uint)wheel, (ushort)wheels[wheel]);
+    }
+
     /// <summary>A car's whole transform: where it is and which way it faces.</summary>
     public static uint[] ReadTransform(IMemory m, int car)
     {
@@ -263,7 +322,8 @@ public static class RemoteCars
     /// the game says about them. AroundZ is the heading; the other two are a
     /// car's lean on the road and stay within a couple of degrees of nothing.
     /// </summary>
-    public sealed record Pose(Place Place, short AroundX, short AroundY, short AroundZ);
+    public sealed record Pose(Place Place, short AroundX, short AroundY, short AroundZ,
+                             Wheels Wheels = default);
 
     /// <summary>Which way a car faces, as the three angles the game rebuilds from.</summary>
     public static Pose ReadPose(IMemory m, int car)
@@ -273,7 +333,8 @@ public static class RemoteCars
             Read(m, car),
             (short)m.ReadU16(at),
             (short)m.ReadU16(at + 2u),
-            (short)m.ReadU16(at + 4u));
+            (short)m.ReadU16(at + 4u),
+            ReadWheels(m, car));
     }
 
     /// <summary>
@@ -282,7 +343,8 @@ public static class RemoteCars
     /// Only the place and the angles are written. The rotation at +0x218 is
     /// left alone on purpose: the game rebuilds it from these three angles
     /// later in the same frame, so writing it as well would be writing over
-    /// the answer with the question.
+    /// the answer with the question. The wheels are left alone for the same
+    /// reason and go on afterwards, through <see cref="WriteWheels"/>.
     /// </summary>
     public static void WritePose(IMemory m, int car, Pose pose)
     {
