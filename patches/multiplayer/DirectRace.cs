@@ -522,13 +522,23 @@ public static class DirectRace
         // +0x40 and its name back at +0x20 over the top. Every launched race
         // ran Tahiti Road because a Tahiti Road race was being written over the
         // one the game had just built correctly.
+        // Before the grid, because it replaces the whole record: a viewer's
+        // race is the demo's race with the room's content over the top, and
+        // the room's content is what the grid writes.
+        bool replay = ReplayView.ShowsAReplay(race) && ReplayView.InstallTheDemosRace(m);
+
         if (!RaceGrid.TryApply(m, race.Players, race.Me, race.Cars))
             Console.Error.WriteLine("[direct] the race is not built yet - the room was not applied");
 
-        // After the grid, because what it changes is a race the room has
-        // already been written into - the question is how that race is
-        // presented, not who is in it.
-        ReplayView.RaceIsBuilt(m);
+        // And after it, because the grid writes +0x82 the way an arcade race
+        // means it, and the course the demo was captured on is not the one the
+        // overlay has already loaded.
+        if (replay)
+        {
+            ReplayView.KeepItAReplay(m);
+            ReplayView.PutTheRoomsCourseIn(m,
+                CourseWanted.Length > 0 ? CourseWanted : race.Course);
+        }
 
         SecondDriver.HandTheSecondCarOver(m);
         SayTheRacesCourse(m);

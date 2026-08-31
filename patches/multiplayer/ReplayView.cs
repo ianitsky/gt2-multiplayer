@@ -3,98 +3,141 @@ using RecompOne.Runtime.Memory;
 namespace GT2Port.Multiplayer;
 
 /// <summary>
-/// Asks the game, in one race, whether it will present itself as a replay
-/// without being given a recording.
+/// Makes a viewer's race the race the attract demo runs.
 ///
-/// A viewer is meant to watch a live race the way a replay is watched. Reading
-/// says where that switch is and very likely what to put in it, and stops one
-/// step short of saying whether it works:
+/// A viewer is meant to see a replay, and a replay is not an ordinary race with
+/// a flag flipped. Writing 2 into the kind byte at +0x0A of an arcade race
+/// loaded it and walked straight back out to the arcade menu, and
+/// gt2_main_func21 - the installer, at 0x80069AC4 - says why: it copies 0x58C
+/// bytes into the block, then reads the kind out of what it has just copied and
+/// branches on it. The kind is not a key that turns something on. It says what
+/// shape the rest of the record is in.
 ///
-///   - The kind of race is one byte, at race block +0x0A. gt2_01 reads it in
-///     sixty-four places and branches on values from 0 to 12. An arcade race
-///     holds 4, which
-///     gt2_ovr3_build_race_block_and_fill_all_six_entrants copies out of the
-///     parameter block's +0x02.
+/// So the record is taken whole. config/demo-race.bin is 1420 bytes captured
+/// from the block while the attract demo was running one, and holding it beside
+/// a captured arcade race says exactly what a replay is:
 ///
-///   - The attract demo - which is a replay, and which ran the race logic with
-///     lap times counting while this port wrote car ids into its block - held
-///     2.
+///   +0x04  1, where an arcade race has 0
+///   +0x09  1, where an arcade race has 0
+///   +0x0A  2, the kind - an arcade race is 4
 ///
-///   - gt2_01 changes its own kind at runtime through the pair at 0x80017098
-///     and 0x8001710C, and the kind the caller of the second one supplies is 2
-///     in every path but one.
+///   every entrant's +0x82 carries 0x40, which
+///   gt2_ovr3_build_race_block_and_fill_all_six_entrants sets from an argument
+///   the arcade passes as zero, and entrant 0 carries 0xC0 rather than the
+///   0x41 the other five do
 ///
-/// **Both were run, and both answered no.**
-///
-///   GT2_RACE_KIND=2 loaded the race and went straight back to the arcade menu.
-///   Kind 2 is the attract demo's kind, and a race handed it without whatever
-///   else the demo sets up ends itself before it draws. The game's own replay
-///   is not something a viewer can be dropped into by writing one byte.
-///
-///   GT2_NOBODY_DRIVES=1 ran an ordinary race in which the player kept full
-///   control of their car. So IsAi is not what binds a pad to a car - see
-///   SecondDriver, whose third outcome this is.
-///
-/// Both are kept, off, because they are how the next kind or the next flag gets
-/// asked the same question for the cost of a run.
+/// Everything else that differs is content: the race key, the course, the team
+/// names, the cars. So the demo's record goes down first and the room's own
+/// content goes over the top of it, which is the same order that already makes
+/// a launched arcade race work.
 /// </summary>
 public static class ReplayView
 {
     const uint Block = 0x801D585Cu;
+    const int RecordSize = 0x58C;
 
-    /// <summary>What kind of race this is, which is the whole question.</summary>
+    /// <summary>What kind of race this is - 2 for the demo's, 4 for the arcade's.</summary>
     const uint Kind = 0x0Au;
+
+    /// <summary>Where the block names its course, as a number and as text.</summary>
+    const uint CourseName = 0x20u;
+    const int CourseNameRoom = 0x20;
+    const uint CourseNumber = 0x40u;
 
     const uint FirstEntrant = 0x5Cu;
     const uint EntrantSize = 0xD0u;
 
-    /// <summary>The two RaceGrid uses to say who the game drives and how well.</summary>
-    const uint AiSkill = 0x42u;
-    const uint IsAi = 0x82u;
-
     /// <summary>
-    /// A race kind to write once the race is built, when GT2_RACE_KIND names
-    /// one. Two is the one worth trying; the others are what says whether 2 is
-    /// special or whether any kind but 4 looks like this.
-    /// </summary>
-    static readonly int Wanted =
-        int.TryParse(Environment.GetEnvironmentVariable("GT2_RACE_KIND"), out int n) ? n : -1;
-
-    /// <summary>
-    /// Takes every entrant away from the pad, when GT2_NOBODY_DRIVES asks.
+    /// Who drives an entrant, which is a set of bits rather than a flag.
     ///
-    /// Separate from the kind on purpose. A viewer must not be steering, and
-    /// if the kind alone already stops that then this is not needed - which is
-    /// a thing worth knowing rather than papering over. Run them apart first
-    /// and together after.
+    /// An arcade race writes 0 here for the car a person drives and 1 for the
+    /// rest, and RaceGrid does the same. A demo writes 0xC0 on the first and
+    /// 0x41 on the other five: bit 0 is still "the game drives this one", and
+    /// bit 6 is on for all of them - the bit the arcade's builder sets from an
+    /// argument only its replay path passes. Bit 7, on the first entrant only,
+    /// is what a replay has that nothing else does.
     /// </summary>
-    static readonly bool NobodyDrives =
-        Environment.GetEnvironmentVariable("GT2_NOBODY_DRIVES") is not (null or "");
+    const uint WhoDrives = 0x82u;
 
-    /// <summary>Whether anything here is on, so a caller can say so once.</summary>
-    public static bool Probing => Wanted >= 0 || NobodyDrives;
+    const byte DemoLeader = 0xC0;
+    const byte DemoOthers = 0x41;
+
+    static readonly string RecordPath = Path.Combine("config", "demo-race.bin");
 
     /// <summary>
-    /// Called once the race block is a finished race - after RaceGrid, so what
-    /// this changes is a grid the room has already been written into.
+    /// Runs a race as a replay even when this machine is racing, so the whole
+    /// thing can be tried on one machine without a lobby and a second player.
     /// </summary>
-    public static void RaceIsBuilt(IMemory m)
+    static readonly bool Forced =
+        Environment.GetEnvironmentVariable("GT2_REPLAY_VIEW") is not (null or "");
+
+    static byte[]? _record;
+
+    /// <summary>Whether this race is to be shown as a replay.</summary>
+    public static bool ShowsAReplay(DirectRace.Pending? race) =>
+        Forced || race?.Watching == true;
+
+    /// <summary>
+    /// Puts the demo's record where the arcade left its own, before anything
+    /// writes the room into it.
+    ///
+    /// Returns false when there is no captured record to install, in which case
+    /// the caller carries on with the arcade's race - a viewer then sees an
+    /// ordinary race, which is wrong but is not a crash.
+    /// </summary>
+    public static bool InstallTheDemosRace(IMemory m)
     {
-        if (Wanted >= 0)
+        _record ??= File.Exists(RecordPath) ? File.ReadAllBytes(RecordPath) : null;
+        if (_record is not { Length: >= RecordSize })
         {
-            byte was = m.ReadU8(Block + Kind);
-            m.WriteU8(Block + Kind, (byte)Wanted);
-            Console.Error.WriteLine($"[replay] the race was kind {was}, now kind {Wanted}");
+            Console.Error.WriteLine($"[replay] no demo race record at {RecordPath}");
+            return false;
         }
 
-        if (!NobodyDrives) return;
+        byte was = m.ReadU8(Block + Kind);
+        for (int i = 0; i < RecordSize; i++) m.WriteU8(Block + (uint)i, _record[i]);
 
+        Console.Error.WriteLine(
+            $"[replay] the demo's race is installed over a kind {was} one - this is kind {m.ReadU8(Block + Kind)}");
+        return true;
+    }
+
+    /// <summary>
+    /// Puts back what the room's own content overwrote.
+    ///
+    /// RaceGrid writes +0x82 as the arcade means it - 0 for the car a person
+    /// drives and 1 for the rest - which is right for a race and wrong for a
+    /// replay. This is called after it, for the same reason the paint is: the
+    /// room decides who is in the race, and this decides what kind of race they
+    /// are in.
+    /// </summary>
+    public static void KeepItAReplay(IMemory m)
+    {
         for (uint i = 0; i < RaceGrid.Slots; i++)
-        {
-            uint entrant = Block + FirstEntrant + i * EntrantSize;
-            m.WriteU8(entrant + IsAi, 1);
-            m.WriteU8(entrant + AiSkill, 100);
-        }
-        Console.Error.WriteLine($"[replay] all {RaceGrid.Slots} entrants handed to the game to drive");
+            m.WriteU8(Block + FirstEntrant + i * EntrantSize + WhoDrives,
+                      i == 0 ? DemoLeader : DemoOthers);
+    }
+
+    /// <summary>
+    /// Points the installed record at the room's course.
+    ///
+    /// The demo's record names the course it was captured on, and the race
+    /// overlay has already loaded ours - so this is not a preference, it is the
+    /// block agreeing with the geometry that is in memory. The number is the
+    /// same rotate-and-add hash of the asset code that the parameter block
+    /// carries, and the name beside it is what the HUD reads.
+    /// </summary>
+    public static void PutTheRoomsCourseIn(IMemory m, string code)
+    {
+        if (code.Length == 0) return;
+
+        uint id = GT2Port.Multiplayer.CourseId.Of(code);
+        m.WriteU32(Block + CourseNumber, id);
+
+        string name = CourseTable.DisplayName(code);
+        for (int i = 0; i < CourseNameRoom; i++)
+            m.WriteU8(Block + CourseName + (uint)i, (byte)(i < name.Length ? name[i] : 0));
+
+        Console.Error.WriteLine($"[replay] the replay is set to {name} ({code}, 0x{id:X8})");
     }
 }
