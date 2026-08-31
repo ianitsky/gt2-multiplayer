@@ -166,13 +166,13 @@ public class RaceGridPaintTests
         m.ReadU8(Block + FirstEntrant + (uint)entrant * EntrantSize + GridPlace);
 
     /// <summary>
-    /// The block always has six entrants, whatever the room holds. Writing
-    /// places for the room's four and leaving the last two as the arcade left
-    /// them - numbered 5 down to 0 - put two cars on one square, which is what
-    /// four players saw as the first and the fourth both starting at the front.
+    /// The entrants nobody in the room is driving keep what the arcade left
+    /// them, which is what running with them renumbered showed was right: with
+    /// every entrant given a number of its own, all six cars started on the
+    /// same square. Whatever +0x8D is, it is not a square to stand on.
     /// </summary>
     [Fact]
-    public void Every_entrant_gets_a_grid_place_of_its_own()
+    public void The_entrants_nobody_is_driving_keep_the_arcades_numbers()
     {
         var m = BuiltRace();
         for (uint i = 0; i < RaceGrid.Slots; i++)
@@ -183,14 +183,16 @@ public class RaceGridPaintTests
         [
             new Player("ian", "dvpgn", true),
             new Player("les", "dvpgn", true),
-            new Player("kay", "dvpgn", true),
-            new Player("guest", "dvpgn", true),
         ];
 
         Assert.True(RaceGrid.TryApply(m, room, "ian", cars: null));
 
-        var places = Enumerable.Range(0, RaceGrid.Slots).Select(i => PlaceIn(m, i)).ToList();
-        Assert.Equal(RaceGrid.Slots, places.Distinct().Count());
+        // The room's two are numbered by the room...
+        Assert.Equal(0, PlaceIn(m, 0));
+        Assert.Equal(1, PlaceIn(m, 1));
+
+        // ...and the other four are left exactly as they were found.
+        Assert.Equal([3, 2, 1, 0], Enumerable.Range(2, 4).Select(i => (int)PlaceIn(m, i)));
     }
 
     /// <summary>

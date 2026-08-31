@@ -82,6 +82,16 @@ public static class RaceGrid
     public const int Slots = 6;
 
     /// <summary>
+    /// Whether to number the entrants nobody in the room is driving.
+    ///
+    /// Tried on, and it put every car on one square. Kept as a switch rather
+    /// than deleted because the question it was asking is still open - two
+    /// cars did share a square before it, and something numbers them.
+    /// </summary>
+    static readonly bool PlaceTheLeftovers =
+        Environment.GetEnvironmentVariable("GT2_GRID_LEFTOVERS") is not (null or "");
+
+    /// <summary>
     /// The letter a player's chosen paint is called, or null when the car
     /// database cannot say - in which case the entrant keeps whatever the
     /// arcade left there, which is a paint the car really has.
@@ -152,18 +162,22 @@ public static class RaceGrid
         }
 
         // And the cars nobody in the room is driving take the places nobody in
-        // the room is using.
+        // the room is using - when GT2_GRID_LEFTOVERS asks for it.
         //
-        // The block always has six entrants. Writing places for the first four
-        // and leaving the last two as the arcade left them is what put two cars
-        // on the same square: the arcade numbers its own six 5 down to 0, so
-        // entrants four and five kept 1 and 0 and collided with the room's
-        // second and first. Four players made it obvious; two had it too, with
-        // the collisions buried among the cars nobody was looking at.
-        for (int i = racing; i < Slots; i++)
-            m.WriteU8(Block + (uint)(FirstEntrant + i * EntrantSize) + GridPlace, (byte)i);
+        // The reasoning was that the block always has six entrants, that the
+        // arcade numbers its own six 5 down to 0, and that writing places for
+        // only the room's four left entrants four and five holding 1 and 0 -
+        // colliding with the room's second and first.
+        //
+        // The reasoning was wrong, or +0x8D is not what places a car: with it
+        // on, all six cars started on the same square, which is worse than the
+        // collision it was meant to remove. Off by default until the report
+        // below says what the game does with these numbers.
+        if (PlaceTheLeftovers)
+            for (int i = racing; i < Slots; i++)
+                m.WriteU8(Block + (uint)(FirstEntrant + i * EntrantSize) + GridPlace, (byte)i);
 
-        Say(drivers, leader, order, cars);
+        Say(m, drivers, leader, order, cars);
         return true;
     }
 
@@ -177,7 +191,8 @@ public static class RaceGrid
     /// seats, their slots, their cars and their paints is what turns that from
     /// a guess into a comparison.
     /// </summary>
-    static void Say(IReadOnlyList<Player> drivers, string leader, List<Player> order, CarCatalogue? cars)
+    static void Say(IMemory m, IReadOnlyList<Player> drivers, string leader,
+                    List<Player> order, CarCatalogue? cars)
     {
         var said = new System.Text.StringBuilder();
         for (int slot = 0; slot < order.Count; slot++)
@@ -188,12 +203,19 @@ public static class RaceGrid
             string paint = PaintFor(cars, player) is { } letter
                 ? $"'{(char)letter}'"
                 : $"none (of {paints?.Count ?? 0})";
-            said.Append($"{Environment.NewLine}[grid]   slot {slot} seat {seat}"
+            byte place = m.ReadU8(Block + (uint)(FirstEntrant + slot * EntrantSize) + GridPlace);
+            said.Append($"{Environment.NewLine}[grid]   slot {slot} seat {seat} place {place}"
                 + $"  {player.Name}  {player.Car}  colour {player.Colour} -> {paint}");
         }
 
+        for (int slot = order.Count; slot < Slots; slot++)
+            said.Append($"{Environment.NewLine}[grid]   slot {slot} place "
+                + m.ReadU8(Block + (uint)(FirstEntrant + slot * EntrantSize) + GridPlace)
+                + "  (not in the room)");
+
         Console.Error.WriteLine(
-            $"[grid] {drivers.Count} driver(s), led by {leader}:" + said);
+            $"[grid] {drivers.Count} driver(s), led by {leader}"
+            + $", leftovers {(PlaceTheLeftovers ? "renumbered" : "left alone")}:" + said);
     }
 
     static void WriteText(IMemory m, uint at, string text, int room)
