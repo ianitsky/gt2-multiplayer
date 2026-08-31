@@ -215,4 +215,21 @@ public class RoomStateTests
 
         Assert.Equal([(byte)2, (byte)11], back.Players.Select(p => p.Colour));
     }
+
+    /// <summary>
+    /// Whether a player is racing or watching has to survive the wire: it is
+    /// what every machine derives the seats from, and two machines disagreeing
+    /// about it would key the same car differently.
+    /// </summary>
+    [Fact]
+    public void Round_trips_who_is_only_watching()
+    {
+        var room = new Room(Guid.NewGuid(), "room", "parma_2p", "special", 6,
+            [new Player("ian", "dvpgn", true),
+             new Player("guest", "", true, Colour: 0, Watching: true)]);
+
+        Assert.True(RoomState.TryDeserialise(RoomState.Serialise(room), out var back));
+
+        Assert.Equal([false, true], back.Players.Select(p => p.Watching));
+    }
 }

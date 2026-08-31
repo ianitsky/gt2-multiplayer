@@ -127,14 +127,17 @@ public static class ModeHook
         var room = _session?.Current;
         if (room == null || room.Players.Count == 0) return;
 
-        if (!RaceGrid.TryApply(m, room.Players, _session!.PlayerName, _carCatalogue))
+        var drivers = Seats.Drivers(room.Players);
+        string leader = _session!.WatchedDriver()?.Name ?? _session.PlayerName;
+
+        if (!RaceGrid.TryApply(m, drivers, leader, _carCatalogue))
         {
             Console.Error.WriteLine("[grid] the race is not built yet - the room was not applied");
             return;
         }
 
         Console.Error.WriteLine(
-            $"[grid] {room.Players.Count} player(s) put on the grid, {_session.PlayerName} driving");
+            $"[grid] {drivers.Count} driver(s) put on the grid, led by {leader}");
 
         // The race has the car now, so stop replacing what the arcade loads.
         // Leaving it on would have the next visit to the menus fighting a
@@ -350,11 +353,11 @@ public static class ModeHook
         // Pointing straight at the race overlay, which is what this used to do,
         // is what does not work - the race then runs with none of the state the
         // arcade's initialisation builds, the car loader's owner among it.
-        if (DirectRace.Enabled && room != null
-            && room.Players.FirstOrDefault(p => p.Name == _session.PlayerName) is { } mine)
+        if (DirectRace.Enabled && room != null && Leader(room) is { } lead)
         {
             DirectRace.Expect(new DirectRace.Pending(
-                room.Players, _session.PlayerName, mine.Car, room.Track, _carCatalogue));
+                Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
+                Watching: IsWatching(room)));
             c.A0 = ArcadeOverlayIndex;
             c.A1 = ArcadeEntryPoint;
         }
@@ -377,7 +380,10 @@ public static class ModeHook
     /// </summary>
     static void DriveTheRoomsCar(Room room)
     {
-        var mine = room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName);
+        // A viewer's entrant 0 is the driver it is watching, so that is the car
+        // this machine has to have in memory - the same call, about somebody
+        // else's choice.
+        var mine = Leader(room);
         if (mine is null || string.IsNullOrEmpty(mine.Car)) return;
 
         if (_archive is null || !_archive.TryIndexOf($"carobj/{mine.Car}.cdo.gz", out int index))
@@ -386,7 +392,7 @@ public static class ModeHook
             return;
         }
 
-        Console.Error.WriteLine($"[car] {_session!.PlayerName} is to drive {mine.Car} (file {index})");
+        Console.Error.WriteLine($"[car] {mine.Name}'s {mine.Car} is to be loaded (file {index})");
         CarLoad.Drive(mine.Car, index);
     }
 
@@ -550,6 +556,20 @@ public static class ModeHook
             if (!started) DropSession();
         }
     }
+
+    /// <summary>Whether this machine's player is in the room to watch rather than race.</summary>
+    static bool IsWatching(Room room) =>
+        room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName)?.Watching == true;
+
+    /// <summary>
+    /// The driver this machine's race is built around: its own player when it
+    /// is racing, and the driver it is watching when it is not. Null when there
+    /// is neither - a room of nothing but viewers has no race to build.
+    /// </summary>
+    static Player? Leader(Room room) =>
+        IsWatching(room)
+            ? _session!.WatchedDriver()
+            : room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName);
 
     /// <summary>Frees the session socket, so another instance here can host or join.</summary>
     static void DropSession()

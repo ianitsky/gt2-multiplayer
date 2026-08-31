@@ -436,7 +436,7 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.TextUnformatted($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
         ImGui.Separator();
 
-        foreach (var player in room.Players)
+        foreach (var player in Seats.Drivers(room.Players))
         {
             ImGui.TextUnformatted($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
 
@@ -447,6 +447,9 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.SameLine();
             Swatch(paints[player.Colour], selected: false, hovered: false);
         }
+
+        foreach (var viewer in Seats.Viewers(room.Players))
+            ImGui.TextUnformatted($"{(viewer.Ready ? "[ready]" : "[    ]")}  {viewer.Name}  watching");
 
         ImGui.Separator();
 
@@ -466,8 +469,19 @@ public sealed class MultiplayerPanel : IPanel
         float colourRow = ImGui.GetTextLineHeightWithSpacing() + SwatchSize + ImGui.GetStyle().ItemSpacing.Y;
         float reservedBelowList = colourRow + frameRow + separatorHeight + frameRow + hintRow;
 
-        DrawCarList(room, reservedBelowList);
-        DrawColours(room);
+        if (Watching(room))
+        {
+            DrawDriverToFollow(room, reservedBelowList);
+        }
+        else
+        {
+            DrawCarList(room, reservedBelowList);
+            DrawColours(room);
+        }
+
+        if (ImGui.Button(Watching(room) ? "Race instead" : "Watch instead"))
+            _session.SetWatching(_session.PlayerName, !Watching(room));
+        ImGui.SameLine();
 
         if (ImGui.Button("Ready")) _session.SetReady(_session.PlayerName, true);
         ImGui.SameLine();
@@ -489,6 +503,46 @@ public sealed class MultiplayerPanel : IPanel
     // rather than collapsing to a sliver - the floor half of review
     // Important 1.
     const int MinVisibleCarRows = 3;
+
+    /// <summary>Whether this machine's player is in the room to watch.</summary>
+    bool Watching(Room room) =>
+        room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Watching == true;
+
+    /// <summary>
+    /// The drivers a viewer may follow, in place of the car list they have no
+    /// use for.
+    ///
+    /// Which one is followed never leaves this machine: it decides which driver
+    /// this viewer's race is built around, and nobody else's race changes
+    /// because of it.
+    /// </summary>
+    void DrawDriverToFollow(Room room, float reservedBelow)
+    {
+        ImGui.TextUnformatted("Follow");
+
+        var drivers = Seats.Drivers(room.Players);
+        if (drivers.Count == 0)
+        {
+            DrawWarning("Nobody is racing yet - a room of viewers has no race to watch.");
+            return;
+        }
+
+        string following = _session.WatchedDriver()?.Name ?? "";
+
+        float rowHeight = ImGui.GetTextLineHeightWithSpacing();
+        float floorHeight = rowHeight * MinVisibleCarRows + ImGui.GetStyle().FramePadding.Y * 2f;
+        float listHeight = Math.Max(ImGui.GetContentRegionAvail().Y - reservedBelow, floorHeight);
+        ImGui.BeginChild("Drivers", new Vector2(0f, listHeight), ImGuiChildFlags.Border);
+        foreach (var driver in drivers)
+        {
+            ImGui.PushID(driver.Name);
+            if (ImGui.Selectable($"{driver.Name}  {_carCatalogue.DisplayName(driver.Car)}",
+                                 driver.Name == following))
+                _session.Watch(driver.Name);
+            ImGui.PopID();
+        }
+        ImGui.EndChild();
+    }
 
     /// <summary>How big a paint square is, in the UI's own units.</summary>
     static float SwatchSize => ImGui.GetTextLineHeight();

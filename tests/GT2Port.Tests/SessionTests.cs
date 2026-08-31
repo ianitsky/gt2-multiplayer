@@ -1015,4 +1015,47 @@ public class SessionTests
 
         Assert.Equal((byte)5, session.Current!.Players.Single(p => p.Name == "guest").Colour);
     }
+
+    [Fact]
+    public void A_clients_choice_to_watch_reaches_the_hosts_room()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+
+        session.ApplyClientIntent("guest", "", ready: true, colour: 0, watching: true);
+
+        Assert.True(session.Current!.Players.Single(p => p.Name == "guest").Watching);
+    }
+
+    /// <summary>
+    /// A viewer's race is built around a driver, so there has to be one even
+    /// before they choose - and the choice has to survive a driver leaving.
+    /// </summary>
+    [Fact]
+    public void A_viewer_follows_the_first_driver_until_it_chooses()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+        session.SetWatching("ian", true);
+        session.ApplyClientIntent("les", "dvpgn", ready: true);
+        session.ApplyClientIntent("kay", "buc9n", ready: true);
+
+        Assert.Equal("les", session.WatchedDriver()!.Name);
+
+        session.Watch("kay");
+        Assert.Equal("kay", session.WatchedDriver()!.Name);
+
+        session.ApplyClientLeave("kay");
+        Assert.Equal("les", session.WatchedDriver()!.Name);
+    }
+
+    [Fact]
+    public void A_room_with_nobody_driving_has_no_driver_to_follow()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+        session.SetWatching("ian", true);
+
+        Assert.Null(session.WatchedDriver());
+    }
 }

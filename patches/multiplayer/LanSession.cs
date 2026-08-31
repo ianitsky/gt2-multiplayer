@@ -47,6 +47,14 @@ public sealed class LanSession : IDisposable
     const byte ReadyFlag = 1 << 0;
     const byte LeavingFlag = 1 << 1;
 
+    /// <summary>
+    /// This player is here to watch. A bit rather than a byte of its own, so
+    /// the intent's layout does not move and its version need not: a host that
+    /// does not know the bit ignores it and sees a driver, which is what it
+    /// would have seen anyway.
+    /// </summary>
+    const byte WatchingFlag = 1 << 2;
+
     readonly UdpClient _socket;
     readonly int _boundPort;
     readonly int _hostPort;
@@ -373,7 +381,8 @@ public sealed class LanSession : IDisposable
             if (intent.Leaving)
                 session.ApplyClientLeave(intent.Name);
             else
-                session.ApplyClientIntent(intent.Name, intent.Car, intent.Ready, intent.Colour);
+                session.ApplyClientIntent(intent.Name, intent.Car, intent.Ready, intent.Colour,
+                intent.Watching);
 
             SendRoomState(session.Current!, from!);
         }
@@ -420,7 +429,8 @@ public sealed class LanSession : IDisposable
 
         var self = current.Players.FirstOrDefault(p => p.Name == session.PlayerName);
         var intent = new ClientIntent(current.Id, session.PlayerName,
-            self?.Car ?? "", self?.Ready ?? false, Leaving: false, Colour: self?.Colour ?? 0);
+            self?.Car ?? "", self?.Ready ?? false, Leaving: false, Colour: self?.Colour ?? 0,
+            Watching: self?.Watching ?? false);
         SendIntent(intent, hostAddress);
         _lastIntentSent = now;
     }
@@ -437,7 +447,8 @@ public sealed class LanSession : IDisposable
 
         var self = current.Players.FirstOrDefault(p => p.Name == session.PlayerName);
         var intent = new ClientIntent(current.Id, session.PlayerName,
-            self?.Car ?? "", self?.Ready ?? false, Leaving: true, Colour: self?.Colour ?? 0);
+            self?.Car ?? "", self?.Ready ?? false, Leaving: true, Colour: self?.Colour ?? 0,
+            Watching: self?.Watching ?? false);
         SendIntent(intent, hostAddress);
     }
 
@@ -559,7 +570,8 @@ public sealed class LanSession : IDisposable
     // ---- wire format ----
 
     internal readonly record struct ClientIntent(
-        Guid RoomId, string Name, string Car, bool Ready, bool Leaving, byte Colour = 0);
+        Guid RoomId, string Name, string Car, bool Ready, bool Leaving,
+        byte Colour = 0, bool Watching = false);
 
     internal static byte[] Serialise(ClientIntent intent)
     {
@@ -571,6 +583,7 @@ public sealed class LanSession : IDisposable
         byte flags = 0;
         if (intent.Ready) flags |= ReadyFlag;
         if (intent.Leaving) flags |= LeavingFlag;
+        if (intent.Watching) flags |= WatchingFlag;
         buffer.Add(flags);
 
         WriteString(buffer, intent.Name);
@@ -600,7 +613,7 @@ public sealed class LanSession : IDisposable
 
         intent = new ClientIntent(roomId, name, car,
             Ready: (flags & ReadyFlag) != 0, Leaving: (flags & LeavingFlag) != 0,
-            Colour: colour);
+            Colour: colour, Watching: (flags & WatchingFlag) != 0);
         return true;
     }
 

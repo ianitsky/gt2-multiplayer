@@ -130,6 +130,35 @@ public sealed class Session
     public void SetColour(string playerName, byte colour) =>
         UpdatePlayer(playerName, p => p with { Colour = colour });
 
+    /// <summary>Takes a seat in the race, or gives it up to watch instead.</summary>
+    public void SetWatching(string playerName, bool watching) =>
+        UpdatePlayer(playerName, p => p with { Watching = watching });
+
+    /// <summary>
+    /// Which driver this machine's viewer is following, by name.
+    ///
+    /// Local, and deliberately not on the wire: it changes nothing for anybody
+    /// else, and a room that carried it would have every machine retransmitting
+    /// a choice only one of them can act on. Empty means "the first driver",
+    /// which is also what a name that has since left the room falls back to.
+    /// </summary>
+    public string Watching { get; private set; } = "";
+
+    /// <summary>Follows a driver, by name.</summary>
+    public void Watch(string driverName) => Watching = driverName;
+
+    /// <summary>
+    /// The driver a viewer's race is built around: the one they chose if that
+    /// name is still driving, and the first driver otherwise.
+    /// </summary>
+    public Player? WatchedDriver()
+    {
+        if (Current is not { } room) return null;
+        var drivers = Seats.Drivers(room.Players);
+        if (drivers.Count == 0) return null;
+        return drivers.FirstOrDefault(p => p.Name == Watching) ?? drivers[0];
+    }
+
     /// <summary>
     /// Applies a client's whole intent, received over the wire: update if
     /// the name is already in the room, add it if there is room, otherwise
@@ -137,7 +166,8 @@ public sealed class Session
     /// cannot ready up, change car, or (via <see cref="ApplyClientLeave"/>)
     /// remove the host by sending a message that happens to carry its name.
     /// </summary>
-    public void ApplyClientIntent(string name, string car, bool ready, byte colour = 0)
+    public void ApplyClientIntent(string name, string car, bool ready, byte colour = 0,
+                                  bool watching = false)
     {
         if (Phase != SessionPhase.Hosting) return;
         if (name == _playerName) return;
@@ -145,12 +175,18 @@ public sealed class Session
 
         if (room.Players.Any(p => p.Name == name))
         {
-            UpdatePlayer(name, p => p with { Car = car, Ready = ready, Colour = colour });
+            UpdatePlayer(name, p => p with
+            {
+                Car = car, Ready = ready, Colour = colour, Watching = watching,
+            });
             OnHeard(name);
         }
         else if (room.Players.Count < room.MaxPlayers)
         {
-            Current = room with { Players = [.. room.Players, new Player(name, car, ready, colour)] };
+            Current = room with
+            {
+                Players = [.. room.Players, new Player(name, car, ready, colour, watching)],
+            };
             OnHeard(name);
         }
         // else: room is full - ignore, no row added and no keep-alive recorded.

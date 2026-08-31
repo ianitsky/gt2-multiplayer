@@ -14,7 +14,44 @@ namespace GT2Port.Multiplayer;
 /// paint keep saying what they mean. The first paint is the one the arcade
 /// would have chosen.
 /// </summary>
-public record Player(string Name, string Car, bool Ready, byte Colour = 0);
+public record Player(string Name, string Car, bool Ready, byte Colour = 0, bool Watching = false);
+
+/// <summary>
+/// Who is in a room, split the way the race needs them.
+///
+/// A room used to be a list of players, and a player's place in that list was
+/// also their place on the grid and the seat every pose on the wire is keyed
+/// by. Viewers break that: they are in the room and not in the race, so the two
+/// numberings come apart, and a pose keyed by the wrong one arrives at the
+/// wrong car.
+///
+/// So the seat counts along the drivers, and only the drivers. The order comes
+/// from the room the host published, so every machine derives the same list
+/// from the same room without anyone sending it.
+/// </summary>
+public static class Seats
+{
+    /// <summary>The players who are racing, in the order the seats count along.</summary>
+    public static List<Player> Drivers(IReadOnlyList<Player> players) =>
+        [.. players.Where(p => !p.Watching).Take(RaceGrid.Slots)];
+
+    /// <summary>The players who are only watching.</summary>
+    public static List<Player> Viewers(IReadOnlyList<Player> players) =>
+        [.. players.Where(p => p.Watching)];
+
+    /// <summary>
+    /// Which seat <paramref name="who"/> holds, or -1 for a viewer and for
+    /// anyone the room does not have - which are the same answer, because
+    /// neither has a car for a pose to be about.
+    /// </summary>
+    public static int Of(IReadOnlyList<Player> players, string who)
+    {
+        var drivers = Drivers(players);
+        for (int i = 0; i < drivers.Count; i++)
+            if (drivers[i].Name == who) return i;
+        return -1;
+    }
+}
 
 public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers, IReadOnlyList<Player> Players);
 
@@ -30,7 +67,7 @@ public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxP
 /// </summary>
 public static class RoomState
 {
-    const byte Version = 3;
+    const byte Version = 4;
     public const int MaxPlayers = 6;
     public const int MaxStringBytes = 64;
 
@@ -69,6 +106,7 @@ public static class RoomState
             WriteString(buffer, player.Car);
             buffer.Add(player.Ready ? (byte)1 : (byte)0);
             buffer.Add(player.Colour);
+            buffer.Add(player.Watching ? (byte)1 : (byte)0);
         }
         return [.. buffer];
     }
@@ -96,7 +134,8 @@ public static class RoomState
             if (!TryString(data, ref offset, out string car)) return false;
             if (!TryByte(data, ref offset, out byte ready)) return false;
             if (!TryByte(data, ref offset, out byte colour)) return false;
-            players.Add(new Player(playerName, car, ready != 0, colour));
+            if (!TryByte(data, ref offset, out byte watching)) return false;
+            players.Add(new Player(playerName, car, ready != 0, colour, watching != 0));
         }
 
         room = new Room(id, name, track, carGroup, maxPlayers, players);

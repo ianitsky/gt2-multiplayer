@@ -48,39 +48,39 @@ public static class RaceGrid
     /// <summary>
     /// The entrants in the order this machine writes them.
     ///
-    /// The human always drives entrant 0 - proven by putting the local player
-    /// anywhere else and watching them drive entrant 0's car regardless - so
-    /// each machine leads with its own player and the rest keep the room's
+    /// Entrant 0 is the one that matters: the human always drives it - proven
+    /// by putting the local player anywhere else and watching them drive
+    /// entrant 0's car regardless - and the view follows it. So each machine
+    /// leads with the driver it is built around and the rest keep the room's
     /// order behind them. Every machine therefore holds the same six cars in a
     /// different rotation, which is why anything sent between them has to be
     /// keyed by a seat in the room rather than by a slot in the race.
+    ///
+    /// <paramref name="leader"/> is this machine's own player when it is
+    /// racing, and the driver it is watching when it is not. A viewer's race
+    /// is otherwise the race that driver's own machine builds - which is what
+    /// makes a viewer cost no new mechanism at all.
     /// </summary>
-    public static List<Player> Order(IReadOnlyList<Player> players, string me, int racing)
+    public static List<Player> Order(IReadOnlyList<Player> drivers, string leader, int racing)
     {
-        var order = players.Take(racing).ToList();
-        int mine = order.FindIndex(p => p.Name == me);
-        if (mine > 0)
+        var order = drivers.Take(racing).ToList();
+        int first = order.FindIndex(p => p.Name == leader);
+        if (first > 0)
         {
-            var self = order[mine];
-            order.RemoveAt(mine);
-            order.Insert(0, self);
+            var lead = order[first];
+            order.RemoveAt(first);
+            order.Insert(0, lead);
         }
         return order;
     }
 
-    /// <summary>Which slot this machine drives <paramref name="who"/> in, or -1.</summary>
-    public static int SlotFor(IReadOnlyList<Player> players, string me, string who) =>
-        Order(players, me, Math.Min(players.Count, Slots)).FindIndex(p => p.Name == who);
+    /// <summary>Which slot this machine holds <paramref name="who"/> in, or -1.</summary>
+    public static int SlotFor(IReadOnlyList<Player> drivers, string leader, string who) =>
+        Order(drivers, leader, Math.Min(drivers.Count, Slots)).FindIndex(p => p.Name == who);
 
     /// <summary>The most entrants the block has room for.</summary>
     public const int Slots = 6;
 
-    /// <summary>
-    /// Writes <paramref name="players"/> into the race the menu has just built,
-    /// marking <paramref name="me"/> as the one this machine drives. Returns
-    /// false if the block is not a finished race yet, so a caller can keep
-    /// trying until it is.
-    /// </summary>
     /// <summary>
     /// The letter a player's chosen paint is called, or null when the car
     /// database cannot say - in which case the entrant keeps whatever the
@@ -93,9 +93,16 @@ public static class RaceGrid
         return paints[player.Colour].Letter;
     }
 
-    public static bool TryApply(IMemory m, IReadOnlyList<Player> players, string me, CarCatalogue? cars)
+    /// <summary>
+    /// Writes <paramref name="drivers"/> into the race the menu has just built,
+    /// leading with <paramref name="leader"/> - this machine's own player when
+    /// it is racing, the driver it is watching when it is not. Returns false if
+    /// the block is not a finished race yet, so a caller can keep trying until
+    /// it is.
+    /// </summary>
+    public static bool TryApply(IMemory m, IReadOnlyList<Player> drivers, string leader, CarCatalogue? cars)
     {
-        if (players.Count == 0) return false;
+        if (drivers.Count == 0) return false;
 
         // The menu fills the entrants one at a time while the host is still
         // choosing. Writing into a half-built race would just be overwritten
@@ -103,7 +110,7 @@ public static class RaceGrid
         for (int i = 0; i < Slots; i++)
             if (m.ReadU32(Block + (uint)(FirstEntrant + i * EntrantSize) + CarId) == 0) return false;
 
-        int racing = Math.Min(players.Count, Slots);
+        int racing = Math.Min(drivers.Count, Slots);
         m.WriteU8(Block + Count, (byte)racing);
 
         // The human always drives entrant 0 - proven by putting the local
@@ -111,7 +118,7 @@ public static class RaceGrid
         // regardless of which entrant was marked. So each machine leads with
         // its own player, and the entrant order differs from machine to
         // machine by exactly that rotation.
-        var order = Order(players, me, racing);
+        var order = Order(drivers, leader, racing);
 
         for (int i = 0; i < racing; i++)
         {
@@ -140,7 +147,7 @@ public static class RaceGrid
             // are rotated so each machine drives its own car, but the room's
             // order is the same everywhere - so every machine puts every
             // player in the same place on the grid, however it numbers them.
-            int place = players.Take(racing).ToList().FindIndex(p => p.Name == player.Name);
+            int place = drivers.Take(racing).ToList().FindIndex(p => p.Name == player.Name);
             m.WriteU8(entrant + GridPlace, (byte)(place < 0 ? i : place));
         }
 

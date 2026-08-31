@@ -93,7 +93,19 @@ public static class DirectRace
     static bool _said;
 
     /// <summary>What the lobby settled, kept because the race has to be described.</summary>
-    public sealed record Pending(IReadOnlyList<Player> Players, string Me, string Car, string Course, CarCatalogue? Cars);
+    /// <summary>
+    /// What the lobby settled, kept because the race has to be described.
+    ///
+    /// <paramref name="Players"/> is the drivers, not the room - a viewer is in
+    /// the room and not in the race, and the seat every pose is keyed by counts
+    /// along this list. <paramref name="Me"/> is the driver the race is built
+    /// around: this machine's own player when it is racing, and the one it is
+    /// watching when it is not, so a viewer's race is the race that driver's
+    /// own machine builds.
+    /// </summary>
+    public sealed record Pending(
+        IReadOnlyList<Player> Players, string Me, string Car, string Course, CarCatalogue? Cars,
+        bool Watching = false);
 
     static Pending? _race;
 
@@ -114,7 +126,8 @@ public static class DirectRace
         _armedAt = DateTime.UtcNow;
         _said = false;
         Console.Error.WriteLine(
-            $"[direct] a race is waiting: {race.Players.Count} player(s), {race.Me} in {race.Car}");
+            $"[direct] a race is waiting: {race.Players.Count} driver(s),"
+            + (race.Watching ? $" watching {race.Me} in {race.Car}" : $" {race.Me} in {race.Car}"));
 
         // Here rather than at the arcade's entry point, which is a frame or
         // two later: this runs while the lobby's overlay hook is still on the
