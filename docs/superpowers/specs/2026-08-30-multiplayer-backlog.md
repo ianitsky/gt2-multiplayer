@@ -390,6 +390,39 @@ is a way to build it out of pieces that already work:
 That second half is unproven. It is a call into the game mid-race, which is
 exactly the shape of thing this port has been bitten by before.
 
+## What stands a car on a square
+
+Not the entrant's index. The byte at **+0x8D** of an entrant, which this port
+writes from the player's seat in the room.
+
+Four machines racing at once, each reporting where the game had stood all six
+cars before anything moved one:
+
+| place | square (x, z) |
+| --- | --- |
+| 0 | (713339, 358892) |
+| 1 | (695895, 314351) |
+| 2 | (654697, 336622) |
+| 3 | (636879, 291710) |
+
+Every machine holds the same four drivers in its own rotation - each leads with
+its own player, because the pad drives entrant 0 - and every machine reports the
+same square for the same number. Slot 0 is a different square on each. So the
+number decides and the slot does not.
+
+That closes two things at once:
+
+- **The correction is not needed.** Standing a machine's own car on the square
+  its seat was holding was right while the grid was numbered by slot, and
+  became wrong the moment the number came from the room: entrant 0 already
+  carries its own seat's number, so moving it again takes it onto somebody
+  else's square. Two players came out on one square again, and four did too.
+- **The leftovers are still open, but narrower.** Numbering the spare entrants
+  4 and 5 put every car on one square, which is not what a placer that simply
+  reads a number would do. A place past the entrant count reaching past the end
+  of the course's list of squares would explain it. Untested - the room's own
+  four are numbered 0 to 3 and are correct.
+
 ## 5. The end of a race returns to the lobby
 
 Not to the arcade menu. The room outlives the race, so a second race can be

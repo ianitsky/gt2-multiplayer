@@ -95,8 +95,10 @@ public static class CarSync
     /// collision came back the moment each machine led the grid with its own
     /// player, and it is why this is off.
     ///
-    /// Kept as a switch rather than deleted because the report below is what
-    /// says which of the two the game actually stands a car by.
+    /// Off, and staying off: four machines then reported the same square for
+    /// the same number at +0x8D - place 0 at (713339, 358892) through place 3
+    /// at (636879, 291710) - in four different rotations. The number stands the
+    /// car; the slot does not. There is nothing left for this to correct.
     /// </summary>
     static readonly bool Stand =
         Environment.GetEnvironmentVariable("GT2_STAND_ON_SQUARE") is not (null or "");
@@ -105,12 +107,10 @@ public static class CarSync
     /// Says where the game stood every car, once, before anything has moved
     /// one - and moves this machine's own car only when asked to.
     ///
-    /// Two machines' reports held side by side answer the question outright.
-    /// If a car is stood by its entrant index, slot i is the same square on
-    /// every machine and the two lists come out identical. If it is stood by
-    /// the place written at +0x8D, each machine's list is the same squares in
-    /// its own rotation - and then a machine's own car is already standing
-    /// exactly where the room says it should.
+    /// Four machines' reports held side by side answered the question outright:
+    /// the same square for the same number at +0x8D, each machine's list being
+    /// that set in its own rotation. Kept because it costs one line a race and
+    /// is the first thing to read when a car turns up somewhere unexpected.
     /// </summary>
     static void SayWhereTheGridPutUs(IMemory m, int seat)
     {

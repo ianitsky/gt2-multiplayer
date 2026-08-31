@@ -41,7 +41,17 @@ public static class RaceGrid
     const int PaintLetter = 0x04;
     const int AiSkill = 0x42;          // 0 for the human's car, 100 for the rest
     const int IsAi = 0x82;             // 0 for the human's car, 1 for the rest
-    const int GridPlace = 0x8D;        // counted from zero
+    /// <summary>
+    /// Where on the grid a car stands, counted from zero - and it is this,
+    /// rather than the entrant's index, that the game stands a car by.
+    ///
+    /// Measured on four machines at once. Each holds the same four drivers in
+    /// its own rotation, and each reports the same square for the same number:
+    /// place 0 at (713339, 358892), place 1 at (695895, 314351), place 2 at
+    /// (654697, 336622), place 3 at (636879, 291710). Slot 0 is a different
+    /// square on every machine, so the slot is not what decides.
+    /// </summary>
+    const int GridPlace = 0x8D;
     const int CarName = 0x90;
     const int CarNameRoom = 0x18;      // how much space the name has
 
@@ -84,9 +94,12 @@ public static class RaceGrid
     /// <summary>
     /// Whether to number the entrants nobody in the room is driving.
     ///
-    /// Tried on, and it put every car on one square. Kept as a switch rather
-    /// than deleted because the question it was asking is still open - two
-    /// cars did share a square before it, and something numbers them.
+    /// Tried on, and it put every car on one square. The question it was asking
+    /// is now answered - <see cref="GridPlace"/> is what stands a car - so what
+    /// is left is why numbering the spare entrants 4 and 5 broke the four that
+    /// were racing. A place past the entrant count reaching past the end of the
+    /// course's list of squares would do it. Left off, and left as a switch,
+    /// because the room's own four are numbered 0 to 3 and are correct.
     /// </summary>
     static readonly bool PlaceTheLeftovers =
         Environment.GetEnvironmentVariable("GT2_GRID_LEFTOVERS") is not (null or "");
@@ -157,6 +170,10 @@ public static class RaceGrid
             // are rotated so each machine drives its own car, but the room's
             // order is the same everywhere - so every machine puts every
             // player in the same place on the grid, however it numbers them.
+            //
+            // And this is the whole of what puts a car on a square: four
+            // machines report the same coordinates for the same number here,
+            // in four different rotations.
             int place = drivers.Take(racing).ToList().FindIndex(p => p.Name == player.Name);
             m.WriteU8(entrant + GridPlace, (byte)(place < 0 ? i : place));
         }
