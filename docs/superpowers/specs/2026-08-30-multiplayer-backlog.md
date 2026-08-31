@@ -206,16 +206,41 @@ above clears it on all but the first. "Which pad drives this entrant" would
 behave exactly like that, and it is the flag the port has been looking for
 since it started asking what makes an entrant answer to a controller.
 
-### The question that decides the approach
+### What running it answered
 
-Whether the game's replay kind can run without a recorded input stream. If it
-can, a viewer is a normal race with one byte changed and no entrant driven by a
-pad. If it cannot, the viewer runs an ordinary race with every car moved by the
-poses already on the wire, and the replay is made rather than borrowed: an
-external camera on a chosen car, and no driver's HUD.
+Two switches, run apart, on 2026-08-30.
 
-The camera target has not been found either way, and "the viewer chooses who to
-follow" needs it.
+**`GT2_RACE_KIND=2`: the race loaded and went straight back to the arcade
+menu.** Kind 2 is the attract demo's kind, and a race handed it without the rest
+of what the demo sets up ends itself before it draws anything. So the game's own
+replay cannot be entered by writing one byte, and the replay has to be made
+rather than borrowed.
+
+**`GT2_NOBODY_DRIVES=1`: an ordinary race, with the player in full control of
+their car.** Every entrant was marked as one the game drives, and the pad still
+steered entrant 0. **IsAi is not what binds a pad to a car** - it decides who
+steers a car nobody is steering, not whether anybody is. That is the third
+outcome `SecondDriver` was written to look for, arrived at from the other end,
+and it has been corrected there.
+
+### What survives
+
+The pad stays on entrant 0 and the camera follows entrant 0. Both of those are
+already true and neither needs a flag - so a viewer does not need a car of their
+own at all:
+
+**Rotate the driver being watched into entrant 0.** `RaceGrid.Order` already
+rotates this machine's own player to the front, because the human always drives
+entrant 0. A viewer has no player to rotate, so it rotates the driver it is
+watching instead. The camera then follows that driver, the six cars are the same
+six cars, and every one of them is moved by the poses already on the wire - the
+steering the pad still does is overwritten by the watched driver's own pose the
+same way a remote car's is.
+
+Zero new mechanism. What it does not give is switching mid-race: who is entrant
+0 is decided when the race is built, because the car models are loaded per
+entrant. Switching while the race runs needs the camera's own target, which has
+not been found.
 
 ## 5. The end of a race returns to the lobby
 

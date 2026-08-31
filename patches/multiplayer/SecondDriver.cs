@@ -14,19 +14,19 @@ namespace GT2Port.Multiplayer;
 /// reached through a register the caller supplies, so they cannot be tied to
 /// the race's object without running the game.
 ///
-/// The game has exactly one flag that separates a car it drives from a car a
-/// person drives - IsAi, at entrant +0x82, which RaceGrid already writes. So
-/// rather than hunt for the AI, this clears it on the second entrant and feeds
-/// the second pad a held accelerator. Three things can happen, and each says
-/// what to build next:
+/// IsAi, at entrant +0x82, looked like the one flag separating a car the game
+/// drives from a car a person drives - so this clears it on the second entrant
+/// and feeds the second pad a held accelerator, to see which of three things
+/// happens.
 ///
-///   the car pulls away    - the game drives any non-AI entrant from the pad of
-///                           the same index, and a LAN race is remote input
-///                           written into 0x801F0CBA
-///   the car sits still    - IsAi takes the AI off it but nothing puts a driver
-///                           on, and the human count from the mode byte is the
-///                           next lever
-///   the car races anyway  - IsAi is not the selector, and the search goes on
+/// **The third one has since been seen, from the other end.** Setting IsAi on
+/// *every* entrant, the player's included, left the player with full control of
+/// their car for a whole race (2026-08-30, GT2_NOBODY_DRIVES). So IsAi is not
+/// what binds a pad to a car: it decides who steers a car nobody is steering,
+/// not whether anybody is. Whatever does the binding is still unfound, and
+/// entrant +0x8C is the current suspect - the arcade's builder writes 1 into it
+/// for all six, and 0x80015084 treats a zero there on entrant 1 as licence to
+/// copy entrant 0 over it wholesale.
 ///
 /// Off unless GT2_SECOND_HUMAN is set, and only ever inside a launched race.
 /// </summary>

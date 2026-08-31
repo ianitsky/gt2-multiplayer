@@ -24,15 +24,19 @@ namespace GT2Port.Multiplayer;
 ///     and 0x8001710C, and the kind the caller of the second one supplies is 2
 ///     in every path but one.
 ///
-/// What none of that says is whether kind 2 draws anything when no recording
-/// has been loaded. The demo suggests yes - nothing but a font and engine
-/// samples was read while it ran, so its cars were being driven rather than
-/// played back - but suggests is not shows, and the difference is one byte and
-/// one run.
+/// **Both were run, and both answered no.**
 ///
-/// So: both switches off by default, each doing exactly one thing, so a run
-/// can tell "the race became a replay" from "the race is the same race and I
-/// am no longer steering".
+///   GT2_RACE_KIND=2 loaded the race and went straight back to the arcade menu.
+///   Kind 2 is the attract demo's kind, and a race handed it without whatever
+///   else the demo sets up ends itself before it draws. The game's own replay
+///   is not something a viewer can be dropped into by writing one byte.
+///
+///   GT2_NOBODY_DRIVES=1 ran an ordinary race in which the player kept full
+///   control of their car. So IsAi is not what binds a pad to a car - see
+///   SecondDriver, whose third outcome this is.
+///
+/// Both are kept, off, because they are how the next kind or the next flag gets
+/// asked the same question for the cost of a run.
 /// </summary>
 public static class ReplayView
 {
