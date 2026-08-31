@@ -127,6 +127,63 @@ public static class ReplayView
     const byte DemoKind = 2;
 
     /// <summary>
+    /// Where the game says whether a replay is running, according to the cheat
+    /// that turns the replay cameras on in a race.
+    ///
+    /// That cheat gates half of itself on this address and calls 1 "replay
+    /// off"; the block that undoes those patches is gated on 0 and is headed
+    /// "when replay is enabled". So this is the switch the *presentation* asks,
+    /// and it is not in the race record - which is why a block with the demo's
+    /// kind, the demo's flags and the demo's entrant bits still came up as an
+    /// ordinary race.
+    ///
+    /// Nothing in the game reaches it by a literal: it is a base register plus
+    /// an offset in all four overlays, so reading cannot say who owns it.
+    /// Holding it is the cheaper question and answers the same thing.
+    /// </summary>
+    const uint ReplayFlag = 0x800A92BCu;
+
+    /// <summary>
+    /// What to hold the replay flag at, when GT2_REPLAY_FLAG names a value.
+    ///
+    /// Held every frame rather than written once: whatever sets it up does so
+    /// while the race is starting, and a value written before that is a value
+    /// about to be overwritten. This is the same lesson the curtain over the
+    /// arcade already carries.
+    /// </summary>
+    static readonly int FlagWanted =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_REPLAY_FLAG"), out int f) ? f : -1;
+
+    static bool _saidFlag;
+
+    /// <summary>
+    /// Holds the replay flag where it was asked to be, once a frame.
+    ///
+    /// The first frame says what the game had it at, which is the value a race
+    /// runs with and therefore the one to try the opposite of.
+    /// </summary>
+    public static void HoldTheReplayFlag(IMemory m)
+    {
+        if (!Forced) return;
+
+        if (!_saidFlag)
+        {
+            _saidFlag = true;
+            var around = new byte[8];
+            for (uint i = 0; i < 8; i++) around[i] = m.ReadU8(ReplayFlag - 2u + i);
+            Console.Error.WriteLine(
+                $"[replay] the flag at 0x{ReplayFlag:X8} reads"
+                + $" byte {m.ReadU8(ReplayFlag)}, halfword {m.ReadU16(ReplayFlag)},"
+                + $" word 0x{m.ReadU32(ReplayFlag):X8}"
+                + $" (0x{ReplayFlag - 2:X8}: " + string.Join(" ", around.Select(b => b.ToString("X2"))) + ")"
+                + (FlagWanted < 0 ? " - not held" : $" - holding it at {FlagWanted}"));
+        }
+
+        if (FlagWanted < 0) return;
+        m.WriteU16(ReplayFlag, (ushort)FlagWanted);
+    }
+
+    /// <summary>
     /// Puts the demo's record where the arcade left its own, keeping the course
     /// this machine has actually loaded.
     ///
