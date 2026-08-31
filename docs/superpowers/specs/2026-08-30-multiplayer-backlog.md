@@ -157,8 +157,65 @@ room list.
 
 ## 4. Viewers
 
-A seat in the room that is not a car: the race is presented to them the way a
-replay is.
+**Status: agreed, being read for. Nothing written.**
+
+### What was agreed
+
+A seat in the room that is not a car. Settled with the player on 2026-08-30:
+
+- **The camera** is the game's own replay presentation, and the viewer chooses
+  which driver it follows.
+- **Viewers do not take grid slots.** A room can hold six drivers and viewers
+  besides.
+- **Chosen in the lobby**, and changeable between races once item 5 puts
+  players back in the lobby afterwards.
+- **Live.** The race happens now; "replay" is the presentation, not a
+  recording.
+
+Decided without asking, and open to being overruled: a viewer readies up and is
+waited for at the start line like anyone else in the room; a room needs at least
+one driver; a viewer starts out following the first driver.
+
+### What that costs structurally
+
+Today a player's seat in the room and their place on the grid are the same
+number. With viewers in the room they stop being the same, and every pose on
+the wire is keyed by that number - so the room has to be split into **drivers**
+(the ones with a car, capped at six, and the list a seat counts along) and
+**viewers**, before anything else is written.
+
+### What the game says so far
+
+**The kind of race is one byte**, at race block +0x0A. `gt2_01` reads it in 64
+places and branches on values from 0 to 11. An arcade race holds **4** - the
+builder copies it out of the parameter block's +0x02. The attract demo, which
+is a replay, held **2**.
+
+**The race changes its own kind at runtime.** `0x80017098` and `0x8001710C` are
+a save-and-restore pair: the save stashes three fields of the block, cuts the
+entrant count at +0x5A to one, and clears +0x8C on every entrant after the
+first; the restore puts the three fields back and writes a kind the caller
+supplies into +0x0A. That is the shape of "go into a one-car presentation and
+come back", which is what a post-race replay is. Which kind the caller supplies
+is held in a register from further up, and that is where static reading has
+stopped.
+
+**A lead on the thing `SecondDriver` never resolved.** Entrant **+0x8C**: the
+arcade's own builder writes 1 into it for every entrant, and the one-car setup
+above clears it on all but the first. "Which pad drives this entrant" would
+behave exactly like that, and it is the flag the port has been looking for
+since it started asking what makes an entrant answer to a controller.
+
+### The question that decides the approach
+
+Whether the game's replay kind can run without a recorded input stream. If it
+can, a viewer is a normal race with one byte changed and no entrant driven by a
+pad. If it cannot, the viewer runs an ordinary race with every car moved by the
+poses already on the wire, and the replay is made rather than borrowed: an
+external camera on a chosen car, and no driver's HUD.
+
+The camera target has not been found either way, and "the viewer chooses who to
+follow" needs it.
 
 ## 5. The end of a race returns to the lobby
 
