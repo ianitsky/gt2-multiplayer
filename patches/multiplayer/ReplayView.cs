@@ -85,7 +85,7 @@ public static class ReplayView
 
     /// <summary>Whether this race is to be shown as a replay.</summary>
     public static bool ShowsAReplay(DirectRace.Pending? race) =>
-        Forced || race?.Watching == true;
+        !Watching && (Forced || race?.Watching == true);
 
     /// <summary>
     /// Turns the race the arcade has just built into the race the attract demo
@@ -154,6 +154,17 @@ public static class ReplayView
     static readonly int FlagWanted =
         int.TryParse(Environment.GetEnvironmentVariable("GT2_REPLAY_FLAG"), out int f) ? f : -1;
 
+    /// <summary>
+    /// Reports the replay flag without changing anything, so the value a real
+    /// replay runs with can be measured rather than guessed at.
+    ///
+    /// The attract demo is a replay, and it reaches the race overlay through
+    /// the same hooks this port already has - so booting and touching nothing
+    /// is a measurement.
+    /// </summary>
+    static readonly bool Watching =
+        Environment.GetEnvironmentVariable("GT2_REPLAY_WATCH") is not (null or "");
+
     static bool _saidFlag;
 
     /// <summary>
@@ -164,7 +175,7 @@ public static class ReplayView
     /// </summary>
     public static void HoldTheReplayFlag(IMemory m)
     {
-        if (!Forced) return;
+        if (!Forced && !Watching) return;
 
         if (!_saidFlag)
         {
@@ -179,7 +190,7 @@ public static class ReplayView
                 + (FlagWanted < 0 ? " - not held" : $" - holding it at {FlagWanted}"));
         }
 
-        if (FlagWanted < 0) return;
+        if (FlagWanted < 0 || Watching) return;
         m.WriteU16(ReplayFlag, (ushort)FlagWanted);
     }
 
