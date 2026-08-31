@@ -67,9 +67,19 @@ public static class ReplayView
     /// <summary>
     /// Runs a race as a replay even when this machine is racing, so the whole
     /// thing can be tried on one machine without a lobby and a second player.
+    ///
+    /// GT2_REPLAY_VIEW=whole installs the captured record entire instead of
+    /// changing the five fields that make one. That is the higher-fidelity
+    /// answer and the riskier one - the capture names the course it was taken
+    /// on and the cars that were in it, and neither is what this machine has
+    /// loaded - so it is kept for comparison rather than used.
     /// </summary>
-    static readonly bool Forced =
-        Environment.GetEnvironmentVariable("GT2_REPLAY_VIEW") is not (null or "");
+    static readonly string Force =
+        Environment.GetEnvironmentVariable("GT2_REPLAY_VIEW") ?? "";
+
+    static bool Forced => Force.Length > 0;
+
+    static bool Wholesale => string.Equals(Force, "whole", StringComparison.OrdinalIgnoreCase);
 
     static byte[]? _record;
 
@@ -78,14 +88,53 @@ public static class ReplayView
         Forced || race?.Watching == true;
 
     /// <summary>
-    /// Puts the demo's record where the arcade left its own, before anything
-    /// writes the room into it.
+    /// Turns the race the arcade has just built into the race the attract demo
+    /// runs, by changing only what separates the two.
     ///
-    /// Returns false when there is no captured record to install, in which case
-    /// the caller carries on with the arcade's race - a viewer then sees an
-    /// ordinary race, which is wrong but is not a crash.
+    /// Everything else in a race record is content - the race key, the course,
+    /// the team names, the cars - and this machine's content is already right:
+    /// the course whose geometry is loaded, and the cars whose models are in
+    /// memory. Installing a captured record whole would replace all of it with
+    /// somebody else's, and then have to put ours back field by field. Changing
+    /// the five fields that differ cannot mismatch anything, because it does not
+    /// touch anything that could.
     /// </summary>
-    public static bool InstallTheDemosRace(IMemory m)
+    public static bool MakeItAReplay(IMemory m)
+    {
+        if (Wholesale) return InstallTheDemosRace(m);
+
+        byte was = m.ReadU8(Block + Kind);
+        m.WriteU8(Block + FirstFlag, 1);
+        m.WriteU8(Block + SecondFlag, 1);
+        m.WriteU8(Block + Kind, DemoKind);
+        KeepItAReplay(m);
+
+        Console.Error.WriteLine(
+            $"[replay] this was a kind {was} race and is now kind {m.ReadU8(Block + Kind)},"
+            + $" with every entrant marked the way a demo marks them");
+        return true;
+    }
+
+    /// <summary>
+    /// The two header bytes a demo race has set and an arcade race does not.
+    /// What they mean is unread; that they are the only other difference in the
+    /// header is measured, from two captures held side by side.
+    /// </summary>
+    const uint FirstFlag = 0x04u;
+    const uint SecondFlag = 0x09u;
+
+    /// <summary>The kind the attract demo's race carries.</summary>
+    const byte DemoKind = 2;
+
+    /// <summary>
+    /// Puts the demo's record where the arcade left its own, keeping the course
+    /// this machine has actually loaded.
+    ///
+    /// Only reached through GT2_REPLAY_VIEW=whole. Returns false when there is
+    /// no captured record, in which case the caller carries on with the
+    /// arcade's race - wrong, but not a crash.
+    /// </summary>
+    static bool InstallTheDemosRace(IMemory m)
     {
         _record ??= File.Exists(RecordPath) ? File.ReadAllBytes(RecordPath) : null;
         if (_record is not { Length: >= RecordSize })
@@ -94,12 +143,45 @@ public static class ReplayView
             return false;
         }
 
+        // The geometry in memory is this machine's course, not the capture's,
+        // so the two fields that name it are held across the copy rather than
+        // corrected afterwards - there is no moment in between when the block
+        // names a course the game has not got.
+        uint courseNumber = m.ReadU32(Block + CourseNumber);
+        var courseName = new byte[CourseNameRoom];
+        for (int i = 0; i < CourseNameRoom; i++) courseName[i] = m.ReadU8(Block + CourseName + (uint)i);
+
         byte was = m.ReadU8(Block + Kind);
         for (int i = 0; i < RecordSize; i++) m.WriteU8(Block + (uint)i, _record[i]);
+
+        m.WriteU32(Block + CourseNumber, courseNumber);
+        for (int i = 0; i < CourseNameRoom; i++) m.WriteU8(Block + CourseName + (uint)i, courseName[i]);
 
         Console.Error.WriteLine(
             $"[replay] the demo's race is installed over a kind {was} one - this is kind {m.ReadU8(Block + Kind)}");
         return true;
+    }
+
+    /// <summary>
+    /// Says what the block actually holds once the race is running.
+    ///
+    /// This is what tells "the write never happened" from "the write happened
+    /// and something put it back" from "the write stuck and a kind 2 race still
+    /// looks like a race" - three failures that look identical on screen and
+    /// need three different answers.
+    /// </summary>
+    public static void SayWhatTheRaceBecame(IMemory m)
+    {
+        if (!Forced) return;
+
+        var flags = new byte[RaceGrid.Slots];
+        for (uint i = 0; i < RaceGrid.Slots; i++)
+            flags[i] = m.ReadU8(Block + FirstEntrant + i * EntrantSize + WhoDrives);
+
+        Console.Error.WriteLine(
+            $"[replay] at the first frame: kind {m.ReadU8(Block + Kind)},"
+            + $" +0x04={m.ReadU8(Block + FirstFlag)} +0x09={m.ReadU8(Block + SecondFlag)},"
+            + $" entrants " + string.Join(" ", flags.Select(f => f.ToString("X2"))));
     }
 
     /// <summary>
@@ -118,26 +200,4 @@ public static class ReplayView
                       i == 0 ? DemoLeader : DemoOthers);
     }
 
-    /// <summary>
-    /// Points the installed record at the room's course.
-    ///
-    /// The demo's record names the course it was captured on, and the race
-    /// overlay has already loaded ours - so this is not a preference, it is the
-    /// block agreeing with the geometry that is in memory. The number is the
-    /// same rotate-and-add hash of the asset code that the parameter block
-    /// carries, and the name beside it is what the HUD reads.
-    /// </summary>
-    public static void PutTheRoomsCourseIn(IMemory m, string code)
-    {
-        if (code.Length == 0) return;
-
-        uint id = GT2Port.Multiplayer.CourseId.Of(code);
-        m.WriteU32(Block + CourseNumber, id);
-
-        string name = CourseTable.DisplayName(code);
-        for (int i = 0; i < CourseNameRoom; i++)
-            m.WriteU8(Block + CourseName + (uint)i, (byte)(i < name.Length ? name[i] : 0));
-
-        Console.Error.WriteLine($"[replay] the replay is set to {name} ({code}, 0x{id:X8})");
-    }
 }

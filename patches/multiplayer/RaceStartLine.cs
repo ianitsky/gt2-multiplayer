@@ -197,6 +197,7 @@ public static class RaceStartLine
             // Whoever built this race - the arcade, or the attract demo - it
             // is installed and has not begun to change yet.
             RaceBlockDump.RaceIsRunning(m);
+            ReplayView.SayWhatTheRaceBecame(m);
 
             // Again here, because the roster was empty when the block was
             // built and the question is whether it is ever filled at all or
