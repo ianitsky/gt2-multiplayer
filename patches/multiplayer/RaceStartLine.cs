@@ -194,6 +194,10 @@ public static class RaceStartLine
             _lastMoved = now;
             _readsWhenQuiet = reads;
 
+            // Whoever built this race - the arcade, or the attract demo - it
+            // is installed and has not begun to change yet.
+            RaceBlockDump.RaceIsRunning(m);
+
             // Again here, because the roster was empty when the block was
             // built and the question is whether it is ever filled at all or
             // only filled by menus a launch walks past.
