@@ -54,6 +54,8 @@ public static class CarSync
         int seat = race.Watching ? -1 : Seats.Of(race.Players, race.Me);
         if (!race.Watching && seat < 0) return;
 
+        StandOnTheRoomsSquare(m, seat);
+
         if (seat >= 0)
         {
             wire.SendPlace((byte)seat, RemoteCars.ReadPose(m, 0), ModeHook.HostToAnswer);
@@ -77,6 +79,39 @@ public static class CarSync
         }
 
         Say(wire, race);
+    }
+
+    static bool _stood;
+
+    /// <summary>
+    /// Moves this machine's own car onto the square the room says is its, once,
+    /// before it has sent a place from the wrong one.
+    ///
+    /// The game puts cars on the grid by entrant, and every machine rotates its
+    /// own player to entrant 0 - because that is the entrant a person drives.
+    /// So on every machine the local car stands on entrant 0's square, and all
+    /// four machines then broadcast a car standing on the same square. Four
+    /// players saw exactly that: everyone starting in one place.
+    ///
+    /// Nothing has to know where the six squares are. The game has already put
+    /// six cars on them and slot i is square i, so the square this room seat is
+    /// owed is the one slot <c>seat</c> is standing on - read it, and stand
+    /// there instead. The car being read is somebody else's, and its own place
+    /// arrives over the wire a frame later, so lending its square costs nothing.
+    /// </summary>
+    static void StandOnTheRoomsSquare(IMemory m, int seat)
+    {
+        if (_stood) return;
+        _stood = true;
+
+        // Seat zero is already on square zero, and a viewer has no car to move.
+        if (seat <= 0) return;
+
+        var square = RemoteCars.ReadPose(m, seat);
+        RemoteCars.WritePose(m, 0, square);
+
+        Console.Error.WriteLine(
+            $"[sync] moved onto seat {seat}'s square at ({square.Place.X}, {square.Place.Z})");
     }
 
     static void Say(LanSession wire, DirectRace.Pending race)
