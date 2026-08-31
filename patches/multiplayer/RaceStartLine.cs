@@ -122,6 +122,7 @@ public static class RaceStartLine
         // Every frame, because whatever sets it does so while the race is
         // starting - a value written before that is one about to be lost.
         ReplayView.HoldTheReplayFlag(m);
+        RaceBlockDump.RaceIsRunning(m);
 
         SecondDriver.DrivePadOne(m);
         SecondDriver.CheckItStuck(m);
@@ -200,7 +201,6 @@ public static class RaceStartLine
 
             // Whoever built this race - the arcade, or the attract demo - it
             // is installed and has not begun to change yet.
-            RaceBlockDump.RaceIsRunning(m);
             ReplayView.SayWhatTheRaceBecame(m);
 
             // Again here, because the roster was empty when the block was

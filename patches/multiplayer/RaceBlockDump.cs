@@ -45,6 +45,34 @@ public static class RaceBlockDump
     const uint Source = 0x801055C0u;
     const int SourceSize = 0x800;
 
+    /// <summary>
+    /// The head of the race context, up to where the cars begin.
+    ///
+    /// The record says what race this is; this says how the race is being run.
+    /// A demo's replay and an arcade race come up through the same
+    /// 12RaceMenuLoop - the port's own first-frame hook is that class's slot
+    /// 0x10, and it fires for both - so whatever makes one a replay is state
+    /// rather than code, and this is where the race keeps its state.
+    ///
+    /// 0x800A9688 is the first car and 0x800A9500 is the base the port already
+    /// knows; this starts a little below both so the neighbourhood the replay
+    /// cameras cheat points at is inside it too.
+    /// </summary>
+    const uint Context = 0x800A9000u;
+    const int ContextSize = 0x700;
+
+    /// <summary>
+    /// Which frame to take the dump on.
+    ///
+    /// Not the first: the port's first-frame hook is a pre-hook on the method
+    /// that builds the race screen, so on that pass the cars have not been made
+    /// yet and half the context is still whatever the last screen left. Two
+    /// frames in, everything the race sets up is set up.
+    /// </summary>
+    const int OnFrame = 2;
+
+    static int _frames;
+
     static readonly string Path = Environment.GetEnvironmentVariable("GT2_DUMP_RACE") ?? "";
 
     static bool _written;
@@ -53,6 +81,7 @@ public static class RaceBlockDump
     public static void RaceIsRunning(IMemory m)
     {
         if (Path.Length == 0 || _written) return;
+        if (_frames++ < OnFrame) return;
         _written = true;
 
         var bytes = Read(m, Block, Size);
@@ -60,10 +89,12 @@ public static class RaceBlockDump
 
         if (!TryWrite(Path, bytes)) return;
         TryWrite(Path + ".src", source);
+        TryWrite(Path + ".ctx", Read(m, Context, ContextSize));
 
         Console.Error.WriteLine(
             $"[dump] {Size} bytes of race record -> {Path},"
-            + $" {SourceSize} of the buffer it was installed from -> {Path}.src"
+            + $" {SourceSize} of the buffer it was installed from -> {Path}.src,"
+            + $" {ContextSize} of the race context -> {Path}.ctx"
             + $"  (kind {bytes[0x0A]}, {bytes[0x5A]} entrant(s), key \"{Text(bytes, 0x10, 8)}\","
             + $" course \"{Text(bytes, 0x20, 0x20)}\")");
     }
