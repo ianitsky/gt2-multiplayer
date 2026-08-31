@@ -53,6 +53,18 @@ public static class RaceStartLine
     /// </summary>
     static readonly TimeSpan TooLong = TimeSpan.FromMilliseconds(100);
 
+    /// <summary>
+    /// A frame to arm the read watch at, when GT2_WATCH_READ_AT names one.
+    ///
+    /// The race's first frame is too early for some questions. Everything the
+    /// race sets up reads the cars once as it builds them, and a watch armed
+    /// before that spends its whole budget on setup and never sees the
+    /// per-frame readers - which, when the question is "what follows this
+    /// car", are the only ones that matter.
+    /// </summary>
+    static readonly int WatchReadsAt =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_WATCH_READ_AT"), out int f) ? f : -1;
+
     static DateTime _frameBegan;
     static int _readsAtFrameStart;
     static int _stalls;
@@ -114,6 +126,12 @@ public static class RaceStartLine
         CarFind.FrameBegins(m);
         RemoteCars.FrameBegins(m);
         CarSync.FrameBegins(m);
+
+        if (WatchReadsAt >= 0 && _frames == WatchReadsAt)
+        {
+            Console.Error.WriteLine($"[read] {_frames} frames into the race - arming now");
+            RecompOne.Runtime.Memory.MemoryWatch.ArmReads();
+        }
 
         var gc = Collector();
         string? whereItWas = StallWatch.WhereItWas();
