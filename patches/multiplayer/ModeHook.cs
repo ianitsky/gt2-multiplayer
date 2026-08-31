@@ -128,7 +128,16 @@ public static class ModeHook
         if (room == null || room.Players.Count == 0) return;
 
         var drivers = Seats.Drivers(room.Players);
-        string leader = _session!.WatchedDriver()?.Name ?? _session.PlayerName;
+
+        // Leader, not WatchedDriver: the latter answers "who is this viewer
+        // following" and falls back to the first driver, which is the right
+        // answer for a viewer and the wrong one for everybody else. Asked
+        // unconditionally it made every machine rebuild the grid led by the
+        // room's first player - so on each of them entrant 0 carried that
+        // player's car, name and paint, and since the pad drives entrant 0,
+        // every player drove a car wearing the first player's colour. That is
+        // what "all four cars are the same colour" was.
+        string leader = Leader(room)?.Name ?? _session!.PlayerName;
 
         if (!RaceGrid.TryApply(m, drivers, leader, _carCatalogue))
         {

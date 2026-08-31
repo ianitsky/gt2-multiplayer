@@ -147,12 +147,25 @@ public sealed class Session
     /// <summary>Follows a driver, by name.</summary>
     public void Watch(string driverName) => Watching = driverName;
 
+    /// <summary>Whether this session's own player is in the room to watch.</summary>
+    public bool IsWatching =>
+        Current?.Players.FirstOrDefault(p => p.Name == _playerName)?.Watching == true;
+
     /// <summary>
     /// The driver a viewer's race is built around: the one they chose if that
     /// name is still driving, and the first driver otherwise.
+    ///
+    /// Null for a player who is racing, and that guard is the point of it. It
+    /// used to answer for anybody, falling back to the first driver - so a
+    /// caller that forgot to ask whether this player was watching got the first
+    /// driver's name and built the grid around it. Every machine then led with
+    /// the same player, entrant 0 carried that player's car and paint
+    /// everywhere, and since the pad drives entrant 0 every player drove a car
+    /// wearing somebody else's colour.
     /// </summary>
     public Player? WatchedDriver()
     {
+        if (!IsWatching) return null;
         if (Current is not { } room) return null;
         var drivers = Seats.Drivers(room.Players);
         if (drivers.Count == 0) return null;

@@ -1058,4 +1058,34 @@ public class SessionTests
 
         Assert.Null(session.WatchedDriver());
     }
+
+    /// <summary>
+    /// A player who is racing follows nobody. The fallback to the first driver
+    /// is for viewers only: answered for everyone, it had every machine build
+    /// the grid around the room's first player, so entrant 0 carried that
+    /// player's car and paint everywhere - and the pad drives entrant 0.
+    /// </summary>
+    [Fact]
+    public void A_player_who_is_racing_is_not_following_anybody()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+        session.SetCar("ian", "dvpgn");
+        session.ApplyClientIntent("les", "buc9n", ready: true);
+
+        Assert.False(session.IsWatching);
+        Assert.Null(session.WatchedDriver());
+    }
+
+    [Fact]
+    public void A_viewer_follows_a_driver_and_says_so()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+        session.SetWatching("ian", true);
+        session.ApplyClientIntent("les", "buc9n", ready: true);
+
+        Assert.True(session.IsWatching);
+        Assert.Equal("les", session.WatchedDriver()!.Name);
+    }
 }
