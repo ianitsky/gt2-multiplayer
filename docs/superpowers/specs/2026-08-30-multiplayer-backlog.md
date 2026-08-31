@@ -223,6 +223,59 @@ steers a car nobody is steering, not whether anybody is. That is the third
 outcome `SecondDriver` was written to look for, arrived at from the other end,
 and it has been corrected there.
 
+### What a replay actually is
+
+**Found, and running.** A replay is two things, in two places, and four wrong
+answers were spent before the second place was looked at.
+
+**The record**, at 0x801D585C. Beyond content, a demo's race and an arcade race
+differ in five fields:
+
+```
++0x04   1, where an arcade race has 0
++0x09   1, where an arcade race has 0
++0x0A   2, the kind - an arcade race is 4
+entrant +0x82:  C0 41 41 41 41 41,  where an arcade race has 00 01 01 01 01 01
+```
+
+Bit 6 of +0x82 is the one
+`gt2_ovr3_build_race_block_and_fill_all_six_entrants` sets from an argument the
+arcade passes as zero; bit 7, on the first entrant only, is what nothing but a
+replay has.
+
+Writing the kind alone had loaded a race and walked straight back out to the
+menu, and `gt2_main_func21` - the installer, at 0x80069AC4 - says why: it copies
+0x58C bytes into the block, then reads the kind out of what it has just copied
+and branches on it. The kind does not switch anything on. It says what shape the
+rest of the record is in.
+
+**And the race context**, at 0x800A9500. All five record fields, applied and
+still there at the first frame, came up as an ordinary race - so the record is
+not what decides the presentation. Two frames into a demo's replay and two into
+an arcade race, the head of the race context differs in **forty bytes of 1792**,
+and thirty-six of those are inside car 0, which is position and physics. What is
+left is `0x800A9500` and `0x800A951C`: one in a replay, zero in a race.
+
+Holding those two at one, every frame, shows the replay.
+
+### Two things it is not
+
+Both measured rather than assumed, and both worth keeping so the next attempt
+does not repeat them.
+
+**Not the address the replay-camera cheat gates on.** `0x800A92BC` reads zero on
+an ordinary race *and* zero on the demo's replay. The likely reason is the disc:
+a Combined Disc merges Arcade and Simulation by patching the boot executable, and
+a cheat's RAM address for the official 1.1 and 1.2 need not survive that. Its
+overlay patches did, gt2_01 being the same binary either way.
+
+**Not another class.** gt2_01 names four race loops - `15RaceDevelopment`,
+`12RaceMenuLoop`, `12RaceViewLoop`, `14ArcadeRaceLoop`, `19GranTurismoRaceLoop` -
+and `RaceViewLoop` looked like the answer for about a minute. A name follows its
+vtable rather than precedes it, so `12RaceMenuLoop` is 0x8002EF98, whose slot
+0x10 is this port's own first-frame hook - and that hook fires during the demo. A
+replay and a race come up through the same loop.
+
 ### What survives
 
 The pad stays on entrant 0 and the camera follows entrant 0. Both of those are

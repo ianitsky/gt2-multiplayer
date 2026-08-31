@@ -5,17 +5,16 @@ namespace GT2Port.Multiplayer;
 /// <summary>
 /// Makes a viewer's race the race the attract demo runs.
 ///
-/// A viewer is meant to see a replay, and a replay is not an ordinary race with
-/// a flag flipped. Writing 2 into the kind byte at +0x0A of an arcade race
-/// loaded it and walked straight back out to the arcade menu, and
-/// gt2_main_func21 - the installer, at 0x80069AC4 - says why: it copies 0x58C
-/// bytes into the block, then reads the kind out of what it has just copied and
-/// branches on it. The kind is not a key that turns something on. It says what
-/// shape the rest of the record is in.
+/// A replay is two things, in two places, and finding that out cost four wrong
+/// answers worth writing down.
 ///
-/// So the record is taken whole. config/demo-race.bin is 1420 bytes captured
-/// from the block while the attract demo was running one, and holding it beside
-/// a captured arcade race says exactly what a replay is:
+/// **The record.** Writing 2 into the kind byte at +0x0A of an arcade race
+/// loaded it and walked straight back out to the menu, because
+/// gt2_main_func21 - the installer, at 0x80069AC4 - copies 0x58C bytes into the
+/// block and then reads the kind out of what it has just copied and branches on
+/// it. The kind does not turn anything on; it says what shape the rest of the
+/// record is in. Captured side by side, a demo's record and an arcade race's
+/// differ in exactly five things beyond their content:
 ///
 ///   +0x04  1, where an arcade race has 0
 ///   +0x09  1, where an arcade race has 0
@@ -23,18 +22,29 @@ namespace GT2Port.Multiplayer;
 ///
 ///   every entrant's +0x82 carries 0x40, which
 ///   gt2_ovr3_build_race_block_and_fill_all_six_entrants sets from an argument
-///   the arcade passes as zero, and entrant 0 carries 0xC0 rather than the
-///   0x41 the other five do
+///   the arcade passes as zero, and entrant 0 carries 0xC0 rather than the 0x41
+///   the other five do
 ///
-/// Everything else that differs is content: the race key, the course, the team
-/// names, the cars. So the demo's record goes down first and the room's own
-/// content goes over the top of it, which is the same order that already makes
-/// a launched arcade race work.
+/// **And the race context.** All five of those, applied and surviving to the
+/// first frame, still came up as an ordinary race - so the record is not what
+/// decides how a race is presented. Two frames into a demo's replay and two
+/// into an arcade race, the head of the race context differs in forty bytes of
+/// 1792, and thirty-six of them are inside car 0, which is position and
+/// physics. What is left is <see cref="ThisIsAReplay"/> and
+/// <see cref="AndSoIsThis"/>: one in a replay, zero in a race. Holding those
+/// two at one, every frame, is what actually shows a replay.
+///
+/// Two things this is not, both measured rather than assumed. It is not the
+/// address the replay-camera cheat gates on - see
+/// <see cref="CheatsReplayFlag"/>. And it is not another class: gt2_01 names
+/// four race loops, but a name follows its vtable rather than precedes it, so
+/// 12RaceMenuLoop is 0x8002EF98 - whose slot 0x10 is this port's own
+/// first-frame hook, and that hook fires during the demo. A replay and a race
+/// come up through the same loop.
 /// </summary>
 public static class ReplayView
 {
     const uint Block = 0x801D585Cu;
-    const int RecordSize = 0x58C;
 
     /// <summary>What kind of race this is - 2 for the demo's, 4 for the arcade's.</summary>
     const uint Kind = 0x0Au;
@@ -62,26 +72,13 @@ public static class ReplayView
     const byte DemoLeader = 0xC0;
     const byte DemoOthers = 0x41;
 
-    static readonly string RecordPath = Path.Combine("config", "demo-race.bin");
-
     /// <summary>
     /// Runs a race as a replay even when this machine is racing, so the whole
     /// thing can be tried on one machine without a lobby and a second player.
     ///
-    /// GT2_REPLAY_VIEW=whole installs the captured record entire instead of
-    /// changing the five fields that make one. That is the higher-fidelity
-    /// answer and the riskier one - the capture names the course it was taken
-    /// on and the cars that were in it, and neither is what this machine has
-    /// loaded - so it is kept for comparison rather than used.
     /// </summary>
-    static readonly string Force =
-        Environment.GetEnvironmentVariable("GT2_REPLAY_VIEW") ?? "";
-
-    static bool Forced => Force.Length > 0;
-
-    static bool Wholesale => string.Equals(Force, "whole", StringComparison.OrdinalIgnoreCase);
-
-    static byte[]? _record;
+    static readonly bool Forced =
+        Environment.GetEnvironmentVariable("GT2_REPLAY_VIEW") is not (null or "");
 
     /// <summary>Whether this race is to be shown as a replay.</summary>
     public static bool ShowsAReplay(DirectRace.Pending? race) =>
@@ -101,7 +98,7 @@ public static class ReplayView
     /// </summary>
     public static bool MakeItAReplay(IMemory m)
     {
-        if (Wholesale) return InstallTheDemosRace(m);
+        _forThisRace = true;
 
         byte was = m.ReadU8(Block + Kind);
         m.WriteU8(Block + FirstFlag, 1);
@@ -127,6 +124,22 @@ public static class ReplayView
     const byte DemoKind = 2;
 
     /// <summary>
+    /// The two bytes of the race context that a replay has set and a race does
+    /// not.
+    ///
+    /// What they mean is unread. That they are the whole of the difference is
+    /// measured: everything else that separates a demo's replay from an arcade
+    /// race, two frames into each, is car 0's position and physics.
+    ///
+    /// 0x800A9500 is the base of the race context this port already knew from
+    /// the car array at +0x188 and the car count at +0x5D2D, so a flag at +0x00
+    /// and another at +0x1C are where a race would be expected to say what kind
+    /// of thing it is.
+    /// </summary>
+    const uint ThisIsAReplay = 0x800A9500u;
+    const uint AndSoIsThis = 0x800A951Cu;
+
+    /// <summary>
     /// The address the replay-camera cheat gates itself on, kept for the
     /// record: it reads zero on an ordinary race and zero on the attract
     /// demo's replay, so on this build it is not the switch. The likely reason
@@ -146,8 +159,15 @@ public static class ReplayView
     /// about to be overwritten. This is the same lesson the curtain over the
     /// arcade already carries.
     /// </summary>
-    static readonly (uint At, byte Value)[] Held = ParseHeld(
+    static readonly (uint At, byte Value)[] Override = ParseHeld(
         Environment.GetEnvironmentVariable("GT2_REPLAY_HOLD") ?? "");
+
+    /// <summary>
+    /// What a replay holds, and what GT2_REPLAY_HOLD replaces when the next
+    /// question about this needs asking without a build.
+    /// </summary>
+    static (uint At, byte Value)[] Held =>
+        Override.Length > 0 ? Override : [(ThisIsAReplay, 1), (AndSoIsThis, 1)];
 
     /// <summary>
     /// Reads a list like <c>800A9500=1,800A951C=1</c>: an address in hex, a
@@ -178,7 +198,7 @@ public static class ReplayView
     /// and 0x800A951C, one in a replay and zero in a race, and the two bytes at
     /// 0x800A9524 that look like the low half of a pointer.
     /// </summary>
-    static readonly uint[] Suspects = [0x800A9500u, 0x800A951Cu, 0x800A9524u, 0x800A9525u];
+    static readonly uint[] Suspects = [ThisIsAReplay, AndSoIsThis];
 
     /// <summary>
     /// Reports the replay flag without changing anything, so the value a real
@@ -199,9 +219,15 @@ public static class ReplayView
     /// The first frame says what the game had it at, which is the value a race
     /// runs with and therefore the one to try the opposite of.
     /// </summary>
+    /// <summary>
+    /// Whether the race now running is one this port made a replay, so the
+    /// per-frame hold knows to run without being told again.
+    /// </summary>
+    static bool _forThisRace;
+
     public static void HoldTheRaceContext(IMemory m)
     {
-        if (!Forced && !Watching) return;
+        if (!Forced && !Watching && !_forThisRace) return;
 
         if (!_saidFlag)
         {
@@ -214,66 +240,32 @@ public static class ReplayView
                     : " - holding " + string.Join(",", Held.Select(h => $"0x{h.At:X8}={h.Value}"))));
         }
 
-        if (Watching) return;
+        // Every frame. The race sets these up while it is starting, so a value
+        // written before that is a value about to be lost.
+        if (Watching || !Forced && !_forThisRace) return;
         foreach (var (at, value) in Held) m.WriteU8(at, value);
     }
 
     /// <summary>
-    /// Puts the demo's record where the arcade left its own, keeping the course
-    /// this machine has actually loaded.
+    /// Says what the record ended up as, once, at the race's first frame.
     ///
-    /// Only reached through GT2_REPLAY_VIEW=whole. Returns false when there is
-    /// no captured record, in which case the caller carries on with the
-    /// arcade's race - wrong, but not a crash.
-    /// </summary>
-    static bool InstallTheDemosRace(IMemory m)
-    {
-        _record ??= File.Exists(RecordPath) ? File.ReadAllBytes(RecordPath) : null;
-        if (_record is not { Length: >= RecordSize })
-        {
-            Console.Error.WriteLine($"[replay] no demo race record at {RecordPath}");
-            return false;
-        }
-
-        // The geometry in memory is this machine's course, not the capture's,
-        // so the two fields that name it are held across the copy rather than
-        // corrected afterwards - there is no moment in between when the block
-        // names a course the game has not got.
-        uint courseNumber = m.ReadU32(Block + CourseNumber);
-        var courseName = new byte[CourseNameRoom];
-        for (int i = 0; i < CourseNameRoom; i++) courseName[i] = m.ReadU8(Block + CourseName + (uint)i);
-
-        byte was = m.ReadU8(Block + Kind);
-        for (int i = 0; i < RecordSize; i++) m.WriteU8(Block + (uint)i, _record[i]);
-
-        m.WriteU32(Block + CourseNumber, courseNumber);
-        for (int i = 0; i < CourseNameRoom; i++) m.WriteU8(Block + CourseName + (uint)i, courseName[i]);
-
-        Console.Error.WriteLine(
-            $"[replay] the demo's race is installed over a kind {was} one - this is kind {m.ReadU8(Block + Kind)}");
-        return true;
-    }
-
-    /// <summary>
-    /// Says what the block actually holds once the race is running.
-    ///
-    /// This is what tells "the write never happened" from "the write happened
-    /// and something put it back" from "the write stuck and a kind 2 race still
-    /// looks like a race" - three failures that look identical on screen and
-    /// need three different answers.
+    /// The five fields are written while the arcade is still building, which is
+    /// a long way before anything draws. This is what says they were still
+    /// there when the race began - and it is what said, when they were, that
+    /// the record alone changes nothing.
     /// </summary>
     public static void SayWhatTheRaceBecame(IMemory m)
     {
-        if (!Forced) return;
+        if (!Forced && !_forThisRace) return;
 
-        var flags = new byte[RaceGrid.Slots];
+        var who = new byte[RaceGrid.Slots];
         for (uint i = 0; i < RaceGrid.Slots; i++)
-            flags[i] = m.ReadU8(Block + FirstEntrant + i * EntrantSize + WhoDrives);
+            who[i] = m.ReadU8(Block + FirstEntrant + i * EntrantSize + WhoDrives);
 
         Console.Error.WriteLine(
             $"[replay] at the first frame: kind {m.ReadU8(Block + Kind)},"
             + $" +0x04={m.ReadU8(Block + FirstFlag)} +0x09={m.ReadU8(Block + SecondFlag)},"
-            + $" entrants " + string.Join(" ", flags.Select(f => f.ToString("X2"))));
+            + " entrants " + string.Join(" ", who.Select(b => b.ToString("X2"))));
     }
 
     /// <summary>
