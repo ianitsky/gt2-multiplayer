@@ -122,5 +122,6 @@ public static class BackToTheLobby
         RacePhases.Forget();
         CarSync.Forget();
         ReplayView.Forget();
+        RaceLaps.Forget();
     }
 }

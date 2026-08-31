@@ -530,6 +530,12 @@ public static class DirectRace
     {
         Say(m, "as the builder left it");
 
+        // Before the room, and before the early return, for the same reason as
+        // the replay below: how many laps a race is run over is a property of
+        // the race rather than of the room, so an arcade race reached without a
+        // lobby has to be able to answer the question too.
+        RaceLaps.PutTheLapsIn(m);
+
         // Before the room, and before the early return: GT2_REPLAY_VIEW exists
         // to try a replay on one machine with no lobby at all, and a switch
         // that only works when a room has been agreed cannot do that. This is

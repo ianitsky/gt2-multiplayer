@@ -520,3 +520,53 @@ shorts of each drawn triple never move.
 
 So the visible half of a wheel is one short, four times, and it is the thing to
 send.
+
+# Second backlog, agreed 2026-08-31
+
+Four more, in the host's hands. Recorded in full before any of them is started,
+and taken one at a time in this order.
+
+## 7. The host chooses how many laps
+
+One to ninety-nine, where today every race is two.
+
+### Where the lap count is not
+
+Not in any capture. Every race ever captured here - two arcade, two from the
+attract demo, and the template - was run over two laps, so every candidate byte
+reads 2 in all five. The header holds exactly four that do:
+
+    +0x02   +0x05   +0x08   +0x0F
+
+and the three bytes that separate an arcade race from a replay - +0x04, +0x09
+and +0x0A - are already accounted for, as is the entrant count at +0x5A.
+
+Reading gt2_01 does not settle it either. The record is addressed from dozens of
+places and none of them reads a small header offset and counts with it.
+
+### So the HUD is asked instead
+
+`GT2_LAPS_PROBE` writes a different number into each of the four candidates, and
+the lap counter names the one the game reads: 1/7 is +0x02, 1/8 is +0x05, 1/9 is
++0x08, 1/11 is +0x0F. One race closes it. `GT2_LAPS_AT` and `GT2_LAPS` then
+confirm the answer without a rebuild, before the host's own choice is wired to
+it.
+
+## 8. The finishing order is shown on the way back to the lobby
+
+Who came where, and what each driver's race time was. The return to the lobby is
+already the end of a race (see item 5), so this is what to show on the way
+through it.
+
+## 9. A race by laps or by time
+
+The host picks which. A timed race runs from five minutes to three hours, chosen
+on a slider. When the time runs out the cars finish the lap they are on, and the
+race ends there: most laps in the least time wins.
+
+## 10. The host arranges the grid
+
+Today the grid is filled in the order players joined the room. Instead the host
+arranges it, and what the host has not arranged keeps a default order. After a
+race, the grid opens arranged by the finishing order of the race just run -
+which the host can still change.
