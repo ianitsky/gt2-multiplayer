@@ -121,7 +121,7 @@ public static class RaceStartLine
 
         // Every frame, because whatever sets it does so while the race is
         // starting - a value written before that is one about to be lost.
-        ReplayView.HoldTheReplayFlag(m);
+        ReplayView.HoldTheRaceContext(m);
         RaceBlockDump.RaceIsRunning(m);
 
         SecondDriver.DrivePadOne(m);

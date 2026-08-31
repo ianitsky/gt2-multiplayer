@@ -127,21 +127,16 @@ public static class ReplayView
     const byte DemoKind = 2;
 
     /// <summary>
-    /// Where the game says whether a replay is running, according to the cheat
-    /// that turns the replay cameras on in a race.
-    ///
-    /// That cheat gates half of itself on this address and calls 1 "replay
-    /// off"; the block that undoes those patches is gated on 0 and is headed
-    /// "when replay is enabled". So this is the switch the *presentation* asks,
-    /// and it is not in the race record - which is why a block with the demo's
-    /// kind, the demo's flags and the demo's entrant bits still came up as an
-    /// ordinary race.
-    ///
-    /// Nothing in the game reaches it by a literal: it is a base register plus
-    /// an offset in all four overlays, so reading cannot say who owns it.
-    /// Holding it is the cheaper question and answers the same thing.
+    /// The address the replay-camera cheat gates itself on, kept for the
+    /// record: it reads zero on an ordinary race and zero on the attract
+    /// demo's replay, so on this build it is not the switch. The likely reason
+    /// is the disc - a Combined Disc merges Arcade and Simulation by patching
+    /// the boot executable, and a cheat's RAM address for the official 1.1 and
+    /// 1.2 need not survive that. The overlay patches did, because gt2_01 is
+    /// the same binary either way.
     /// </summary>
-    const uint ReplayFlag = 0x800A92BCu;
+    const uint CheatsReplayFlag = 0x800A92BCu;
+
 
     /// <summary>
     /// What to hold the replay flag at, when GT2_REPLAY_FLAG names a value.
@@ -151,8 +146,39 @@ public static class ReplayView
     /// about to be overwritten. This is the same lesson the curtain over the
     /// arcade already carries.
     /// </summary>
-    static readonly int FlagWanted =
-        int.TryParse(Environment.GetEnvironmentVariable("GT2_REPLAY_FLAG"), out int f) ? f : -1;
+    static readonly (uint At, byte Value)[] Held = ParseHeld(
+        Environment.GetEnvironmentVariable("GT2_REPLAY_HOLD") ?? "");
+
+    /// <summary>
+    /// Reads a list like <c>800A9500=1,800A951C=1</c>: an address in hex, a
+    /// byte in decimal. A list rather than one address because the candidates
+    /// come in combinations, and trying a combination should not need a build.
+    /// </summary>
+    static (uint, byte)[] ParseHeld(string spec)
+    {
+        var found = new List<(uint, byte)>();
+        foreach (var pair in spec.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var halves = pair.Split('=', 2);
+            if (halves.Length != 2) continue;
+            if (!uint.TryParse(halves[0].Trim().Replace("0x", ""),
+                    System.Globalization.NumberStyles.HexNumber, null, out uint at)) continue;
+            if (!byte.TryParse(halves[1].Trim(), out byte value)) continue;
+            found.Add((at, value));
+        }
+        return [.. found];
+    }
+
+    /// <summary>
+    /// What the context diff left standing, and so what a report should show.
+    ///
+    /// Two frames into a demo's replay and two into an arcade race, the head of
+    /// the race context differs in forty bytes - and all but four of them are
+    /// inside car 0, which is position and physics. What is left is 0x800A9500
+    /// and 0x800A951C, one in a replay and zero in a race, and the two bytes at
+    /// 0x800A9524 that look like the low half of a pointer.
+    /// </summary>
+    static readonly uint[] Suspects = [0x800A9500u, 0x800A951Cu, 0x800A9524u, 0x800A9525u];
 
     /// <summary>
     /// Reports the replay flag without changing anything, so the value a real
@@ -173,25 +199,23 @@ public static class ReplayView
     /// The first frame says what the game had it at, which is the value a race
     /// runs with and therefore the one to try the opposite of.
     /// </summary>
-    public static void HoldTheReplayFlag(IMemory m)
+    public static void HoldTheRaceContext(IMemory m)
     {
         if (!Forced && !Watching) return;
 
         if (!_saidFlag)
         {
             _saidFlag = true;
-            var around = new byte[8];
-            for (uint i = 0; i < 8; i++) around[i] = m.ReadU8(ReplayFlag - 2u + i);
             Console.Error.WriteLine(
-                $"[replay] the flag at 0x{ReplayFlag:X8} reads"
-                + $" byte {m.ReadU8(ReplayFlag)}, halfword {m.ReadU16(ReplayFlag)},"
-                + $" word 0x{m.ReadU32(ReplayFlag):X8}"
-                + $" (0x{ReplayFlag - 2:X8}: " + string.Join(" ", around.Select(b => b.ToString("X2"))) + ")"
-                + (FlagWanted < 0 ? " - not held" : $" - holding it at {FlagWanted}"));
+                "[replay] the race context reads "
+                + string.Join("  ", Suspects.Select(a => $"0x{a:X8}={m.ReadU8(a)}"))
+                + (Held.Length == 0
+                    ? " - holding nothing"
+                    : " - holding " + string.Join(",", Held.Select(h => $"0x{h.At:X8}={h.Value}"))));
         }
 
-        if (FlagWanted < 0 || Watching) return;
-        m.WriteU16(ReplayFlag, (ushort)FlagWanted);
+        if (Watching) return;
+        foreach (var (at, value) in Held) m.WriteU8(at, value);
     }
 
     /// <summary>
