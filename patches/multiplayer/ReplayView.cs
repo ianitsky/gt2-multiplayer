@@ -269,6 +269,17 @@ public static class ReplayView
     }
 
     /// <summary>
+    /// Forgets the race just run, so a viewer who watches two races in a row
+    /// gets a replay for the second as well - and so a driver who watched one
+    /// and then raced does not get a replay for their own.
+    /// </summary>
+    public static void Forget()
+    {
+        _forThisRace = false;
+        _saidFlag = false;
+    }
+
+    /// <summary>
     /// Puts back what the room's own content overwrote.
     ///
     /// RaceGrid writes +0x82 as the arcade means it - 0 for the car a person

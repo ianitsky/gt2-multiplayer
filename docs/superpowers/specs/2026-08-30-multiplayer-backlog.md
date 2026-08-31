@@ -428,6 +428,43 @@ That closes two things at once:
 Not to the arcade menu. The room outlives the race, so a second race can be
 started from the same room.
 
+### Where the end of a race is
+
+It is not a finish line, a results screen or a phase number. A race is an
+overlay: the arcade loads gt2_01 over itself to run one, and when the race is
+done gt2_01 is gone and something has to be loaded in its place. Every overlay
+load goes through `gt2_load_overlay`, which this port already hooks - so **the
+end of a race is the next overlay to arrive after the race's own**, whether the
+race was won or quit.
+
+Only the *first* arrival after the race counts. The arcade fetches several more
+while it sets a race up, and reading one of those as another ending would run
+the lobby again in the middle of starting a race.
+
+### Coming back costs nothing to build
+
+The room already outlives the race. The session socket is kept rather than
+dropped when a lobby ends in a race, and every player is still in the Room
+object they left, so returning is reopening the panel over it. There is no
+overlay to redirect either: the arcade - which is what a race starts from - is
+the overlay already arriving.
+
+### What has to be undone
+
+This port's own memory of the race just run. Every class that does something
+once per race would say it had already happened, and each would be quietly
+wrong rather than loudly broken:
+
+- `RaceStartLine` - the barrier lives on frame zero. A second race that kept
+  the first one's frame counter would never hold, and every machine would begin
+  whenever it finished loading.
+- `DirectRace` - three flags say a screen has already been wound down, and a
+  second race walks through the same two arcade screens.
+- `CarSync`, `ReplayView`, `RacePhases` - the grid report, the replay a viewer
+  is owed, the phase the room holds at.
+- The host's "come to the race", on each client. Left standing it takes them
+  straight back out of the lobby they have just returned to.
+
 ## 6. The other cars behave visibly like cars
 
 Acceleration, braking, wheel rotation and the rest of the visible effects

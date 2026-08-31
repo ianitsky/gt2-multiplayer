@@ -332,6 +332,15 @@ public sealed class LanSession : IDisposable
     public bool HostSaidLeaveTheLobby { get; private set; }
 
     /// <summary>
+    /// Forgets that the host once said to leave the lobby.
+    ///
+    /// It is what took every client out of the lobby and into the race. Left
+    /// standing, it takes them straight back out the moment the race ends and
+    /// the room reopens, before anybody has chosen anything.
+    /// </summary>
+    public void ForgetTheLobbyWasLeft() => HostSaidLeaveTheLobby = false;
+
+    /// <summary>
     /// Whether the host has released the line. Lowered by
     /// <see cref="OpenTheStartLine"/> and raised only by
     /// <see cref="CollectTheStart"/>, so it says something about this race

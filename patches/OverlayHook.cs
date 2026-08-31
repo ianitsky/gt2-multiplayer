@@ -41,6 +41,13 @@ public static partial class OverlayHook
         Multiplayer.ModeHook.TryEnterLobby(c, m, entry);
         entry = c.A1;
 
+        // And the other direction. The overlay that follows the race overlay is
+        // the end of a race, which is where the room is waiting - so the lobby
+        // runs again here, and the race it agrees is set up before the arcade
+        // this load is fetching has run an instruction.
+        Multiplayer.BackToTheLobby.OverlayArriving(entry);
+        entry = c.A1;
+
         // The race overlay arriving is the moment the race is settled: the menu
         // has stopped rewriting the block and nothing has read it yet.
         if (entry == RaceOverlayEntry)

@@ -139,6 +139,18 @@ public static class CarSync
             $"[sync] moved onto seat {seat}'s square at ({square.Place.X}, {square.Place.Z})");
     }
 
+    /// <summary>
+    /// Forgets the race just run, so the next one reports its own grid and
+    /// counts its own places.
+    /// </summary>
+    public static void Forget()
+    {
+        _sent = 0;
+        _applied = 0;
+        _said = false;
+        _stood = false;
+    }
+
     static void Say(LanSession wire, DirectRace.Pending race)
     {
         if (_said && _sent % Occasionally != 0) return;

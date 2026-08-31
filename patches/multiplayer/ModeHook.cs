@@ -107,13 +107,6 @@ public static class ModeHook
     }
 
     /// <summary>
-    /// Whether the grid has been written for the race now being set up, so it
-    /// is written once rather than every frame - and so a second race gets its
-    /// own write.
-    /// </summary>
-    static bool _gridApplied;
-
-    /// <summary>
     /// Carries the room into the race being loaded.
     ///
     /// Called as the race overlay arrives, which is the one moment the block is
@@ -564,6 +557,52 @@ public static class ModeHook
             // on the clean path out of the loop, an exception still frees it.
             if (!started) DropSession();
         }
+    }
+
+    /// <summary>
+    /// Whether there is a room to come back to once a race is over.
+    ///
+    /// A race that was never started from a lobby - the arcade's own, or one
+    /// launched from a capture with no room behind it - has nothing to return
+    /// to, and must be left to end where it always did.
+    /// </summary>
+    public static bool HasARoomToReturnTo => _panel is not null && _session?.Current is not null;
+
+    /// <summary>
+    /// Runs the lobby again, on the overlay load that follows a race.
+    ///
+    /// The same loop as <see cref="TryEnterLobby"/>'s, at a different moment.
+    /// That one is the game asking for Simulation; this one is the arcade
+    /// coming back after the race overlay has finished with it. The difference
+    /// is only what happens when the lobby ends in a race: there is no overlay
+    /// to redirect, because the arcade - which is what a race starts from - is
+    /// the overlay already arriving.
+    ///
+    /// Nothing has to be rebuilt to get here. The socket is kept when a lobby
+    /// ends in a race rather than dropped (see RunLobby's finally), and the
+    /// room is the same object every player left. Coming back is reopening the
+    /// panel over it.
+    /// </summary>
+    public static void ReturnToTheLobby()
+    {
+        if (_panel is null || _session is null) return;
+
+        _lanSession?.ForgetTheLobbyWasLeft();
+        _panel.IsOpen = true;
+
+        Console.Error.WriteLine("[lobby] the race is over - back to the room");
+
+        if (!RunLobby()) return;
+
+        var room = _session.Current;
+        if (room is null) return;
+
+        DriveTheRoomsCar(room);
+
+        if (DirectRace.Enabled && Leader(room) is { } lead)
+            DirectRace.Expect(new DirectRace.Pending(
+                Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
+                Watching: IsWatching(room)));
     }
 
     /// <summary>Whether this machine's player is in the room to watch rather than race.</summary>

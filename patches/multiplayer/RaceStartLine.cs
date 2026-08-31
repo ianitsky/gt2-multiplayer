@@ -258,4 +258,19 @@ public static class RaceStartLine
 
     /// <summary>Whether this held the room, which is what the log line reports.</summary>
     public static bool Held => _held;
+
+    /// <summary>
+    /// Forgets the race just run, so the next one has a first frame again.
+    ///
+    /// Everything here happens on frame zero - the barrier among it. A second
+    /// race that kept the first one's counter would never reach frame zero,
+    /// and so would never hold: every machine would start whenever it happened
+    /// to finish loading.
+    /// </summary>
+    public static void Forget()
+    {
+        _frame = 0;
+        _held = false;
+        _saidQuiet = false;
+    }
 }

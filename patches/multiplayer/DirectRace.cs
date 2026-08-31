@@ -112,6 +112,25 @@ public static class DirectRace
     /// <summary>The race the lobby agreed, while one is running.</summary>
     public static Pending? Racing => _race;
 
+    /// <summary>
+    /// Forgets the race just run, so the next one is set up from nothing.
+    ///
+    /// <see cref="Expect"/> rearms most of this, but not the flags that say a
+    /// screen has already been wound down - and a second race walks through the
+    /// same two arcade screens the first one did. Left standing, they end those
+    /// screens before they have started.
+    /// </summary>
+    public static void Forget()
+    {
+        _race = null;
+        _armed = false;
+        _endNow = false;
+        _step = 0;
+        _said = false;
+        _preRaceEnded = false;
+        EndedTheScreen = false;
+    }
+
     /// <summary>Called by the lobby when a race has been agreed and is to start.</summary>
     public static void Expect(Pending race)
     {
