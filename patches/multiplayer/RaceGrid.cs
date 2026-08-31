@@ -151,7 +151,49 @@ public static class RaceGrid
             m.WriteU8(entrant + GridPlace, (byte)(place < 0 ? i : place));
         }
 
+        // And the cars nobody in the room is driving take the places nobody in
+        // the room is using.
+        //
+        // The block always has six entrants. Writing places for the first four
+        // and leaving the last two as the arcade left them is what put two cars
+        // on the same square: the arcade numbers its own six 5 down to 0, so
+        // entrants four and five kept 1 and 0 and collided with the room's
+        // second and first. Four players made it obvious; two had it too, with
+        // the collisions buried among the cars nobody was looking at.
+        for (int i = racing; i < Slots; i++)
+            m.WriteU8(Block + (uint)(FirstEntrant + i * EntrantSize) + GridPlace, (byte)i);
+
+        Say(drivers, leader, order, cars);
         return true;
+    }
+
+    /// <summary>
+    /// Says what went on the grid, once, per machine.
+    ///
+    /// Four players desynchronised where two had not, and three of the four
+    /// symptoms - two cars on the same grid slot, cars nobody but their owner
+    /// could see, every car in one colour - are all the shape of machines
+    /// disagreeing about the room. A line per machine naming the drivers, their
+    /// seats, their slots, their cars and their paints is what turns that from
+    /// a guess into a comparison.
+    /// </summary>
+    static void Say(IReadOnlyList<Player> drivers, string leader, List<Player> order, CarCatalogue? cars)
+    {
+        var said = new System.Text.StringBuilder();
+        for (int slot = 0; slot < order.Count; slot++)
+        {
+            var player = order[slot];
+            int seat = drivers.ToList().FindIndex(p => p.Name == player.Name);
+            var paints = cars?.Colours(player.Car);
+            string paint = PaintFor(cars, player) is { } letter
+                ? $"'{(char)letter}'"
+                : $"none (of {paints?.Count ?? 0})";
+            said.Append($"{Environment.NewLine}[grid]   slot {slot} seat {seat}"
+                + $"  {player.Name}  {player.Car}  colour {player.Colour} -> {paint}");
+        }
+
+        Console.Error.WriteLine(
+            $"[grid] {drivers.Count} driver(s), led by {leader}:" + said);
     }
 
     static void WriteText(IMemory m, uint at, string text, int room)

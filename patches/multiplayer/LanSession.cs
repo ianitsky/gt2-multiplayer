@@ -58,16 +58,25 @@ public sealed class LanSession : IDisposable
     readonly UdpClient _socket;
     readonly int _boundPort;
     readonly int _hostPort;
+
+    /// <summary>
+    /// Whether this socket is the host's. Until the places had to be passed on,
+    /// only the caller needed to know which role it had built - the two factory
+    /// methods differ in how they bind and in nothing else. The relay is the
+    /// first thing the socket itself has to decide.
+    /// </summary>
+    readonly bool _hosting;
     readonly Func<DateTime> _clock;
     DateTime? _lastIntentSent;
     bool _disposed;
 
-    LanSession(UdpClient socket, int boundPort, int hostPort, Func<DateTime> clock)
+    LanSession(UdpClient socket, int boundPort, int hostPort, Func<DateTime> clock, bool hosting)
     {
         _socket = socket;
         _boundPort = boundPort;
         _hostPort = hostPort;
         _clock = clock;
+        _hosting = hosting;
     }
 
     /// <summary>
@@ -105,7 +114,7 @@ public sealed class LanSession : IDisposable
         // pairing two sessions on ephemeral ports sent everything to port
         // zero before this.
         var bound = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
-        return new LanSession(socket, bound, bound, clock);
+        return new LanSession(socket, bound, bound, clock, hosting: true);
     }
 
     /// <summary>
@@ -132,7 +141,7 @@ public sealed class LanSession : IDisposable
             throw;
         }
         var boundPort = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
-        return new LanSession(socket, boundPort, hostPort, clock);
+        return new LanSession(socket, boundPort, hostPort, clock, hosting: false);
     }
 
     /// <summary>
@@ -151,6 +160,13 @@ public sealed class LanSession : IDisposable
     /// without which a test that expects rejection passes on an empty socket.
     /// </summary>
     internal int Available => _disposed ? 0 : _socket.Available;
+
+    /// <summary>
+    /// Tells the socket about a player it should pass places on to. The lobby
+    /// learns these by being spoken to; a test has no lobby, so it says so
+    /// directly.
+    /// </summary>
+    internal void KnowsAbout(IPEndPoint player) => _known.Add(player);
 
     /// <summary>
     /// The exception from the most recent failed send, or null if the last
@@ -536,6 +552,15 @@ public sealed class LanSession : IDisposable
 
             if (data.Length < PlaceBytes || data[0] != StartMagic || data[1] != Place) continue;
 
+            // The host is the only machine every other machine can reach, so it
+            // is the only one that can pass a car on. A client's places go to
+            // the host and nowhere else - _known and _atTheLine are filled by
+            // host code, and on a client both are empty - so without this, two
+            // players work by accident and three do not: the second client
+            // never hears the first, its car is never given a place, and the
+            // game's own driver takes it over.
+            Relay(data, from);
+
             _places[data[2]] = new RemoteCars.Pose(
                 new RemoteCars.Place(
                     BitConverter.ToInt32(data, 3),
@@ -544,6 +569,32 @@ public sealed class LanSession : IDisposable
                 BitConverter.ToInt16(data, 15),
                 BitConverter.ToInt16(data, 17),
                 BitConverter.ToInt16(data, 19));
+        }
+    }
+
+    /// <summary>
+    /// Passes a place on to every other machine, when this one is the host.
+    ///
+    /// A client's socket knows one address - the host's - and learning the
+    /// others would mean a second round of discovery among peers, six ways for
+    /// six players, through whatever each machine's network will allow. The
+    /// host already has every address, because every client has already spoken
+    /// to it. Passing the datagram along unchanged costs one send per other
+    /// player and needs nobody to learn anything.
+    ///
+    /// Unchanged on purpose: the seat it is keyed by is the room's, so it means
+    /// the same thing to every machine, and a relayed place is indistinguishable
+    /// from a first-hand one. That also makes the relay idempotent - a client
+    /// cannot tell, and does not need to.
+    /// </summary>
+    void Relay(byte[] data, IPEndPoint? from)
+    {
+        if (!_hosting) return;
+
+        foreach (var player in _known.Union(_atTheLine))
+        {
+            if (from is not null && player.Equals(from)) continue;
+            Send(data, player);
         }
     }
 

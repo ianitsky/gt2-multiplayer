@@ -159,4 +159,62 @@ public class RaceGridPaintTests
 
         Assert.Equal((uint)'q', PaintIn(m, 0));
     }
+
+    const uint GridPlace = 0x8Du;
+
+    static byte PlaceIn(IMemory m, int entrant) =>
+        m.ReadU8(Block + FirstEntrant + (uint)entrant * EntrantSize + GridPlace);
+
+    /// <summary>
+    /// The block always has six entrants, whatever the room holds. Writing
+    /// places for the room's four and leaving the last two as the arcade left
+    /// them - numbered 5 down to 0 - put two cars on one square, which is what
+    /// four players saw as the first and the fourth both starting at the front.
+    /// </summary>
+    [Fact]
+    public void Every_entrant_gets_a_grid_place_of_its_own()
+    {
+        var m = BuiltRace();
+        for (uint i = 0; i < RaceGrid.Slots; i++)
+            m.WriteU8(Block + FirstEntrant + i * EntrantSize + GridPlace,
+                      (byte)(RaceGrid.Slots - 1 - i));
+
+        List<Player> room =
+        [
+            new Player("ian", "dvpgn", true),
+            new Player("les", "dvpgn", true),
+            new Player("kay", "dvpgn", true),
+            new Player("guest", "dvpgn", true),
+        ];
+
+        Assert.True(RaceGrid.TryApply(m, room, "ian", cars: null));
+
+        var places = Enumerable.Range(0, RaceGrid.Slots).Select(i => PlaceIn(m, i)).ToList();
+        Assert.Equal(RaceGrid.Slots, places.Distinct().Count());
+    }
+
+    /// <summary>
+    /// And the room's own players keep the places the room gives them, so every
+    /// machine agrees on who starts where however it rotates its entrants.
+    /// </summary>
+    [Fact]
+    public void The_rooms_order_is_the_grid_order_on_every_machine()
+    {
+        List<Player> room =
+        [
+            new Player("ian", "dvpgn", true),
+            new Player("les", "dvpgn", true),
+            new Player("kay", "dvpgn", true),
+        ];
+
+        var mine = BuiltRace();
+        var theirs = BuiltRace();
+        Assert.True(RaceGrid.TryApply(mine, room, "ian", cars: null));
+        Assert.True(RaceGrid.TryApply(theirs, room, "kay", cars: null));
+
+        // "kay" is the room's third, so both machines start it third - on one
+        // it is entrant 2, on the other it is entrant 0.
+        Assert.Equal(2, PlaceIn(mine, 2));
+        Assert.Equal(2, PlaceIn(theirs, 0));
+    }
 }

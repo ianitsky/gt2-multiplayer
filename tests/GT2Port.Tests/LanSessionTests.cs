@@ -10,7 +10,7 @@ public class LanSessionTests
     // Well clear of LanDiscoveryTests' BasePort+0..13 (34800-34813) and of the
     // extra LanDiscovery/LanSession ports SessionTests binds (34740, 34741,
     // 34742, 34750, 34751, 34752) - see those files for why each test needs
-    // its own port. Offsets below run through BasePort+21.
+    // its own port. Offsets below run through BasePort+24.
     const int BasePort = 34760;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
@@ -616,5 +616,110 @@ public class LanSessionTests
     {
         for (int i = 0; i < 200 && session.Available == 0; i++) Thread.Sleep(5);
         Assert.True(session.Available > 0, "the datagram never arrived");
+    }
+
+    // ---- passing a car on ----
+    //
+    // A client's socket knows one address, the host's. Two players therefore
+    // work by accident: host and client are the only pair there is. Three do
+    // not - the second client never hears the first, so that car is never given
+    // a place and the game's own driver takes it over, which is what four
+    // players on one screen looked like.
+
+    /// <summary>A place message: the magic, the kind, a seat, and twelve bytes of pose.</summary>
+    static byte[] PlaceFrom(byte seat)
+    {
+        var data = new byte[21];
+        data[0] = 0xA5;
+        data[1] = 3;
+        data[2] = seat;
+        BitConverter.TryWriteBytes(data.AsSpan(3), 1234);
+        return data;
+    }
+
+    [Fact]
+    public void A_host_passes_a_clients_place_on_to_the_other_clients()
+    {
+        const int hostPort = BasePort + 22;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var first = new UdpClient(0);
+        using var second = new UdpClient(0);
+
+        var firstAt = (IPEndPoint)first.Client.LocalEndPoint!;
+        var secondAt = (IPEndPoint)second.Client.LocalEndPoint!;
+        host.KnowsAbout(new IPEndPoint(IPAddress.Loopback, firstAt.Port));
+        host.KnowsAbout(new IPEndPoint(IPAddress.Loopback, secondAt.Port));
+
+        var place = PlaceFrom(seat: 1);
+        first.Send(place, place.Length, new IPEndPoint(IPAddress.Loopback, host.BoundPort));
+        WaitForDelivery(host);
+        host.CollectPlaces();
+
+        // The host took it for itself...
+        Assert.True(host.Places.ContainsKey(1));
+
+        // ...and the other client got it too, unchanged.
+        IPEndPoint? from = null;
+        second.Client.ReceiveTimeout = 1000;
+        var got = second.Receive(ref from);
+        Assert.Equal(place, got);
+    }
+
+    /// <summary>
+    /// And not back to whoever sent it. A car does not need to be told where it
+    /// is, and a room of six would otherwise spend a sixth of its traffic
+    /// saying so.
+    /// </summary>
+    [Fact]
+    public void A_place_is_not_passed_back_to_the_player_it_came_from()
+    {
+        const int hostPort = BasePort + 23;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var only = new UdpClient(0);
+
+        var onlyAt = (IPEndPoint)only.Client.LocalEndPoint!;
+        host.KnowsAbout(new IPEndPoint(IPAddress.Loopback, onlyAt.Port));
+
+        var place = PlaceFrom(seat: 2);
+        only.Send(place, place.Length, new IPEndPoint(IPAddress.Loopback, host.BoundPort));
+        WaitForDelivery(host);
+        host.CollectPlaces();
+
+        only.Client.ReceiveTimeout = 200;
+        Assert.Throws<SocketException>(() =>
+        {
+            IPEndPoint? from = null;
+            only.Receive(ref from);
+        });
+    }
+
+    /// <summary>
+    /// A client passes nothing on. It has nobody to pass to, and a client that
+    /// echoed what it received would multiply every place by the number of
+    /// players in the room.
+    /// </summary>
+    [Fact]
+    public void A_client_passes_nothing_on()
+    {
+        const int hostPort = BasePort + 24;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        var otherAt = (IPEndPoint)other.Client.LocalEndPoint!;
+        client.KnowsAbout(new IPEndPoint(IPAddress.Loopback, otherAt.Port));
+
+        var place = PlaceFrom(seat: 3);
+        other.Send(place, place.Length, new IPEndPoint(IPAddress.Loopback, client.BoundPort));
+        WaitForDelivery(client);
+        client.CollectPlaces();
+
+        Assert.True(client.Places.ContainsKey(3));
+
+        other.Client.ReceiveTimeout = 200;
+        Assert.Throws<SocketException>(() =>
+        {
+            IPEndPoint? from = null;
+            other.Receive(ref from);
+        });
     }
 }
