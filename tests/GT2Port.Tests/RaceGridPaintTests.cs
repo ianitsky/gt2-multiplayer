@@ -1,0 +1,162 @@
+using System.Text;
+using GT2Port.Multiplayer;
+using RecompOne.Runtime.Memory;
+using Xunit;
+
+namespace GT2Port.Tests;
+
+/// <summary>
+/// The paint a player chose in the lobby has to reach the race on every
+/// machine, not only on theirs. Each machine writes all six entrants, so what
+/// these check is that the entrant carries the letter the car's own list names
+/// the paint by - which is what
+/// gt2_ovr3_build_race_block_and_fill_all_six_entrants puts there when a
+/// player walks the menus, sign-extended into the word at +0x04.
+/// </summary>
+public class RaceGridPaintTests
+{
+    const uint Block = 0x801D585Cu;
+    const uint FirstEntrant = 0x5Cu;
+    const uint EntrantSize = 0xD0u;
+    const uint PaintLetter = 0x04u;
+
+    const string Alphabet = "-0123456789abcdefghijklmnopqrstuvwxyz";
+
+    static uint Pack(string code)
+    {
+        uint packed = 0;
+        for (int i = 0; i < 5; i++)
+            packed |= (uint)Alphabet.IndexOf(code[i]) << ((4 - i) * 6);
+        return packed;
+    }
+
+    /// <summary>
+    /// A one-car database whose block begins with paints, the way the disc's
+    /// blocks do: the swatches as halfwords, a letter each, then the counted
+    /// name.
+    /// </summary>
+    static CarCatalogue CatalogueWith(string code, params char[] letters)
+    {
+        var block = new List<byte>();
+        foreach (char _ in letters) block.AddRange(BitConverter.GetBytes((ushort)0x1234));
+        foreach (char letter in letters) block.Add((byte)letter);
+
+        var text = Encoding.ASCII.GetBytes("Car " + code);
+        block.Add((byte)text.Length);
+        block.AddRange(text);
+        block.Add(0);
+
+        var image = new List<byte>(Encoding.ASCII.GetBytes("CAR\0"));
+        image.AddRange(BitConverter.GetBytes(1u));
+        image.AddRange(BitConverter.GetBytes(Pack(code)));
+        image.AddRange(BitConverter.GetBytes(16u | ((uint)(letters.Length - 1) << 18)));
+        image.AddRange(block);
+
+        return CarCatalogue.FromJson(CarInfo.TryParse(image.ToArray()), null);
+    }
+
+    /// <summary>
+    /// A race the menus have finished building, which is what TryApply waits
+    /// for: six entrants, each already naming some car.
+    /// </summary>
+    static IMemory BuiltRace()
+    {
+        var m = new PSMemory();
+        for (uint i = 0; i < RaceGrid.Slots; i++)
+            m.WriteU32(Block + FirstEntrant + i * EntrantSize, Pack("us36n"));
+        return m;
+    }
+
+    static uint PaintIn(IMemory m, int entrant) =>
+        m.ReadU32(Block + FirstEntrant + (uint)entrant * EntrantSize + PaintLetter);
+
+    [Fact]
+    public void Writes_the_letter_the_cars_own_list_names_the_paint_by()
+    {
+        var m = BuiltRace();
+        var cars = CatalogueWith("dvpgn", '4', '6', 'b');
+
+        Assert.True(RaceGrid.TryApply(
+            m, [new Player("ian", "dvpgn", true, Colour: 2)], "ian", cars));
+
+        Assert.Equal((uint)'b', PaintIn(m, 0));
+    }
+
+    /// <summary>
+    /// The whole point: every machine paints every car, so a client writes the
+    /// host's paint as readily as its own. The order rotates - each machine
+    /// leads with its own player - so the paint follows the player, not the
+    /// slot.
+    /// </summary>
+    [Fact]
+    public void Paints_every_car_in_the_room_and_not_only_this_ones()
+    {
+        var m = BuiltRace();
+        var cars = CatalogueWith("dvpgn", '4', '6', 'b');
+
+        List<Player> room =
+        [
+            new Player("ian", "dvpgn", true, Colour: 0),
+            new Player("guest", "dvpgn", true, Colour: 2),
+        ];
+
+        // Written from the client's machine, so "guest" leads.
+        Assert.True(RaceGrid.TryApply(m, room, "guest", cars));
+
+        Assert.Equal((uint)'b', PaintIn(m, 0));
+        Assert.Equal((uint)'4', PaintIn(m, 1));
+    }
+
+    /// <summary>
+    /// A letter is a signed byte where it comes from, and the entrant field is
+    /// a word - the game sign-extends. Nothing on the disc uses a letter above
+    /// 0x7F today, so this pins the rule rather than a case that has been
+    /// seen.
+    /// </summary>
+    [Fact]
+    public void Sign_extends_a_letter_past_the_top_of_the_byte()
+    {
+        var m = BuiltRace();
+        var cars = CatalogueWith("dvpgn", (char)0x80);
+
+        Assert.True(RaceGrid.TryApply(
+            m, [new Player("ian", "dvpgn", true, Colour: 0)], "ian", cars));
+
+        Assert.Equal(0xFFFFFF80u, PaintIn(m, 0));
+    }
+
+    /// <summary>
+    /// Without a car database there is no letter to write, and the entrant
+    /// keeps what the arcade left there - which is a paint the car really has.
+    /// Writing a zero instead would name no paint at all.
+    /// </summary>
+    [Fact]
+    public void Leaves_the_arcades_paint_alone_when_the_disc_cannot_say()
+    {
+        var m = BuiltRace();
+        m.WriteU32(Block + FirstEntrant + PaintLetter, (uint)'q');
+
+        Assert.True(RaceGrid.TryApply(
+            m, [new Player("ian", "dvpgn", true, Colour: 0)], "ian", cars: null));
+
+        Assert.Equal((uint)'q', PaintIn(m, 0));
+    }
+
+    /// <summary>
+    /// The same, for a paint number the car does not have - which a room can
+    /// hold for one frame while a car change and a colour change cross on the
+    /// wire.
+    /// </summary>
+    [Fact]
+    public void Leaves_the_arcades_paint_alone_when_the_car_has_no_such_paint()
+    {
+        var m = BuiltRace();
+        m.WriteU32(Block + FirstEntrant + PaintLetter, (uint)'q');
+        var cars = CatalogueWith("dvpgn", '4', '6', 'b');
+
+        Assert.True(RaceGrid.TryApply(
+            m, [new Player("ian", "dvpgn", true, Colour: 7)], "ian", cars));
+
+        Assert.Equal((uint)'q', PaintIn(m, 0));
+    }
+}

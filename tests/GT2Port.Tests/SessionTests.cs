@@ -966,4 +966,53 @@ public class SessionTests
         Assert.Single(session.Current.Players);
         Assert.Equal("ian", session.Current.Players[0].Name);
     }
+
+    // ---- paint ----
+
+    /// <summary>
+    /// A paint is an index into the car's own list, and the lists differ. A
+    /// car with three paints and one with twelve share nothing but the
+    /// numbering, so carrying the number across a change would either repaint
+    /// the car silently or name a paint it does not have.
+    /// </summary>
+    [Fact]
+    public void Choosing_a_different_car_goes_back_to_its_first_paint()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+        session.SetCar("ian", "buc9n");
+        session.SetColour("ian", 11);
+
+        session.SetCar("ian", "dvpgn");
+
+        Assert.Equal((byte)0, session.Current!.Players.Single().Colour);
+    }
+
+    /// <summary>
+    /// Choosing the same car again is not a change, so it must not throw away
+    /// a paint - the picker re-selects the current car on every click.
+    /// </summary>
+    [Fact]
+    public void Choosing_the_same_car_again_keeps_the_paint()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+        session.SetCar("ian", "buc9n");
+        session.SetColour("ian", 7);
+
+        session.SetCar("ian", "buc9n");
+
+        Assert.Equal((byte)7, session.Current!.Players.Single().Colour);
+    }
+
+    [Fact]
+    public void A_clients_paint_reaches_the_hosts_room()
+    {
+        var session = NewSession();
+        session.Host("room", "parma_2p", "special");
+
+        session.ApplyClientIntent("guest", "buc9n", ready: true, colour: 5);
+
+        Assert.Equal((byte)5, session.Current!.Players.Single(p => p.Name == "guest").Colour);
+    }
 }

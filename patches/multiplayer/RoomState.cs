@@ -2,7 +2,19 @@ using System.Text;
 
 namespace GT2Port.Multiplayer;
 
-public record Player(string Name, string Car, bool Ready);
+/// <summary>
+/// One player in a room. <paramref name="Colour"/> is an index into the paints
+/// their car comes in, not a colour in itself: the cars each carry their own
+/// list, so the same number means different paint on different cars and only
+/// the pair is meaningful. It travels as the index rather than as the letter
+/// the race wants because the lobby is where a car can still change, and an
+/// index is the thing that has to be re-checked when it does.
+///
+/// Defaulted, so the hundred places that build a player without caring about
+/// paint keep saying what they mean. The first paint is the one the arcade
+/// would have chosen.
+/// </summary>
+public record Player(string Name, string Car, bool Ready, byte Colour = 0);
 
 public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers, IReadOnlyList<Player> Players);
 
@@ -18,7 +30,7 @@ public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxP
 /// </summary>
 public static class RoomState
 {
-    const byte Version = 2;
+    const byte Version = 3;
     public const int MaxPlayers = 6;
     public const int MaxStringBytes = 64;
 
@@ -56,6 +68,7 @@ public static class RoomState
             WriteString(buffer, player.Name);
             WriteString(buffer, player.Car);
             buffer.Add(player.Ready ? (byte)1 : (byte)0);
+            buffer.Add(player.Colour);
         }
         return [.. buffer];
     }
@@ -82,7 +95,8 @@ public static class RoomState
             if (!TryString(data, ref offset, out string playerName)) return false;
             if (!TryString(data, ref offset, out string car)) return false;
             if (!TryByte(data, ref offset, out byte ready)) return false;
-            players.Add(new Player(playerName, car, ready != 0));
+            if (!TryByte(data, ref offset, out byte colour)) return false;
+            players.Add(new Player(playerName, car, ready != 0, colour));
         }
 
         room = new Room(id, name, track, carGroup, maxPlayers, players);

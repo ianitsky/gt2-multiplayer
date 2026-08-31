@@ -19,6 +19,16 @@ public class LanSessionTests
     static LanSession.ClientIntent SampleIntent(bool ready, bool leaving) =>
         new(Guid.Parse("11111111-2222-3333-4444-555555555555"), "guest", "Skyline GT-R", ready, leaving);
 
+    [Fact]
+    public void Round_trips_the_paint_a_client_chose()
+    {
+        var intent = SampleIntent(ready: true, leaving: false) with { Colour = 9 };
+
+        Assert.True(LanSession.TryDeserialise(LanSession.Serialise(intent), out var back));
+
+        Assert.Equal((byte)9, back.Colour);
+    }
+
     // ---- wire format ----
 
     [Fact]

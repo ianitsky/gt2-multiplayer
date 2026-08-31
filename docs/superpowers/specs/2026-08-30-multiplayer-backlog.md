@@ -91,9 +91,69 @@ want those frames.
 
 ## 3. Car colour is chosen in the lobby
 
-Every machine should draw every car in the colour its owner picked. The colour
-belongs beside `Player.Car` in the room state, so it travels with the rest of
-the room rather than over the race channel.
+**Status: written, not yet seen on two machines.**
+
+### Where a car's paints live
+
+`.carinfoe` is not only the name table. Each of its 1110 records is eight
+bytes: the packed five-character code, then one word this port used to read as
+a halfword offset and a spare halfword. It is not a spare.
+`gt2_main_carinfo_block_and_paint_count_for_car` splits that word as
+
+```
+offset = word & 0x3FFFF          the car's block, from the start of the file
+paints = ((word >> 18) & 0x1F) + 1
+```
+
+and the block begins with the paints, not with the name:
+
+```
+paints x u16   the swatch, five bits a channel, red lowest
+paints x s8    the letter the game names that paint by
+u8 len, text, NUL   the name, which is what this port already read
+```
+
+Read against the real disc: the Viper GTS comes in three, the RUF CTR 2 in
+twelve, the Shelby GT350 '66 in five, and unpacking the halfwords as
+`R = v & 31, G = (v >> 5) & 31, B = (v >> 10) & 31` gives silver, grey, black,
+red, yellow, greens and blues - which is what a car's colour list looks like.
+
+### What the race wants
+
+Two different things, in two different places, and it matters which is which.
+
+The arcade's 720-byte parameter block carries the player's paint at **+0x16 as
+an index** into that car's list.
+`gt2_ovr3_build_race_block_and_fill_all_six_entrants` hands the index and the
+car id to `gt2_ovr3_read_signed_byte_from_decoded_car_info_at_offset`, takes
+the **letter** that comes back, and writes it - sign-extended to a word - into
+each entrant at **+0x04**.
+
+So `DirectRace` writes the index at +0x16 for this machine's own player, before
+the builder runs, and `RaceGrid` writes the letter at +0x04 for all six
+entrants, after it. Every machine writes every entrant, which is what makes the
+six cars the same six colours everywhere.
+
+What is not yet proven is that a letter written after the builder still reaches
+what is drawn. The car **id** written at the same moment does - remote cars
+already show the right models - so the paint beside it very likely does too,
+but "very likely" is what a run is for.
+
+### In the lobby
+
+`Player` gained a `Colour`, defaulted so nothing that does not care had to
+change. It travels as the index rather than the letter because the lobby is
+where a car can still change, and an index is what has to be re-checked when it
+does - `Session.SetCar` takes it back to the first paint on a real change, and
+leaves it alone when the player re-picks the car they already had.
+
+The room state is at version 3 and a client's intent at version 2; both carry
+one more byte.
+
+The picker draws the swatches themselves. There are no colour names on the
+disc - only the swatch and the letter - so squares are the whole of what can
+honestly be shown, and each player's own square sits beside their name in the
+room list.
 
 ## 4. Viewers
 

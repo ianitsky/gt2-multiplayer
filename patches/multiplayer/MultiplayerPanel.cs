@@ -437,7 +437,16 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.Separator();
 
         foreach (var player in room.Players)
+        {
             ImGui.TextUnformatted($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
+
+            // Beside the name, because the point of choosing a paint in the
+            // lobby is that everyone can see who is in what before the race.
+            var paints = _carCatalogue.Colours(player.Car);
+            if (player.Colour >= paints.Count) continue;
+            ImGui.SameLine();
+            Swatch(paints[player.Colour], selected: false, hovered: false);
+        }
 
         ImGui.Separator();
 
@@ -449,9 +458,16 @@ public sealed class MultiplayerPanel : IPanel
         float frameRow = ImGui.GetFrameHeightWithSpacing();
         float hintRow = ImGui.GetTextLineHeightWithSpacing();
         float separatorHeight = ImGui.GetStyle().ItemSpacing.Y * 2f + 1f;
-        float reservedBelowList = frameRow + separatorHeight + frameRow + hintRow;
+
+        // The swatches sit under the car list and are measured into what it
+        // must leave behind, the same way every other row below it is - a row
+        // that reserves nothing is a row that pushes the buttons off the
+        // window at 150% scale.
+        float colourRow = ImGui.GetTextLineHeightWithSpacing() + SwatchSize + ImGui.GetStyle().ItemSpacing.Y;
+        float reservedBelowList = colourRow + frameRow + separatorHeight + frameRow + hintRow;
 
         DrawCarList(room, reservedBelowList);
+        DrawColours(room);
 
         if (ImGui.Button("Ready")) _session.SetReady(_session.PlayerName, true);
         ImGui.SameLine();
@@ -473,6 +489,68 @@ public sealed class MultiplayerPanel : IPanel
     // rather than collapsing to a sliver - the floor half of review
     // Important 1.
     const int MinVisibleCarRows = 3;
+
+    /// <summary>How big a paint square is, in the UI's own units.</summary>
+    static float SwatchSize => ImGui.GetTextLineHeight();
+
+    /// <summary>
+    /// The paints the chosen car comes in, as the game orders them.
+    ///
+    /// No list, no dropdown and no names: the disc gives a swatch per paint
+    /// and nothing that says what to call it, so the squares are the whole of
+    /// what can honestly be shown. A car with one paint still draws it, since
+    /// a row that disappears for some cars is a row that moves the buttons.
+    /// </summary>
+    void DrawColours(Room room)
+    {
+        ImGui.TextUnformatted("Colour");
+
+        var mine = room.Players.FirstOrDefault(p => p.Name == _session.PlayerName);
+        var paints = _carCatalogue.Colours(mine?.Car ?? "");
+        if (paints.Count == 0)
+        {
+            ImGui.TextDisabled(mine is null or { Car: "" }
+                ? "Choose a car first."
+                : "This build has no paints for that car.");
+            return;
+        }
+
+        for (int i = 0; i < paints.Count; i++)
+        {
+            if (i > 0) ImGui.SameLine();
+            ImGui.PushID(i);
+            if (Swatch(paints[i], selected: i == mine!.Colour, hovered: false, clickable: true))
+                _session.SetColour(_session.PlayerName, (byte)i);
+            ImGui.PopID();
+        }
+    }
+
+    /// <summary>
+    /// Draws one paint square, and says whether it was clicked.
+    ///
+    /// The five bits a channel arrives in are spread over the whole of 0-1
+    /// rather than divided by 256: the swatch is a colour in the console's own
+    /// depth, so its brightest is the brightest there is, not an eighth of it.
+    /// </summary>
+    static bool Swatch(CarInfo.Colour paint, bool selected, bool hovered, bool clickable = false)
+    {
+        var fill = new Vector4(paint.Red / 31f, paint.Green / 31f, paint.Blue / 31f, 1f);
+        var edge = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+
+        ImGui.PushStyleColor(ImGuiCol.Button, fill);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, fill);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, fill);
+        ImGui.PushStyleColor(ImGuiCol.Border,
+            selected ? edge : new Vector4(edge.X, edge.Y, edge.Z, 0.25f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, selected ? 2f : 1f);
+
+        float size = SwatchSize;
+        bool clicked = ImGui.Button("", new Vector2(size, size)) && clickable;
+
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(4);
+        return clicked;
+    }
 
     /// <summary>
     /// The car picker for the room's own group. The group comes from the

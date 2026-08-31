@@ -2703,6 +2703,10 @@
         {
           "address": "0x80025850",
           "name": "gt2_ovr3_start_the_menu_music"
+        },
+        {
+          "address": "0x800100EC",
+          "name": "gt2_ovr3_unpack_fifteen_bit_colour_and_say_how_saturated"
         }
       ]
     },
@@ -2951,6 +2955,18 @@
     {
       "address": "0x8005DA04",
       "name": "setjmp_resume_8005DA04"
+    },
+    {
+      "address": "0x80060A88",
+      "name": "gt2_main_carinfo_block_and_paint_count_for_car"
+    },
+    {
+      "address": "0x80060AE8",
+      "name": "gt2_main_carinfo_name_text_for_car"
+    },
+    {
+      "address": "0x80060BEC",
+      "name": "gt2_main_carinfo_swatches_and_letters_for_car"
     },
     {
       "address": "0x800686C8",

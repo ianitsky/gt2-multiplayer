@@ -18,14 +18,44 @@ public sealed class CarInfo
     const int RecordSize = 8;
 
     readonly Dictionary<string, string> _names;
+    readonly Dictionary<string, Colour[]> _colours;
 
     public int Count { get; }
 
-    CarInfo(int count, Dictionary<string, string> names)
+    CarInfo(int count, Dictionary<string, string> names, Dictionary<string, Colour[]> colours)
     {
         Count = count;
         _names = names;
+        _colours = colours;
     }
+
+    /// <summary>
+    /// One paint a car can be delivered in: the letter the game knows it by,
+    /// and the swatch shown for it.
+    ///
+    /// The letter is what a race carries. gt2_ovr3_build_race_block_and_fill_
+    /// all_six_entrants writes it, sign-extended, into each entrant at +0x04,
+    /// which is the whole of what one machine has to tell another for the cars
+    /// to be painted the same. The swatch never leaves the menus - the game
+    /// unpacks it as five bits per channel and uses it to draw the little
+    /// square, and the paint itself lives in the car's own model.
+    /// </summary>
+    public readonly record struct Colour(sbyte Letter, ushort Swatch)
+    {
+        /// <summary>Red, green and blue, each 0-31, as gt2_ovr3 unpacks them.</summary>
+        public byte Red => (byte)(Swatch & 0x1F);
+        public byte Green => (byte)((Swatch >> 5) & 0x1F);
+        public byte Blue => (byte)((Swatch >> 10) & 0x1F);
+    }
+
+    /// <summary>
+    /// The paints a car comes in, in the game's own order - so an index into
+    /// this list is the number the arcade's parameter block wants at +0x16.
+    /// Empty for a car this file does not describe, which is the same answer
+    /// as a car with no name.
+    /// </summary>
+    public IReadOnlyList<Colour> Colours(string code) =>
+        _colours.TryGetValue(code, out var found) ? found : [];
 
     /// <summary>
     /// A five-character code back into the packed word the game stores it as -
@@ -81,23 +111,39 @@ public sealed class CarInfo
         int n = (int)count;
         var codes = new string?[n];
         var starts = new int[n];
+        var paints = new int[n];
 
         for (int i = 0; i < n; i++)
         {
             if (!TryU32(span, ref offset, out uint packed)) return null;
-            if (!TryU16(span, ref offset, out ushort blockOffset)) return null;
-            if (!TryU16(span, ref offset, out _)) return null; // unused field
 
-            starts[i] = blockOffset;
+            // One word, three fields, and the second half of it is not the
+            // spare this used to skip.
+            // gt2_main_carinfo_block_and_paint_count_for_car takes the low
+            // eighteen bits as the block's offset and the five above them as
+            // one less than the number of paints the car comes in, and every
+            // reader of a car's colours in the game goes through it.
+            if (!TryU32(span, ref offset, out uint field)) return null;
+
+            starts[i] = (int)(field & 0x3FFFFu);
+            paints[i] = (int)((field >> 18) & 0x1Fu) + 1;
             codes[i] = TryDecodeCode(packed, out string code) ? code : null;
+        }
+
+        var colours = new Dictionary<string, Colour[]>(StringComparer.Ordinal);
+        for (int i = 0; i < n; i++)
+        {
+            if (codes[i] is not { } paintCode) continue;
+            if (TryReadColours(data, starts[i], paints[i], out var found))
+                colours[paintCode] = found;
         }
 
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
         for (int i = 0; i < n; i++)
         {
             int start = starts[i];
-            // start comes from TryU16, an unsigned read - it can never be
-            // negative, only out of range high (review Minor 8).
+            // start is eighteen bits masked out of an unsigned word - it can
+            // never be negative, only out of range high (review Minor 8).
             if (start > data.Length) continue; // this car's own offset is unusable - no name, nothing else affected
 
             if (i + 1 < n)
@@ -131,7 +177,38 @@ public sealed class CarInfo
             }
         }
 
-        return new CarInfo(n, names);
+        return new CarInfo(n, names, colours);
+    }
+
+    /// <summary>
+    /// Reads one car's paints out of its block, which begins with them:
+    /// <paramref name="count"/> swatches as halfwords, then the same number of
+    /// letters as bytes, and the car's name after those. The two run in step -
+    /// gt2_ovr3 reads swatch i at <c>block + i * 2</c> and letter i at
+    /// <c>block + count * 2 + i</c> - so they are paired here rather than kept
+    /// apart.
+    ///
+    /// False, and no colours for this car, when the block does not fit: the
+    /// same answer a missing name gets, and for the same reason - one car's
+    /// unusable offset says nothing about the other 1109.
+    /// </summary>
+    static bool TryReadColours(byte[] data, int start, int count, out Colour[] colours)
+    {
+        colours = [];
+        if (count <= 0 || start < 0) return false;
+
+        long end = (long)start + count * 3;
+        if (end > data.Length) return false;
+
+        var found = new Colour[count];
+        for (int i = 0; i < count; i++)
+        {
+            ushort swatch = (ushort)(data[start + i * 2] | (data[start + i * 2 + 1] << 8));
+            found[i] = new Colour((sbyte)data[start + count * 2 + i], swatch);
+        }
+
+        colours = found;
+        return true;
     }
 
     /// <summary>Looks up a car's display name. False when the code is unknown or its name will not parse.</summary>
@@ -253,14 +330,6 @@ public sealed class CarInfo
         if (data.Length - offset < 4) { value = 0; return false; }
         value = BitConverter.ToUInt32(data.Slice(offset, 4));
         offset += 4;
-        return true;
-    }
-
-    static bool TryU16(ReadOnlySpan<byte> data, ref int offset, out ushort value)
-    {
-        if (data.Length - offset < 2) { value = 0; return false; }
-        value = BitConverter.ToUInt16(data.Slice(offset, 2));
-        offset += 2;
         return true;
     }
 }

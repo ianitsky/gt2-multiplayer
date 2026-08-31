@@ -114,8 +114,21 @@ public sealed class Session
     public void SetReady(string playerName, bool ready) =>
         UpdatePlayer(playerName, p => p with { Ready = ready });
 
+    /// <summary>
+    /// Chooses a car, and takes the paint back to the first one.
+    ///
+    /// A paint is an index into the car's own list and the lists differ - a
+    /// car with three paints and one with twelve share nothing but the
+    /// numbering. Carrying the old index across a change would mean the
+    /// player's car quietly repainting itself, or naming a paint the new car
+    /// does not have.
+    /// </summary>
     public void SetCar(string playerName, string car) =>
-        UpdatePlayer(playerName, p => p with { Car = car });
+        UpdatePlayer(playerName, p => p.Car == car ? p : p with { Car = car, Colour = 0 });
+
+    /// <summary>Chooses one of the paints the player's car comes in, by index.</summary>
+    public void SetColour(string playerName, byte colour) =>
+        UpdatePlayer(playerName, p => p with { Colour = colour });
 
     /// <summary>
     /// Applies a client's whole intent, received over the wire: update if
@@ -124,7 +137,7 @@ public sealed class Session
     /// cannot ready up, change car, or (via <see cref="ApplyClientLeave"/>)
     /// remove the host by sending a message that happens to carry its name.
     /// </summary>
-    public void ApplyClientIntent(string name, string car, bool ready)
+    public void ApplyClientIntent(string name, string car, bool ready, byte colour = 0)
     {
         if (Phase != SessionPhase.Hosting) return;
         if (name == _playerName) return;
@@ -132,12 +145,12 @@ public sealed class Session
 
         if (room.Players.Any(p => p.Name == name))
         {
-            UpdatePlayer(name, p => p with { Car = car, Ready = ready });
+            UpdatePlayer(name, p => p with { Car = car, Ready = ready, Colour = colour });
             OnHeard(name);
         }
         else if (room.Players.Count < room.MaxPlayers)
         {
-            Current = room with { Players = [.. room.Players, new Player(name, car, ready)] };
+            Current = room with { Players = [.. room.Players, new Player(name, car, ready, colour)] };
             OnHeard(name);
         }
         // else: room is full - ignore, no row added and no keep-alive recorded.

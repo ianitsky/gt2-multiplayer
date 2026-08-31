@@ -34,20 +34,131 @@ public class CarInfoTests
             blocks.Add(block.ToArray());
         }
 
-        int blockBase = 8 + cars.Length * 8;
+        return Assemble(cars.Select(car => car.Code).ToArray(), blocks, cars.Select(_ => 1).ToArray());
+    }
+
+    /// <summary>
+    /// Builds a database whose blocks begin the way the disc's really do: the
+    /// swatches as halfwords, then a letter each, then the counted name. The
+    /// prefix the other builder takes is this region, written by hand - these
+    /// two describe the same bytes, from opposite ends.
+    /// </summary>
+    static byte[] BuildPaintedDatabase(
+        params (string Code, (ushort Swatch, char Letter)[] Paints, string Name)[] cars)
+    {
+        var blocks = new List<byte[]>();
+        foreach (var (_, paints, name) in cars)
+        {
+            var block = new List<byte>();
+            foreach (var (swatch, _) in paints) block.AddRange(BitConverter.GetBytes(swatch));
+            foreach (var (_, letter) in paints) block.Add((byte)letter);
+
+            var text = Encoding.ASCII.GetBytes(name);
+            block.Add((byte)text.Length);
+            block.AddRange(text);
+            block.Add(0);
+            blocks.Add(block.ToArray());
+        }
+
+        return Assemble(cars.Select(car => car.Code).ToArray(), blocks,
+            cars.Select(car => car.Paints.Length).ToArray());
+    }
+
+    /// <summary>
+    /// Lays records and blocks out as the file does. The record's second word
+    /// carries the block's offset in its low eighteen bits and one less than
+    /// the paint count in the five above them, which is the packing
+    /// gt2_main_carinfo_block_and_paint_count_for_car unpacks.
+    /// </summary>
+    static byte[] Assemble(string[] codes, List<byte[]> blocks, int[] paints)
+    {
+        int blockBase = 8 + codes.Length * 8;
         var image = new List<byte>(Encoding.ASCII.GetBytes("CAR\0"));
-        image.AddRange(BitConverter.GetBytes((uint)cars.Length));
+        image.AddRange(BitConverter.GetBytes((uint)codes.Length));
 
         int at = blockBase;
-        for (int i = 0; i < cars.Length; i++)
+        for (int i = 0; i < codes.Length; i++)
         {
-            image.AddRange(BitConverter.GetBytes(Pack(cars[i].Code)));
-            image.AddRange(BitConverter.GetBytes((ushort)at));
-            image.AddRange(BitConverter.GetBytes((ushort)0));
+            image.AddRange(BitConverter.GetBytes(Pack(codes[i])));
+            image.AddRange(BitConverter.GetBytes((uint)at | ((uint)(paints[i] - 1) << 18)));
             at += blocks[i].Length;
         }
         foreach (var block in blocks) image.AddRange(block);
         return image.ToArray();
+    }
+
+    // ---- the paints a car comes in ----
+
+    [Fact]
+    public void Reads_the_paints_a_car_comes_in()
+    {
+        var db = BuildPaintedDatabase(
+            ("dvpgn", [(0x5AF7, '4'), (0x4A52, '6'), (0x0C63, 'b')], "Viper GTS"));
+
+        var info = CarInfo.TryParse(db);
+
+        Assert.NotNull(info);
+        var paints = info!.Colours("dvpgn");
+        Assert.Equal(3, paints.Count);
+        Assert.Equal([(sbyte)'4', (sbyte)'6', (sbyte)'b'], paints.Select(p => p.Letter));
+        Assert.Equal([(ushort)0x5AF7, (ushort)0x4A52, (ushort)0x0C63], paints.Select(p => p.Swatch));
+    }
+
+    /// <summary>
+    /// Five bits a channel, red lowest - the split
+    /// gt2_ovr3_unpack_fifteen_bit_colour_and_say_how_saturated makes before
+    /// it works out how saturated a colour is.
+    /// </summary>
+    [Fact]
+    public void Unpacks_a_swatch_as_five_bits_a_channel()
+    {
+        var db = BuildPaintedDatabase(("dvpgn", [(0x4D80, '1')], "Viper GTS"));
+
+        var paint = CarInfo.TryParse(db)!.Colours("dvpgn")[0];
+
+        // 0x4D80 = 0 100110 11000 00000: red 0, green 12, blue 19.
+        Assert.Equal(0, paint.Red);
+        Assert.Equal(12, paint.Green);
+        Assert.Equal(19, paint.Blue);
+    }
+
+    [Fact]
+    public void The_name_is_still_read_from_a_block_that_begins_with_paints()
+    {
+        var db = BuildPaintedDatabase(
+            ("dvpgn", [(0x5AF7, '4'), (0x4A52, '6'), (0x0C63, 'b')], "Viper GTS"));
+
+        Assert.Equal("Viper GTS", CarInfo.TryParse(db)!.DisplayName("dvpgn"));
+    }
+
+    [Fact]
+    public void A_car_the_file_does_not_describe_has_no_paints()
+    {
+        var db = BuildPaintedDatabase(("dvpgn", [(0x5AF7, '4')], "Viper GTS"));
+
+        Assert.Empty(CarInfo.TryParse(db)!.Colours("buc9n"));
+    }
+
+    /// <summary>
+    /// A count that runs the paint region off the end of the file gets the
+    /// same answer an unusable name offset gets - nothing for that car, and
+    /// nothing said about any other.
+    /// </summary>
+    [Fact]
+    public void A_paint_region_that_runs_off_the_end_is_dropped()
+    {
+        var db = BuildPaintedDatabase(("dvpgn", [(0x5AF7, '4')], "Viper GTS"));
+
+        // Claim thirty-two paints where the file has room for one. The
+        // record's second word sits at 12: four bytes of magic, four of
+        // count, then the packed code.
+        uint field = BitConverter.ToUInt32(db, 12);
+        BitConverter.GetBytes((field & 0x3FFFFu) | (31u << 18)).CopyTo(db, 12);
+
+        var info = CarInfo.TryParse(db);
+
+        Assert.NotNull(info);
+        Assert.Empty(info!.Colours("dvpgn"));
     }
 
     /// <summary>

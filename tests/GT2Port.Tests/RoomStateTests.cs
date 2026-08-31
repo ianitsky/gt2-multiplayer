@@ -199,4 +199,20 @@ public class RoomStateTests
 
         Assert.False(RoomState.TryDeserialise(packet, out _));
     }
+
+    /// <summary>
+    /// The paint has to survive the wire or the lobby is choosing a colour
+    /// only the chooser can see, which is the one thing it exists not to do.
+    /// </summary>
+    [Fact]
+    public void Round_trips_the_paint_each_player_chose()
+    {
+        var room = new Room(Guid.NewGuid(), "room", "parma_2p", "special", 6,
+            [new Player("ian", "dvpgn", true, Colour: 2),
+             new Player("guest", "buc9n", false, Colour: 11)]);
+
+        Assert.True(RoomState.TryDeserialise(RoomState.Serialise(room), out var back));
+
+        Assert.Equal([(byte)2, (byte)11], back.Players.Select(p => p.Colour));
+    }
 }

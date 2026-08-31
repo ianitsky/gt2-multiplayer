@@ -27,6 +27,18 @@ public static class RaceGrid
     const int FirstEntrant = 0x5C;
     const int EntrantSize = 0xD0;
     const int CarId = 0x00;
+
+    /// <summary>
+    /// The paint, as the letter the car's own list names it by - not as an
+    /// index into that list.
+    ///
+    /// gt2_ovr3_build_race_block_and_fill_all_six_entrants reads the letter
+    /// out of the twelve-byte record it is handed per car and writes it here,
+    /// sign-extended to a word. Writing the index instead would be writing the
+    /// question where the game keeps the answer, which is the same mistake the
+    /// rotation cost seven attempts.
+    /// </summary>
+    const int PaintLetter = 0x04;
     const int AiSkill = 0x42;          // 0 for the human's car, 100 for the rest
     const int IsAi = 0x82;             // 0 for the human's car, 1 for the rest
     const int GridPlace = 0x8D;        // counted from zero
@@ -69,6 +81,18 @@ public static class RaceGrid
     /// false if the block is not a finished race yet, so a caller can keep
     /// trying until it is.
     /// </summary>
+    /// <summary>
+    /// The letter a player's chosen paint is called, or null when the car
+    /// database cannot say - in which case the entrant keeps whatever the
+    /// arcade left there, which is a paint the car really has.
+    /// </summary>
+    static sbyte? PaintFor(CarCatalogue? cars, Player player)
+    {
+        var paints = cars?.Colours(player.Car);
+        if (paints is null || player.Colour >= paints.Count) return null;
+        return paints[player.Colour].Letter;
+    }
+
     public static bool TryApply(IMemory m, IReadOnlyList<Player> players, string me, CarCatalogue? cars)
     {
         if (players.Count == 0) return false;
@@ -96,6 +120,12 @@ public static class RaceGrid
 
             if (CarInfo.TryEncodeCode(player.Car, out uint packed))
                 m.WriteU32(entrant + CarId, packed);
+
+            // Every machine writes every entrant's paint, its own included, so
+            // six machines paint the same six cars - which is the whole of
+            // what choosing a colour in the lobby is for.
+            if (PaintFor(cars, player) is { } letter)
+                m.WriteU32(entrant + PaintLetter, unchecked((uint)letter));
 
             // The name is a separate field and is not derived from the id, so
             // leaving it alone would have the HUD announce a car that is not

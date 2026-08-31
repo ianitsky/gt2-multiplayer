@@ -36,7 +36,12 @@ public sealed class LanSession : IDisposable
     static readonly TimeSpan IntentInterval = TimeSpan.FromSeconds(1.0 / 5.0);
 
     static readonly byte[] Magic = "G2CS"u8.ToArray();
-    const byte Version = 1;
+    /// <summary>
+    /// Two, since a client's intent gained the paint it chose. A host running
+    /// the older format rejects this outright rather than reading the colour
+    /// byte as the start of something else.
+    /// </summary>
+    const byte Version = 2;
     const int MaxStringBytes = RoomState.MaxStringBytes;
 
     const byte ReadyFlag = 1 << 0;
@@ -368,7 +373,7 @@ public sealed class LanSession : IDisposable
             if (intent.Leaving)
                 session.ApplyClientLeave(intent.Name);
             else
-                session.ApplyClientIntent(intent.Name, intent.Car, intent.Ready);
+                session.ApplyClientIntent(intent.Name, intent.Car, intent.Ready, intent.Colour);
 
             SendRoomState(session.Current!, from!);
         }
@@ -415,7 +420,7 @@ public sealed class LanSession : IDisposable
 
         var self = current.Players.FirstOrDefault(p => p.Name == session.PlayerName);
         var intent = new ClientIntent(current.Id, session.PlayerName,
-            self?.Car ?? "", self?.Ready ?? false, Leaving: false);
+            self?.Car ?? "", self?.Ready ?? false, Leaving: false, Colour: self?.Colour ?? 0);
         SendIntent(intent, hostAddress);
         _lastIntentSent = now;
     }
@@ -432,7 +437,7 @@ public sealed class LanSession : IDisposable
 
         var self = current.Players.FirstOrDefault(p => p.Name == session.PlayerName);
         var intent = new ClientIntent(current.Id, session.PlayerName,
-            self?.Car ?? "", self?.Ready ?? false, Leaving: true);
+            self?.Car ?? "", self?.Ready ?? false, Leaving: true, Colour: self?.Colour ?? 0);
         SendIntent(intent, hostAddress);
     }
 
@@ -553,7 +558,8 @@ public sealed class LanSession : IDisposable
 
     // ---- wire format ----
 
-    internal readonly record struct ClientIntent(Guid RoomId, string Name, string Car, bool Ready, bool Leaving);
+    internal readonly record struct ClientIntent(
+        Guid RoomId, string Name, string Car, bool Ready, bool Leaving, byte Colour = 0);
 
     internal static byte[] Serialise(ClientIntent intent)
     {
@@ -569,6 +575,7 @@ public sealed class LanSession : IDisposable
 
         WriteString(buffer, intent.Name);
         WriteString(buffer, intent.Car);
+        buffer.Add(intent.Colour);
         return [.. buffer];
     }
 
@@ -589,9 +596,11 @@ public sealed class LanSession : IDisposable
         if (!TryByte(span, ref offset, out byte flags)) return false;
         if (!TryString(span, ref offset, out string name)) return false;
         if (!TryString(span, ref offset, out string car)) return false;
+        if (!TryByte(span, ref offset, out byte colour)) return false;
 
         intent = new ClientIntent(roomId, name, car,
-            Ready: (flags & ReadyFlag) != 0, Leaving: (flags & LeavingFlag) != 0);
+            Ready: (flags & ReadyFlag) != 0, Leaving: (flags & LeavingFlag) != 0,
+            Colour: colour);
         return true;
     }
 

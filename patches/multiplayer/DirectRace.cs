@@ -297,6 +297,34 @@ public static class DirectRace
     }
 
     /// <summary>
+    /// Points the captured block at the paint this machine's player chose.
+    ///
+    /// An index, and only this player's: the builder resolves it against the
+    /// car it was given and fills entrant zero from the result. The other five
+    /// are RaceGrid's, and by the letter rather than the index.
+    /// </summary>
+    static void PutTheRoomsPaintIn(IMemory m)
+    {
+        if (_race is not { } race) return;
+
+        var mine = race.Players.FirstOrDefault(p => p.Name == race.Me);
+        if (mine is null) return;
+
+        var paints = race.Cars?.Colours(mine.Car);
+        if (paints is null || mine.Colour >= paints.Count)
+        {
+            Console.Error.WriteLine(
+                $"[paint] no paint {mine.Colour} for {mine.Car} - the capture's will run");
+            return;
+        }
+
+        m.WriteU16(Parameters + ChosenPaint, mine.Colour);
+        Console.Error.WriteLine(
+            $"[paint] {race.Me} is driving {mine.Car} in paint {mine.Colour}"
+            + $" of {paints.Count} ('{(char)paints[mine.Colour].Letter}')");
+    }
+
+    /// <summary>
     /// Runs one of the game's own functions from inside a hook and puts every
     /// register back, returning what the call left in V0.
     ///
@@ -341,6 +369,18 @@ public static class DirectRace
     /// </summary>
     const uint ChosenCar = 0x0Cu;
     const uint ChosenCarAgain = 0x10u;
+
+    /// <summary>
+    /// Where the block names the paint - as an index into the car's own list,
+    /// which is the one place the game wants the index rather than the letter.
+    ///
+    /// The builder hands it straight to
+    /// gt2_ovr3_read_signed_byte_from_decoded_car_info_at_offset along with the
+    /// car id, and that returns the letter it then puts in the entrant. So this
+    /// is where the player's own car is painted, and RaceGrid's write is where
+    /// everyone else's is.
+    /// </summary>
+    const uint ChosenPaint = 0x16u;
 
     /// <summary>
     /// Where the parameter block names the course.
@@ -417,6 +457,7 @@ public static class DirectRace
         }
 
         PutTheRoomsCourseIn(m);
+        PutTheRoomsPaintIn(m);
 
         Say(m, "as supplied");
         SilenceTheArcade(c, m);

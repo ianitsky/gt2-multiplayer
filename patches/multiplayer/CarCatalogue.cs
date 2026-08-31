@@ -166,6 +166,15 @@ public sealed class CarCatalogue
     /// </summary>
     public string DisplayName(string carCode) => _info?.DisplayName(carCode) ?? carCode;
 
+    /// <summary>
+    /// The paints a car comes in, in the game's own order. Empty without a
+    /// car database, which is the same shape a session with no disc already
+    /// gets for names - the lobby then offers no colour rather than offering
+    /// one it cannot show.
+    /// </summary>
+    public IReadOnlyList<CarInfo.Colour> Colours(string carCode) =>
+        _info?.Colours(carCode) ?? [];
+
     sealed record GroupDto(
         [property: JsonPropertyName("id")] string? Id,
         [property: JsonPropertyName("name")] string? Name,
