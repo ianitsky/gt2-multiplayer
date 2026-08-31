@@ -24,6 +24,41 @@ public class RoomStateTests
         Assert.Equal(original.Players.Count, back.Players.Count);
     }
 
+    /// <summary>
+    /// The lap count is the host's choice and every other machine reads it off
+    /// the room, so a race whose length did not survive the wire would be six
+    /// machines running six different races.
+    /// </summary>
+    [Fact]
+    public void Round_trips_how_many_laps_the_race_is()
+    {
+        var room = Sample() with { Laps = 47 };
+        Assert.True(RoomState.TryDeserialise(RoomState.Serialise(room), out var back));
+        Assert.Equal(47, back.Laps);
+    }
+
+    /// <summary>
+    /// A room arrives off a socket, so its lap count is clamped rather than
+    /// trusted: zero laps is a race that ends before it starts.
+    ///
+    /// Which byte carries it is found by asking the format rather than by
+    /// counting through it - two rooms alike but for their laps differ in
+    /// exactly one place.
+    /// </summary>
+    [Fact]
+    public void A_lap_count_off_the_wire_is_clamped()
+    {
+        var one = RoomState.Serialise(Sample() with { Laps = 1 });
+        var two = RoomState.Serialise(Sample() with { Laps = 2 });
+
+        var differ = Enumerable.Range(0, one.Length).Where(i => one[i] != two[i]).ToList();
+        int at = Assert.Single(differ);
+
+        one[at] = 0;
+        Assert.True(RoomState.TryDeserialise(one, out var back));
+        Assert.Equal(RaceLaps.Fewest, back.Laps);
+    }
+
     [Fact]
     public void Round_trips_every_player_field()
     {
@@ -96,10 +131,14 @@ public class RoomStateTests
             "", "", "", 6, []);
 
         var data = RoomState.Serialise(room).ToList();
-        // Same layout as Rejects_corrupted_packet_while_preserving_invariants:
-        // version(1) + guid(16) + name_len(1) + track_len(1) + carGroup_len(1) + maxPlayers(1) + count(1)
-        // - maxPlayers sits right before count, at data.Count - 2.
-        int maxPlayersByteIndex = data.Count - 2;
+
+        // Found by asking the format rather than by counting through it: two
+        // rooms alike but for their player limit differ in exactly one byte.
+        // Counting was how this test broke when the laps byte was added
+        // between the limit and the player count.
+        var five = RoomState.Serialise(room with { MaxPlayers = 5 });
+        int maxPlayersByteIndex = Assert.Single(
+            Enumerable.Range(0, data.Count).Where(i => data[i] != five[i]));
 
         // Positive precondition: the untouched packet round-trips, so the
         // rejection below is the forged byte's doing, not a broken parser

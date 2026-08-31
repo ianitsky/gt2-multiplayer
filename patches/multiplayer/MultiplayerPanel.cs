@@ -434,6 +434,21 @@ public sealed class MultiplayerPanel : IPanel
         var room = _session.Current!;
 
         ImGui.TextUnformatted($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
+
+        // The host's to choose and everyone else's to read: the number travels
+        // with the room, so a client showing a slider would be offering a
+        // choice the next room update would take back.
+        if (_session.Phase == SessionPhase.Hosting)
+        {
+            int laps = room.Laps;
+            if (ImGui.SliderInt("Laps", ref laps, RaceLaps.Fewest, RaceLaps.Most))
+                _session.SetLaps(laps);
+        }
+        else
+        {
+            ImGui.TextDisabled($"{room.Laps} lap{(room.Laps == 1 ? "" : "s")}");
+        }
+
         ImGui.Separator();
 
         foreach (var player in Seats.Drivers(room.Players))

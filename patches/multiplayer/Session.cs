@@ -127,6 +127,20 @@ public sealed class Session
         UpdatePlayer(playerName, p => p.Car == car ? p : p with { Car = car, Colour = 0 });
 
     /// <summary>Chooses one of the paints the player's car comes in, by index.</summary>
+    /// <summary>
+    /// Sets how many laps the race will be run over.
+    ///
+    /// The host's alone: every other machine learns it from the room the host
+    /// publishes, the same way it learns the track. Clamped here rather than
+    /// trusted, because the number reaches this from a slider on one machine
+    /// and from a socket on every other.
+    /// </summary>
+    public void SetLaps(int laps)
+    {
+        if (Current is not { } room) return;
+        Current = room with { Laps = (byte)RaceLaps.Sensible(laps) };
+    }
+
     public void SetColour(string playerName, byte colour) =>
         UpdatePlayer(playerName, p => p with { Colour = colour });
 

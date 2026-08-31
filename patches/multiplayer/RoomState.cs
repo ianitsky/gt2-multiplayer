@@ -53,7 +53,15 @@ public static class Seats
     }
 }
 
-public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers, IReadOnlyList<Player> Players);
+/// <summary>
+/// A room, and the race it is arranging.
+///
+/// <paramref name="Laps"/> is how many laps that race is run over - the host's
+/// choice, one to ninety-nine. Two is what an arcade race is built as, so a
+/// room that never says otherwise runs what the game would have run anyway.
+/// </summary>
+public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers,
+                   IReadOnlyList<Player> Players, byte Laps = RaceLaps.AsBuilt);
 
 /// <summary>
 /// The wire format for room state.
@@ -67,7 +75,7 @@ public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxP
 /// </summary>
 public static class RoomState
 {
-    const byte Version = 4;
+    const byte Version = 5;
     public const int MaxPlayers = 6;
     public const int MaxStringBytes = 64;
 
@@ -99,6 +107,7 @@ public static class RoomState
         WriteString(buffer, room.Track);
         WriteString(buffer, room.CarGroup);
         buffer.Add((byte)room.MaxPlayers);
+        buffer.Add(room.Laps);
         buffer.Add((byte)room.Players.Count);
         foreach (var player in room.Players)
         {
@@ -125,6 +134,7 @@ public static class RoomState
         if (!TryString(data, ref offset, out string track)) return false;
         if (!TryString(data, ref offset, out string carGroup)) return false;
         if (!TryByte(data, ref offset, out byte maxPlayers) || maxPlayers > MaxPlayers) return false;
+        if (!TryByte(data, ref offset, out byte laps)) return false;
         if (!TryByte(data, ref offset, out byte count) || count > MaxPlayers) return false;
 
         var players = new List<Player>(count);
@@ -138,7 +148,10 @@ public static class RoomState
             players.Add(new Player(playerName, car, ready != 0, colour, watching != 0));
         }
 
-        room = new Room(id, name, track, carGroup, maxPlayers, players);
+        // Clamped rather than trusted: this came off a socket, and a room
+        // claiming a zero-lap race would be a race that ends before it starts.
+        room = new Room(id, name, track, carGroup, maxPlayers, players,
+                        (byte)RaceLaps.Sensible(laps));
         return true;
     }
 

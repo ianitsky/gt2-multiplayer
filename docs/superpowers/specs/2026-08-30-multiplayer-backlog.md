@@ -544,13 +544,30 @@ and +0x0A - are already accounted for, as is the entrant count at +0x5A.
 Reading gt2_01 does not settle it either. The record is addressed from dozens of
 places and none of them reads a small header offset and counts with it.
 
-### So the HUD is asked instead
+### So the HUD was asked instead
 
-`GT2_LAPS_PROBE` writes a different number into each of the four candidates, and
-the lap counter names the one the game reads: 1/7 is +0x02, 1/8 is +0x05, 1/9 is
-+0x08, 1/11 is +0x0F. One race closes it. `GT2_LAPS_AT` and `GT2_LAPS` then
-confirm the answer without a rebuild, before the host's own choice is wired to
-it.
+`GT2_LAPS_PROBE` wrote a different number into each of the four candidates and
+the lap counter named the one the game reads. It said **Lap 1/11**, so the lap
+count is the byte at **+0x0F**. One race, one answer.
+
+One byte, so ninety-nine laps fits with room to spare. The probe is kept behind
+its switch: it is what would name the byte again on a build that moves it.
+
+### The host's choice, from the lobby to the record
+
+`Room` gained a `Laps` byte, defaulting to the two an arcade race is built as -
+so a room that never chooses runs the race the game would have run anyway. It
+travels in the room the host publishes (wire version 5), which makes it the same
+kind of thing as the track: chosen once, read everywhere.
+
+Clamped in three places, because the number arrives from three: a slider on the
+host's machine, a socket on everyone else's, and `GT2_LAPS` on a run being
+tested.
+
+Two tests that located a byte by counting through the format broke when the laps
+byte landed between the player limit and the player count. Both now find their
+byte by serialising two rooms that differ in one field and asking which byte
+differs, which cannot go stale.
 
 ## 8. The finishing order is shown on the way back to the lobby
 
