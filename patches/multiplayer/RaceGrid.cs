@@ -218,6 +218,14 @@ public static class RaceGrid
             + $", leftovers {(PlaceTheLeftovers ? "renumbered" : "left alone")}:" + said);
     }
 
+    /// <summary>
+    /// The place the block now holds for a slot. Public because the question of
+    /// what the game stands a car by - the slot it is in or the number written
+    /// in it - is answered by reading both and comparing.
+    /// </summary>
+    public static byte PlaceOf(IMemory m, int slot) =>
+        m.ReadU8(Block + (uint)(FirstEntrant + slot * EntrantSize) + GridPlace);
+
     static void WriteText(IMemory m, uint at, string text, int room)
     {
         for (int i = 0; i < room; i++)

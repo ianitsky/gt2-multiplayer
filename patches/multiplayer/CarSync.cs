@@ -54,7 +54,7 @@ public static class CarSync
         int seat = race.Watching ? -1 : Seats.Of(race.Players, race.Me);
         if (!race.Watching && seat < 0) return;
 
-        StandOnTheRoomsSquare(m, seat);
+        SayWhereTheGridPutUs(m, seat);
 
         if (seat >= 0)
         {
@@ -84,28 +84,53 @@ public static class CarSync
     static bool _stood;
 
     /// <summary>
-    /// Moves this machine's own car onto the square the room says is its, once,
-    /// before it has sent a place from the wrong one.
+    /// Whether to move this machine's own car onto another slot's square.
     ///
-    /// The game puts cars on the grid by entrant, and every machine rotates its
-    /// own player to entrant 0 - because that is the entrant a person drives.
-    /// So on every machine the local car stands on entrant 0's square, and all
-    /// four machines then broadcast a car standing on the same square. Four
-    /// players saw exactly that: everyone starting in one place.
+    /// It had to, once. Every machine rotates its own player to entrant 0, and
+    /// while the grid was numbered by slot that put every machine's driven car
+    /// on square zero - four players all started in one place. Since the number
+    /// at +0x8D became the room's seat rather than the slot, entrant 0 already
+    /// carries the number of the seat it belongs to, and moving it again takes
+    /// it off its own square and onto the one it read. That is how the
+    /// collision came back the moment each machine led the grid with its own
+    /// player, and it is why this is off.
     ///
-    /// Nothing has to know where the six squares are. The game has already put
-    /// six cars on them and slot i is square i, so the square this room seat is
-    /// owed is the one slot <c>seat</c> is standing on - read it, and stand
-    /// there instead. The car being read is somebody else's, and its own place
-    /// arrives over the wire a frame later, so lending its square costs nothing.
+    /// Kept as a switch rather than deleted because the report below is what
+    /// says which of the two the game actually stands a car by.
     /// </summary>
-    static void StandOnTheRoomsSquare(IMemory m, int seat)
+    static readonly bool Stand =
+        Environment.GetEnvironmentVariable("GT2_STAND_ON_SQUARE") is not (null or "");
+
+    /// <summary>
+    /// Says where the game stood every car, once, before anything has moved
+    /// one - and moves this machine's own car only when asked to.
+    ///
+    /// Two machines' reports held side by side answer the question outright.
+    /// If a car is stood by its entrant index, slot i is the same square on
+    /// every machine and the two lists come out identical. If it is stood by
+    /// the place written at +0x8D, each machine's list is the same squares in
+    /// its own rotation - and then a machine's own car is already standing
+    /// exactly where the room says it should.
+    /// </summary>
+    static void SayWhereTheGridPutUs(IMemory m, int seat)
     {
         if (_stood) return;
         _stood = true;
 
-        // Seat zero is already on square zero, and a viewer has no car to move.
-        if (seat <= 0) return;
+        var said = new System.Text.StringBuilder();
+        for (int slot = 0; slot < RaceGrid.Slots; slot++)
+        {
+            var pose = RemoteCars.ReadPose(m, slot);
+            said.Append($"{Environment.NewLine}[sync]   slot {slot}"
+                + $" place {RaceGrid.PlaceOf(m, slot)}"
+                + $" at ({pose.Place.X}, {pose.Place.Z}) facing {pose.AroundY}");
+        }
+
+        Console.Error.WriteLine($"[sync] seat {seat} finds the grid standing:" + said);
+
+        // A viewer has no car to move, and seat zero would be moving onto its
+        // own square.
+        if (!Stand || seat <= 0) return;
 
         var square = RemoteCars.ReadPose(m, seat);
         RemoteCars.WritePose(m, 0, square);
