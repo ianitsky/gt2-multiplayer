@@ -239,8 +239,64 @@ same way a remote car's is.
 
 Zero new mechanism. What it does not give is switching mid-race: who is entrant
 0 is decided when the race is built, because the car models are loaded per
-entrant. Switching while the race runs needs the camera's own target, which has
-not been found.
+entrant. Switching while the race runs needs the camera's own target.
+
+**The player asked for mid-race switching**, so the target has to be found.
+
+### Hunting the camera's target
+
+Four static searches and two instrumented runs, and it is still not found. What
+each ruled out is worth keeping, because the next attempt should not repeat
+them.
+
+Static, all empty:
+
+- The car array base (0x800A9688) is taken in ten places in `gt2_01`. The ones
+  that are not the physics use **car 0 by constant address**, not by index.
+- The three functions outside the physics that read a car's place
+  (0x8004E88C and neighbours) are text: they call 0x8006C460 with format
+  strings out of 0x8005B3xx.
+- The GTE control loads are libgte's own helpers in `main.cs`; the caller is
+  what matters and static reading did not reach it.
+- Shoulder buttons near the race context: three sites, none a camera change.
+
+A read watch on car 0's place (0x800A9D10), armed at the race's first frame,
+spent its whole budget on setup and returned `entry_80012CD4` - the function
+that builds a car slot from an entrant, taking the entrant index in A1. Useful,
+and not the camera. That is what `GT2_WATCH_READ_AT` and `GT2_WATCH_READ_HITS`
+were added for.
+
+Armed 300 frames in, the same watch returned seven per-frame readers, **all of
+them under `entry_8003EBF0`** - the pass that walks every car:
+
+```
+func_80033E6C <- func_80034320 <- func_80034480 <- entry_8003EBF0
+entry_80041AE8 <- func_80033E6C <- ...
+entry_80043388 <- entry_8003EBF0
+entry_80043AE0 <- entry_8003E8E4 (the physics stepper)
+entry_8003E7EC <- entry_8003E8E4
+entry_8003CE3C <- entry_8003CF94
+entry_8001336C <- entry_800133F0   (already named: a car's GTE matrices)
+```
+
+`func_80034480(A0 = car array base, A1 = car count)` loops all cars and then
+calls a run of `f(base, count)` passes, so that chain is per-car too. Every one
+of the seven is per-car, which is evidence that **the view does not read a car's
+place to decide what to follow** - or does not read the place at all.
+
+A car does carry camera-shaped fields - `func_80032B0C` builds rotation rows at
+car +0x668/+0x670/+0x678 out of three angles at +0x644/+0x646/+0x648, through
+`gt2_ovr1_race_rotation_matrix_from_three_angles`, the same function a car's own
+rotation goes through. But +0x644 is also read by the physics stepper, so those
+are the car's fields rather than a camera's.
+
+### The next probe
+
+Ask which code consumes the pad. The race registers its pad readers at
+0x800A9528 and 0x800A95D8 on its first frame, and a read watch on the first of
+them names everything that acts on a button - which has to include whatever
+changes the camera, and is also the question `SecondDriver` was written to
+answer and never could.
 
 ## 5. The end of a race returns to the lobby
 
