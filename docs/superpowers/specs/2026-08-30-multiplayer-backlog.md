@@ -470,3 +470,53 @@ wrong rather than loudly broken:
 Acceleration, braking, wheel rotation and the rest of the visible effects
 should look on the remote machines the way they look on the owner's. Place and
 heading travel already; this is the rest of what is drawn.
+
+### Where a car begins
+
+`0x800A9688`, stepping by `0xB40` - the race context's own car array. Not
+deduced: `gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from` is hooked and
+prints the pointer it is handed, and the six came back exactly there.
+
+`RemoteCars.FirstCar` is `0x800A9B04`, which is **0x47C into a car** rather than
+at its start. That cost nothing while everything this port wrote was addressed
+from it, and cost two wrong answers the moment gt2_01's own offsets were used.
+
+### Two guesses from reading, both wrong
+
+Kept because the reasoning was sound and the measurement still says no.
+
+- **`+0x5A` is not speed.** The matrix builder reads it into the vector
+  `(0, 0, it)`, turns it by the car's matrix and adds the result to the drawn
+  position, which is exactly what a speed would do. It reads 500 and stays there
+  through acceleration, braking and a full stop. A fixed offset along the nose.
+- **`+0x7CC + wheel * 0x10` is not the wheel's angle.** That is where
+  `gt2_ovr1_race_car_set_its_four_wheels_draw_angles` writes three angles per
+  wheel, at exactly that stride. The memory holds `(-3055, -5004)`,
+  `(3055, -5004)`, `(-3063, 5024)`, `(3063, 5024)` and never moves: left and
+  right, front and rear. Where the wheels are *mounted*.
+
+### What actually moves
+
+Measured instead of guessed - a copy of the car kept per frame, counting how
+often each halfword changes over 1200 frames of driving:
+
+| range | what it is | moved |
+| --- | --- | --- |
+| `+0x670` | the three heading angles | 926 |
+| `+0x688` | position, X Z Y | 929 |
+| `+0x694` | the rotation matrix built from the angles | 813 |
+| `+0x6AC` | the second copy of both, 0x24 on | 929 |
+| `+0x48C + wheel * 0x68` | a physics block per wheel, four of them | ~330 |
+| `+0x7C6 + wheel * 0x10` | **one live angle per wheel** | ~880 |
+| `+0x804`, `+0x81C`, `+0x830`, `+0x850` | the drawn matrix and position | ~930 |
+
+The first four are what already travels. The last row is derived from them.
+
+What is new is the middle two. `+0x49C` - the first wheel's physics block plus
+0x10 - is the value the drawing code subtracts from a per-axle angle to get the
+wheel's own, and the result lands in `+0x7C6 + wheel * 0x10`: four shorts,
+holding four different values, moving on three frames in four. The other two
+shorts of each drawn triple never move.
+
+So the visible half of a wheel is one short, four times, and it is the thing to
+send.

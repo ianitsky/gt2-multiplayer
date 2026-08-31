@@ -2912,6 +2912,12 @@
       "address": "0x80015B64",
       "target": "GT2Port.Multiplayer.RaceStartLine.FrameDone",
       "mode": "post"
+    },
+    {
+      "overlay": "gt2_01",
+      "address": "0x800133F0",
+      "target": "GT2Port.Multiplayer.CarDriving.MatricesBeingBuilt",
+      "mode": "pre"
     }
   ],
   "debug": false,

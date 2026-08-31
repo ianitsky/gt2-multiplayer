@@ -132,6 +132,7 @@ public static class RaceStartLine
         RemoteCars.FrameBegins(m);
         CarSync.FrameBegins(m);
 
+
         if (WatchReadsAt >= 0 && _frames == WatchReadsAt)
         {
             Console.Error.WriteLine($"[read] {_frames} frames into the race - arming now");
@@ -224,11 +225,6 @@ public static class RaceStartLine
                 ModeHook.HoldAtTheLine();
             }
         }
-
-        // Every frame, and its own switch: what a remote car is missing is
-        // what the game derives from a car's own state, and the first thing to
-        // know is which fields those are.
-        CarDriving.Tick(m, RaceGrid.Slots);
 
         if (!Watching) return;
 

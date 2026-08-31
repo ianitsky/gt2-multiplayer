@@ -23,7 +23,30 @@ namespace GT2Port.Multiplayer;
 /// </summary>
 public static class RemoteCars
 {
-    /// <summary>The array of what each car is doing, and how far apart they are.</summary>
+    /// <summary>
+    /// Where a car really begins, as the game's own code counts it.
+    ///
+    /// <see cref="FirstCar"/> was found by watching writes and is 0x47C into a
+    /// car rather than at its start, which cost nothing while everything this
+    /// port wrote was addressed from it. It costs something now: the offsets in
+    /// gt2_01 are counted from the start, and reading them from 0x47C in gives
+    /// numbers that never change - which is what a first attempt at the driving
+    /// fields got, thirty-nine identical readings while the car was being
+    /// driven.
+    ///
+    /// Two things agree on where the start is.
+    /// gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from takes the car in
+    /// A0 and reads its transform at +0x688, and this port already knows that
+    /// transform as <see cref="Transform"/>, 0x20C from FirstCar - so the start
+    /// is 0x47C below it. And the race context at 0x800A9500 holds its car
+    /// array at +0x188, which is 0x800A9688: the same address.
+    /// </summary>
+    public const uint FirstCarObject = 0x800A9688u;
+
+    /// <summary>
+    /// Where a car's transform is, and how far apart the cars are. 0x47C into
+    /// a car rather than at its start - see <see cref="FirstCarObject"/>.
+    /// </summary>
     public const uint FirstCar = 0x800A9B04u;
     public const int CarStride = 0xB40;
     public const int Cars = 6;
