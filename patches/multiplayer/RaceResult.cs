@@ -43,8 +43,20 @@ namespace GT2Port.Multiplayer;
 /// </summary>
 public static class RaceResult
 {
-    /// <summary>How many laps this car has completed.</summary>
-    public const uint Laps = 0x634u;
+    /// <summary>
+    /// Which lap this car is on, counted from one - **not** how many it has
+    /// completed.
+    ///
+    /// It was read as completed laps for a while, and two readings of the same
+    /// race caught it. A one-minute race called its last lap while the car was
+    /// still on lap one and the HUD then showed "Lap 1/2", because the count
+    /// written was this plus one. And the standings said two laps where the
+    /// game's own results screen listed one. Both are the same off-by-one, and
+    /// both go away by reading this as the lap in progress.
+    ///
+    /// So laps completed is this less one, and never below zero.
+    /// </summary>
+    public const uint OnLap = 0x634u;
 
     /// <summary>
     /// The race time, in milliseconds.
@@ -76,7 +88,7 @@ public static class RaceResult
     }
 
     /// <summary>
-    /// The most laps this machine's own car has been seen to have completed.
+    /// The highest lap this machine's own car has been seen to be on.
     ///
     /// Watched during the race rather than read at the end of it, because at
     /// the end it reads zero: a race that had plainly been driven reported
@@ -86,11 +98,7 @@ public static class RaceResult
     /// car. And the overlay being replaced is the only moment this port hears
     /// that a race is over, which is already too late.
     ///
-    /// It counts laps completed rather than the lap in progress. The
-    /// field-watching runs show why: the value equals the number of times it
-    /// changed, from zero - 1 after one crossing, 2 after two - so nothing has
-    /// to be subtracted from it.
-    ///
+
     /// The highest seen rather than the last seen, for the same reason: the
     /// last frame before the end may already be the one that cleared it.
     /// </summary>
@@ -114,20 +122,24 @@ public static class RaceResult
     /// </summary>
     public static void Watch(IMemory m)
     {
-        int laps = LapsOf(m, 0);
-        if (laps <= _mostLaps || laps >= 1000) return;
+        int lap = OnLapNow(m, 0);
+        if (lap <= _mostLaps || lap >= 1000) return;
 
-        _mostLaps = laps;
+        _mostLaps = lap;
         Console.Error.WriteLine(
-            $"[result] the lap counter turned to {laps}"
-            + $" with the race clock at {new Finish(0, (int)m.ReadU32(Milliseconds)).Clock}");
+            $"[result] the car is now on lap {lap} - {Completed(lap)} completed"
+            + $" - with the race clock at {new Finish(0, (int)m.ReadU32(Milliseconds)).Clock}");
     }
 
     /// <summary>Forgets the race just run, so the next one counts its own laps.</summary>
     public static void Forget() => _mostLaps = 0;
 
-    static int LapsOf(IMemory m, int slot) => (short)m.ReadU16(
-        RemoteCars.FirstCarObject + (uint)(slot * RemoteCars.CarStride) + Laps);
+    /// <summary>Which lap a car is on, as the game counts it.</summary>
+    public static int OnLapNow(IMemory m, int slot) => (short)m.ReadU16(
+        RemoteCars.FirstCarObject + (uint)(slot * RemoteCars.CarStride) + OnLap);
+
+    /// <summary>How many laps a car on this lap has finished.</summary>
+    public static int Completed(int onLap) => Math.Max(0, onLap - 1);
 
     /// <summary>
     /// Reads what the race just ended as, for the car in the given slot.
@@ -139,8 +151,8 @@ public static class RaceResult
     /// </summary>
     public static Finish Read(IMemory m, int slot)
     {
-        int now = LapsOf(m, slot);
-        return new Finish(Math.Max(now, _mostLaps), (int)m.ReadU32(Milliseconds));
+        int onLap = Math.Max(OnLapNow(m, slot), _mostLaps);
+        return new Finish(Completed(onLap), (int)m.ReadU32(Milliseconds));
     }
 
     /// <summary>
@@ -155,7 +167,7 @@ public static class RaceResult
         var finish = Read(m, slot);
         Console.Error.WriteLine(
             $"[result] car {slot} finished {finish.Laps} lap(s) in {finish.Clock}"
-            + $" - the counter now reads {LapsOf(m, slot)}, the most seen was {_mostLaps}"
+            + $" - the car is on lap {OnLapNow(m, slot)}, the highest seen was {_mostLaps}"
             + " - the two that also held the time read "
             + string.Join("  ", AlsoHeldIt.Select(a => $"0x{a:X8}={AsATime(m, a)}")));
     }

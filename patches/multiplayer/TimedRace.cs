@@ -156,17 +156,18 @@ public static class TimedRace
 
         _called = true;
 
-        // The lap this car is on, plus one. RaceResult.Laps counts laps
-        // completed, so a car that has finished two is on its third - and the
-        // race should end when that third is done.
-        int completed = (short)m.ReadU16(RemoteCars.FirstCarObject + RaceResult.Laps);
-        int last = Math.Clamp(completed + 1, RaceLaps.Fewest, RaceLaps.Most);
+        // The lap this car is on, and no more: the race should end when the
+        // current lap is finished. Adding one to it was reading the field as
+        // laps completed, and a car on its first lap then got a two-lap race -
+        // "Lap 1/2" on the screen where it should have said 1/1.
+        int onLap = RaceResult.OnLapNow(m, 0);
+        int last = Math.Clamp(onLap, RaceLaps.Fewest, RaceLaps.Most);
 
         RaceLaps.CallTheLastLap(m, last);
 
         Console.Error.WriteLine(
             $"[timed] {_minutes} minute(s) are up after {SecondsSoFar(m)}s"
-            + $" - this car has completed {completed} lap(s), so the race ends on lap {last}"
+            + $" - this car is on lap {onLap}, so the race ends on lap {last}"
             + $" (0x801D5F80 reads {(int)m.ReadU32(RaceResult.Milliseconds)})");
     }
 

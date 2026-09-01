@@ -123,6 +123,22 @@ public class TimedRaceTests
     }
 
     /// <summary>
+    /// The game counts the lap a car is on, from one, and a race is scored on
+    /// laps finished. Two readings of the same race caught the difference: a
+    /// car on lap one had its last lap called as lap two, and the standings
+    /// claimed a lap more than the game's own results screen listed.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(15, 14)]
+    public void A_car_on_a_lap_has_finished_the_ones_before_it(int onLap, int completed)
+    {
+        Assert.Equal(completed, RaceResult.Completed(onLap));
+    }
+
+    /// <summary>
     /// A timed race can end with cars on different laps, which is the case the
     /// standings rule was written for: most laps first, then least time. This
     /// is that rule read back as the thing a timed race needs.

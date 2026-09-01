@@ -642,8 +642,12 @@ more questions at no cost - the last of them without running the game again.
   moment the overlay is replaced, so a race that had plainly been driven
   reported "0 laps". It is watched every frame now, highest reading winning,
   since the last frame before the end may already be the one that cleared it.
-  It counts laps *completed*: the field-watching runs show its value equal to
-  the number of times it changed, from zero.
+- **And it is the lap a car is *on*, from one - not laps completed.** Read as
+  completed, it was one too many everywhere, and two readings of the same race
+  caught it: a one-minute race called its last lap while the car was still on
+  lap one and the screen then read "Lap 1/2", and the standings claimed two laps
+  where the game's own results screen listed one. Laps finished is this less
+  one, never below zero.
 - **`+0x0F` really is the lap count.** The record read 1 for a race the room
   had set to one lap - a second, independent confirmation of what the HUD probe
   named.
