@@ -99,7 +99,12 @@ public static class ModeHook
     {
         if (phase == SessionPhase.Hosting)
             return currentRole == SessionPhase.Hosting ? SocketAction.Keep : SocketAction.RebuildAsHost;
-        if (phase == SessionPhase.Joined)
+        // Knocking holds the same socket as Joined and for the same reason:
+        // both are a client talking to one host. A knocking client that had to
+        // wait for a socket would have nothing to knock with - and the role
+        // recorded for both is Joined, so being answered does not rebuild the
+        // socket underneath a client mid-handshake.
+        if (phase is SessionPhase.Joined or SessionPhase.Knocking)
             return currentRole == SessionPhase.Joined ? SocketAction.Keep : SocketAction.RebuildAsClient;
         // Browsing and Disconnected hold no socket: drop one if there still
         // is one, otherwise there is nothing to do.
@@ -500,8 +505,18 @@ public static class ModeHook
                 {
                     _lanSession?.HostTick(_session);
                 }
-                else if (_session.Phase == SessionPhase.Joined &&
-                         _discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
+                else if (_session.Phase == SessionPhase.Knocking &&
+                         Session.TryReadAddress(_session.KnockingAt, out var knockingAt))
+                {
+                    // Repeated rather than sent once: this is a datagram to a
+                    // machine that has never heard of us, over a network that
+                    // loses them, and nothing retries it if it goes missing.
+                    // Being answered is what ends this.
+                    _raceHost = knockingAt.Address;
+                    _lanSession?.SendKnock(knockingAt, _session.PlayerName, _session.KnockingSecret);
+                    _lanSession?.ClientTick(_session, knockingAt.Address);
+                }
+                else if (_session.Phase == SessionPhase.Joined)
                 {
                     // Kept for after the lobby. Discovery forgets a host three
                     // seconds after its last announcement, and the host only
@@ -509,8 +524,16 @@ public static class ModeHook
                     // overlay has loaded and the start barrier begins, the
                     // address is already gone and a client that looked it up
                     // there would find nothing and say nothing.
-                    _raceHost = hostAddress;
-                    _lanSession?.ClientTick(_session, hostAddress);
+                    //
+                    // And a room joined by address was never announced at all,
+                    // so discovery will never have it. The address it was
+                    // reached at is the one already kept, and asking discovery
+                    // first would have such a client fall through this every
+                    // tick and never speak to its host again.
+                    if (_discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
+                        _raceHost = hostAddress;
+
+                    if (_raceHost is { } host) _lanSession?.ClientTick(_session, host);
                 }
 
                 if (_session.Phase == SessionPhase.Hosting &&

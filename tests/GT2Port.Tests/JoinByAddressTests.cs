@@ -125,4 +125,67 @@ public class JoinByAddressTests
 
         Assert.DoesNotContain(host.Current!.Players, p => p.Name == "les");
     }
+
+    /// <summary>
+    /// The answer to a knock is room state, and adopting it is what joining by
+    /// address means. The room's id is learned here and not before, so the
+    /// guard that rejects state for a different room cannot apply yet.
+    /// </summary>
+    [Fact]
+    public void The_room_that_answers_a_knock_is_the_room_this_client_joins()
+    {
+        var session = new Session("les", () => DateTime.UtcNow);
+        session.Knock("192.168.0.9:34719", "");
+
+        session.OnRemoteState(new Room(
+            Guid.NewGuid(), "ian's room", "seattle_short", "special", 6,
+            [new Player("ian", "buc9n", true), new Player("les", "", false)]));
+
+        Assert.Equal(SessionPhase.Joined, session.Phase);
+        Assert.Equal("ian's room", session.Current!.Name);
+    }
+
+    /// <summary>
+    /// A host that answers without a row for this client answered a full room.
+    /// Adopting it would leave a client sitting in a room it is not in.
+    /// </summary>
+    [Fact]
+    public void A_room_with_no_row_for_this_client_is_not_joined()
+    {
+        var session = new Session("les", () => DateTime.UtcNow);
+        session.Knock("192.168.0.9:34719", "");
+
+        session.OnRemoteState(new Room(
+            Guid.NewGuid(), "ian's room", "seattle_short", "special", 6,
+            [new Player("ian", "buc9n", true)]));
+
+        Assert.Equal(SessionPhase.Disconnected, session.Phase);
+        Assert.Null(session.Current);
+    }
+
+    /// <summary>
+    /// A knocking client needs the socket a joined one needs - it is already
+    /// talking to the host - and browsing still needs none. The role recorded
+    /// for both is Joined, so being answered must not rebuild the socket
+    /// underneath a client mid-handshake.
+    /// </summary>
+    [Fact]
+    public void A_knocking_client_is_given_a_client_socket()
+    {
+        Assert.Equal(
+            ModeHook.SocketAction.RebuildAsClient,
+            ModeHook.DecideSocketAction(null, SessionPhase.Knocking));
+
+        Assert.Equal(
+            ModeHook.SocketAction.Keep,
+            ModeHook.DecideSocketAction(SessionPhase.Joined, SessionPhase.Knocking));
+
+        Assert.Equal(
+            ModeHook.SocketAction.Keep,
+            ModeHook.DecideSocketAction(SessionPhase.Joined, SessionPhase.Joined));
+
+        Assert.Equal(
+            ModeHook.SocketAction.Drop,
+            ModeHook.DecideSocketAction(SessionPhase.Joined, SessionPhase.Browsing));
+    }
 }

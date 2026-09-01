@@ -449,6 +449,25 @@ public sealed class Session
         // remote state.
         if (Phase == SessionPhase.Hosting) return;
 
+        // A knock is answered with room state, and this is the first thing this
+        // client has ever been told about the room - including its id, so the
+        // guard below that rejects state for a different room has nothing to
+        // compare it against yet. A room that answers without a row for this
+        // client is a full one, reported the way the joined path reports it.
+        if (Phase == SessionPhase.Knocking)
+        {
+            if (!room.Players.Any(p => p.Name == _playerName))
+            {
+                Current = null;
+                Phase = SessionPhase.Disconnected;
+                StatusMessage = "The room is full.";
+                return;
+            }
+
+            Phase = SessionPhase.Joined;
+            StatusMessage = null;
+        }
+
         if (Phase == SessionPhase.Joined && Current is { } joinedRoom)
         {
             // A datagram for a room other than the one we're in - forged,
