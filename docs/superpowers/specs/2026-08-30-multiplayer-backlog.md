@@ -727,6 +727,56 @@ The host picks which. A timed race runs from five minutes to three hours, chosen
 on a slider. When the time runs out the cars finish the lap they are on, and the
 race ends there: most laps in the least time wins.
 
+### Nothing here ends a race
+
+The game already knows how to end one - it does it when a car completes the lap
+the record's `+0x0F` names - and *finish the lap you are on* is exactly what
+that does. So a timed race is a lap race whose lap count is not decided until
+the clock runs out:
+
+- it starts at 99, the most the byte will hold, so the game has no reason to end
+  it early;
+- when the time is up, `+0x0F` becomes the lap this car is on plus one, and the
+  game ends the race when that lap is completed.
+
+The ending is then the game's own, with its own results screen and its own
+timing. Driving the race loop into its finished state from outside would have to
+reproduce all of that, and would leave two different ways for a race to end.
+
+**What one timed race has to confirm:** whether the game reads `+0x0F` again
+once a race is running, or copies it somewhere at setup. If it copies, the lap
+count has to be found in its copy instead - and the log prints what was written
+and what reads back, so the run says which.
+
+### Whose clock
+
+The game's, not a stopwatch here - the same rule as the lap count and the race
+time. Which of the game's two is unsettled:
+
+- `0x801D5F80` holds the race time in milliseconds and matched the screen
+  exactly at the end of a race, but whether it ticks *during* one has never been
+  watched;
+- `0x800A8C64` rises by exactly two a frame, and the screen's clock matches
+  frames times two over sixty.
+
+So the deadline is measured against the counter that is known to be running, and
+both are printed when the last lap is called. One timed race settles which to
+keep.
+
+### Laps or a clock, one control
+
+They are one decision - a race is run to one or the other and never to both - so
+the lobby shows one radio pair and one slider. A room showing both sliders would
+be inviting somebody to set the one being ignored.
+
+Zero minutes means laps, which keeps a room that never heard of any of this
+running exactly as it did. It is also the one value not clamped on the way in
+off the wire: zero is not a too-short race.
+
+The standings needed nothing. Most laps, then least time, was already the rule -
+written for a lap race that ends with cars on different laps, which is every
+timed race.
+
 ## 10. The host arranges the grid
 
 Today the grid is filled in the order players joined the room. Instead the host

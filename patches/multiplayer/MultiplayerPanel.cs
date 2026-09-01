@@ -437,19 +437,7 @@ public sealed class MultiplayerPanel : IPanel
 
         DrawTheLastRace();
 
-        // The host's to choose and everyone else's to read: the number travels
-        // with the room, so a client showing a slider would be offering a
-        // choice the next room update would take back.
-        if (_session.Phase == SessionPhase.Hosting)
-        {
-            int laps = room.Laps;
-            if (ImGui.SliderInt("Laps", ref laps, RaceLaps.Fewest, RaceLaps.Most))
-                _session.SetLaps(laps);
-        }
-        else
-        {
-            ImGui.TextDisabled($"{room.Laps} lap{(room.Laps == 1 ? "" : "s")}");
-        }
+        DrawHowLongTheRaceIs(room);
 
         ImGui.Separator();
 
@@ -521,6 +509,46 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.SameLine();
         if (ImGui.Button("Leave")) LeaveRoom();
+    }
+
+    /// <summary>
+    /// How long the race is: a number of laps, or a number of minutes.
+    ///
+    /// The host's to choose and everyone else's to read - the answer travels
+    /// with the room, so a client showing a slider would be offering a choice
+    /// the next room update would take back.
+    ///
+    /// The two are one control rather than two, because they are one decision:
+    /// a race is run to laps or to a clock and never to both, and a room that
+    /// showed both sliders would be inviting somebody to set the one that is
+    /// being ignored.
+    /// </summary>
+    void DrawHowLongTheRaceIs(Room room)
+    {
+        if (_session.Phase != SessionPhase.Hosting)
+        {
+            ImGui.TextDisabled(room.ByTheClock
+                ? $"{room.Minutes} minutes"
+                : $"{room.Laps} lap{(room.Laps == 1 ? "" : "s")}");
+            return;
+        }
+
+        bool byLaps = !room.ByTheClock;
+        if (ImGui.RadioButton("Laps", byLaps) && !byLaps) _session.SetMinutes(0);
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Time", !byLaps) && byLaps) _session.SetMinutes(TimedRace.Shortest);
+
+        if (byLaps)
+        {
+            int laps = room.Laps;
+            if (ImGui.SliderInt("How many", ref laps, RaceLaps.Fewest, RaceLaps.Most))
+                _session.SetLaps(laps);
+            return;
+        }
+
+        int minutes = room.Minutes;
+        if (ImGui.SliderInt("How long", ref minutes, TimedRace.Shortest, TimedRace.Longest, "%d min"))
+            _session.SetMinutes(minutes);
     }
 
     /// <summary>

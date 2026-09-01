@@ -70,6 +70,24 @@ public static class RaceLaps
     static bool _said;
 
     /// <summary>
+    /// Changes how many laps the race is, while it is being run.
+    ///
+    /// Only a timed race does this, and only once: when the clock runs out it
+    /// sets the count to the lap the car is on, so the game ends the race the
+    /// way it ends any other. Whether the game reads this byte again after the
+    /// race has started, or copies it somewhere at setup, is exactly what one
+    /// timed race will say - so this reports what it wrote and what the byte
+    /// reads back.
+    /// </summary>
+    public static void CallTheLastLap(IMemory m, int laps)
+    {
+        m.WriteU8(Block + Laps, (byte)Sensible(laps));
+        Console.Error.WriteLine(
+            $"[laps] the last lap is called: +0x{Laps:X2} was set to {Sensible(laps)}"
+            + $" and reads back {m.ReadU8(Block + Laps)}");
+    }
+
+    /// <summary>
     /// Called once the record is built and final, which is the same moment the
     /// room is written over it.
     /// </summary>
@@ -79,6 +97,15 @@ public static class RaceLaps
         {
             foreach (var (at, probe) in Candidates) m.WriteU8(Block + at, probe);
             Say(m, "probing - the HUD names the one it reads");
+            return;
+        }
+
+        // A timed race starts with as many laps as the byte will hold, so the
+        // game has no reason to end it before the clock does - see TimedRace.
+        if (DirectRace.Racing?.Minutes > TimedRace.ByLaps)
+        {
+            m.WriteU8(Block + At, Most);
+            Say(m, $"a {DirectRace.Racing.Minutes} minute race, so {Most} laps until the clock says otherwise");
             return;
         }
 

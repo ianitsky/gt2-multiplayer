@@ -142,5 +142,6 @@ public static class BackToTheLobby
         ReplayView.Forget();
         RaceLaps.Forget();
         RaceResult.Forget();
+        TimedRace.Forget();
     }
 }

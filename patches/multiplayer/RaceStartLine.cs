@@ -136,6 +136,9 @@ public static class RaceStartLine
         // over - see RaceResult.
         RaceResult.Watch(m);
 
+        // And every frame because a clock runs out between two of them.
+        TimedRace.Tick(m);
+
 
         if (WatchReadsAt >= 0 && _frames == WatchReadsAt)
         {
@@ -220,6 +223,10 @@ public static class RaceStartLine
             // game answering instead of the port guessing.
             RecompOne.Runtime.Memory.MemoryWatch.Arm();
             RecompOne.Runtime.Memory.MemoryWatch.ArmReads();
+
+            // The first frame is where a timed race starts counting, because
+            // the counter it reads has been running since long before it.
+            TimedRace.Begins(m, DirectRace.Racing?.Minutes ?? 0);
 
             if (HoldsHere)
             {

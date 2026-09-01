@@ -359,7 +359,7 @@ public static class ModeHook
         {
             DirectRace.Expect(new DirectRace.Pending(
                 Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
-                Watching: IsWatching(room), Laps: room.Laps));
+                Watching: IsWatching(room), Laps: room.Laps, Minutes: room.Minutes));
             c.A0 = ArcadeOverlayIndex;
             c.A1 = ArcadeEntryPoint;
         }
@@ -759,7 +759,7 @@ public static class ModeHook
         if (DirectRace.Enabled && Leader(room) is { } lead)
             DirectRace.Expect(new DirectRace.Pending(
                 Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
-                Watching: IsWatching(room), Laps: room.Laps));
+                Watching: IsWatching(room), Laps: room.Laps, Minutes: room.Minutes));
     }
 
     /// <summary>Whether this machine's player is in the room to watch rather than race.</summary>

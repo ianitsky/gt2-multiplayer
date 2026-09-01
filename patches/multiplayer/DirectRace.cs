@@ -105,7 +105,8 @@ public static class DirectRace
     /// </summary>
     public sealed record Pending(
         IReadOnlyList<Player> Players, string Me, string Car, string Course, CarCatalogue? Cars,
-        bool Watching = false, byte Laps = RaceLaps.AsBuilt);
+        bool Watching = false, byte Laps = RaceLaps.AsBuilt,
+        ushort Minutes = TimedRace.ByLaps);
 
     static Pending? _race;
 

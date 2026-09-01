@@ -221,6 +221,23 @@ public sealed class Session
         };
     }
 
+    /// <summary>
+    /// Sets how long the race runs for, or asks for a lap race with zero.
+    ///
+    /// The host's alone, like the laps and the track. Clamped here rather than
+    /// trusted, because it reaches this from a slider on one machine and from a
+    /// socket on every other.
+    /// </summary>
+    public void SetMinutes(int minutes)
+    {
+        if (Current is not { } room) return;
+
+        Current = room with
+        {
+            Minutes = minutes <= 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes),
+        };
+    }
+
     public void SetColour(string playerName, byte colour) =>
         UpdatePlayer(playerName, p => p with { Colour = colour });
 
