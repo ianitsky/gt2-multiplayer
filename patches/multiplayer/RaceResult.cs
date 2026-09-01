@@ -76,17 +76,45 @@ public static class RaceResult
     }
 
     /// <summary>
+    /// The most laps this machine's own car has been seen to have completed.
+    ///
+    /// Watched during the race rather than read at the end of it, because at
+    /// the end it reads zero: a race that had plainly been driven reported
+    /// "0 laps" beside a race time that was exactly right. Whatever tears a
+    /// race down clears the counter before the overlay is replaced, and the
+    /// overlay being replaced is the only moment this port hears that a race
+    /// is over.
+    ///
+    /// The highest seen rather than the last seen, for the same reason: the
+    /// last frame before the end may already be the one that cleared it.
+    /// </summary>
+    static int _mostLaps;
+
+    /// <summary>Called once a frame, from the hook that runs every frame.</summary>
+    public static void Watch(IMemory m)
+    {
+        int laps = LapsOf(m, 0);
+        if (laps > _mostLaps && laps < 1000) _mostLaps = laps;
+    }
+
+    /// <summary>Forgets the race just run, so the next one counts its own laps.</summary>
+    public static void Forget() => _mostLaps = 0;
+
+    static int LapsOf(IMemory m, int slot) => (short)m.ReadU16(
+        RemoteCars.FirstCarObject + (uint)(slot * RemoteCars.CarStride) + Laps);
+
+    /// <summary>
     /// Reads what the race just ended as, for the car in the given slot.
     ///
     /// Called at the moment the race overlay is replaced, which is the last
-    /// instant the race's own memory is still standing.
+    /// instant the race's own memory is still standing - and so the last moment
+    /// the time can be read at all. The laps come from what was watched rather
+    /// than from what is there now, which by this point is zero.
     /// </summary>
     public static Finish Read(IMemory m, int slot)
     {
-        int laps = (short)m.ReadU16(
-            RemoteCars.FirstCarObject + (uint)(slot * RemoteCars.CarStride) + Laps);
-
-        return new Finish(laps, (int)m.ReadU32(Milliseconds));
+        int now = LapsOf(m, slot);
+        return new Finish(Math.Max(now, _mostLaps), (int)m.ReadU32(Milliseconds));
     }
 
     /// <summary>
@@ -101,7 +129,8 @@ public static class RaceResult
         var finish = Read(m, slot);
         Console.Error.WriteLine(
             $"[result] car {slot} finished {finish.Laps} lap(s) in {finish.Clock}"
-            + " - the two that also held it read "
+            + $" - the counter now reads {LapsOf(m, slot)}, the most seen was {_mostLaps}"
+            + " - the two that also held the time read "
             + string.Join("  ", AlsoHeldIt.Select(a => $"0x{a:X8}={AsATime(m, a)}")));
     }
 

@@ -132,6 +132,10 @@ public static class RaceStartLine
         RemoteCars.FrameBegins(m);
         CarSync.FrameBegins(m);
 
+        // Every frame, because the lap counter cannot be read once the race is
+        // over - see RaceResult.
+        RaceResult.Watch(m);
+
 
         if (WatchReadsAt >= 0 && _frames == WatchReadsAt)
         {
