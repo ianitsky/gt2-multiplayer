@@ -608,16 +608,14 @@ public sealed class MultiplayerPanel : IPanel
 
         foreach (var driver in standings)
         {
-            // A qualifying session is about one lap and a race is about all of
-            // them, so each shows what it was decided on rather than both
-            // showing everything.
-            string what = qualifying
-                ? driver.BestLap
-                : $"{(driver.Laps == 1 ? "1 lap" : $"{driver.Laps} laps")}   {driver.Clock}";
+            // Everything a session produced, whichever kind it was: a race is
+            // decided on laps and total time and a qualifying session on the
+            // best lap, but the driver wants to see all three either way.
+            string laps = driver.Laps == 1 ? "1 lap" : $"{driver.Laps} laps";
 
             ImGui.TextUnformatted(
                 $"{driver.Place}.  {driver.Name}   {_carCatalogue.DisplayName(driver.Car)}"
-                + $"   {what}"
+                + $"   {laps}   {driver.Clock}   best {driver.BestLap}"
                 + (driver.Reported ? "" : "   (no report)"));
         }
     }

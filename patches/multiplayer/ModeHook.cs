@@ -594,6 +594,17 @@ public static class ModeHook
     /// <summary>What this machine's driver did, while it is still worth saying.</summary>
     static RaceResult.Finish _myResult;
     static int _mySeat = -1;
+
+    /// <summary>
+    /// Whether the session just run was a qualifying one.
+    ///
+    /// Kept here rather than asked of DirectRace when the scoring happens. The
+    /// scoring happens in the lobby, and by then the race has been forgotten -
+    /// so asking it there answered "no" for every qualifying session, and the
+    /// results came out titled "Last race" and sorted by distance and time
+    /// rather than by best lap. This is read while the race is still standing.
+    /// </summary>
+    static bool _wasQualifying;
     static DateTime _stopSaying;
     static DateTime _lastSaid;
     static int _reportsShown;
@@ -622,14 +633,19 @@ public static class ModeHook
         // player there - so that is the car whose race it can report. A viewer
         // drove nobody and has nothing to say, but still has everything to hear.
         _myResult = _mySeat >= 0 ? RaceResult.Read(m, 0) : default;
+        _wasQualifying = DirectRace.Racing?.Qualifying ?? false;
         _stopSaying = DateTime.UtcNow + ResultPatience;
         _lastSaid = DateTime.MinValue;
         _reportsShown = 0;
 
         _lanSession?.ForgetTheResults();
         if (_mySeat >= 0 && _lanSession is null)
-            RaceStandings.Show(RaceStandings.From(drivers,
-                new Dictionary<byte, RaceResult.Finish> { [(byte)_mySeat] = _myResult }));
+            RaceStandings.Show(
+                RaceStandings.From(
+                    drivers,
+                    new Dictionary<byte, RaceResult.Finish> { [(byte)_mySeat] = _myResult },
+                    _wasQualifying),
+                _wasQualifying);
 
         Console.Error.WriteLine(
             $"[result] this machine finished {_myResult.Laps} lap(s) in {_myResult.Clock}"
@@ -686,13 +702,12 @@ public static class ModeHook
         if (_lanSession.Results.Count == _reportsShown) return;
         _reportsShown = _lanSession.Results.Count;
 
-        bool qualifying = DirectRace.Racing?.Qualifying ?? false;
-        var standings = RaceStandings.From(drivers, _lanSession.Results, qualifying);
-        RaceStandings.Show(standings, qualifying);
+        var standings = RaceStandings.From(drivers, _lanSession.Results, _wasQualifying);
+        RaceStandings.Show(standings, _wasQualifying);
 
         Console.Error.WriteLine(
             $"[result] {_reportsShown} of {drivers.Count} driver(s) have reported"
-            + (qualifying ? " (qualifying)" : "") + ":"
+            + (_wasQualifying ? " (qualifying)" : "") + ":"
             + string.Concat(standings.Select(x =>
                 $"{Environment.NewLine}[result]   {x.Place}. {x.Name}  {x.Laps} lap(s)"
                 + $"  {x.Clock}  best lap {x.BestLap}")));

@@ -903,6 +903,19 @@ and only the best counts, so a driver who spun on one lap and was quickest on
 the other qualifies on the quick one. A driver who never finished a lap has no
 time to qualify on and goes last, rather than first with a zero.
 
+## Asking the race a question after it has gone
+
+The first run of this scored every qualifying session as a race: the table came
+out titled "Last race" and sorted by distance and time. The rule was right and
+the question was asked in the wrong place - "was this a qualifying session?" was
+put to `DirectRace.Racing` from the lobby, and by the time the lobby scores
+anything the race has been forgotten, so the answer was always no.
+
+It is read now while the race is still standing, at the same moment the laps and
+the time are read off its memory, and kept beside them. Everything about a
+session that is not on the wire has to be taken then: that moment is the last
+one where the race exists.
+
 ## The lobby says which it is
 
 The same room is a qualifying lobby and then a race lobby, so it carries a title
