@@ -604,12 +604,30 @@ Three passes have not found it, and each failure narrowed the question.
   seventy-fifths, 14400 hundredths or 4320 thirtieths - and no offset in a car
   held six values that could be six finishing times.
 
-So the time is kept somewhere else, and guessing where has cost more than
-reading everything would. `GT2_DUMP_END` now keeps the whole two megabytes at
-the moment the race overlay is replaced, which is the last instant the race's
-memory is still standing. One pass, one file, searched here afterwards in
-whatever encoding it takes - and it can ride along with a race being run for
-some other reason.
+So the whole of RAM was kept instead, at the moment the race overlay is
+replaced - the last instant the race's own memory is still standing - and
+searched for the number the screen had shown.
+
+### How long it has taken: milliseconds, in one of three places
+
+A race that ended at **2:21.456** held **141456** exactly, as a 32-bit word, in
+three places. So the unit is milliseconds and the only question left is which
+address. They are not equally believable:
+
+| address | what surrounds it |
+| --- | --- |
+| `0x801D5F80` | 0x198 past the end of the race record at 0x801D585C, among five-word entries on a 0x14 stride reading `-1 -1 -1 -1 -65536` - which is what an unset time looks like |
+| `0x8005AC80` | inside a repeating 0x20-byte structure of large constants |
+| `0x801B75D4` | surrounded by values in the hundreds of millions |
+
+The first looks like a race result and the other two look like data that happens
+to contain the number. That is an argument, not a measurement, so all three are
+read and printed at the end of every race beside the lap count. The next race to
+be run for any reason names the real one: a two-lap race that took 2:21.456 says
+2 laps and 2:21.456, and whichever address disagrees is not the time.
+
+Lap times were looked for too, as a corroboration, and are not stored as
+adjacent millisecond words: no pair or triple anywhere in RAM sums to the total.
 
 ## 9. A race by laps or by time
 
