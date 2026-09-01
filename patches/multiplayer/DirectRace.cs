@@ -122,7 +122,7 @@ public static class DirectRace
         /// "slot zero" has to ask this instead.
         /// </summary>
         public int MySlot =>
-            Driving.Length == 0 || Driving == Me
+            Driving.Length == 0
                 ? 0
                 : Math.Max(0, RaceGrid.SlotFor(Players, Me, Driving));
 

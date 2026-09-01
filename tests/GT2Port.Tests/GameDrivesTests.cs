@@ -63,6 +63,21 @@ public class GameDrivesTests
         Assert.Equal(1, race.MySlot);
     }
 
+    /// <summary>
+    /// The slot is always the grid's answer and never a shortcut, because when
+    /// the game is driving the room does not begin at entrant zero at all: a
+    /// room of one would then say slot zero while its car was written into
+    /// entrant two.
+    /// </summary>
+    [Fact]
+    public void Even_a_leader_driving_their_own_car_asks_the_grid_where_it_is()
+    {
+        var race = Race(leader: "ian", driving: "ian");
+
+        Assert.Equal(RaceGrid.SlotFor(Room(), "ian", "ian"), race.MySlot);
+        Assert.Equal(RaceGrid.FirstRoomEntrant, race.MySlot);
+    }
+
     [Fact]
     public void And_the_slot_it_names_is_the_one_the_grid_agrees_on()
     {

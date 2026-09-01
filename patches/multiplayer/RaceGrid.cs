@@ -84,9 +84,22 @@ public static class RaceGrid
         return order;
     }
 
-    /// <summary>Which slot this machine holds <paramref name="who"/> in, or -1.</summary>
-    public static int SlotFor(IReadOnlyList<Player> drivers, string leader, string who) =>
-        Order(drivers, leader, Math.Min(drivers.Count, Slots)).FindIndex(p => p.Name == who);
+    /// <summary>
+    /// Which slot this machine holds <paramref name="who"/> in, or -1.
+    ///
+    /// Counted from <see cref="FirstRoomEntrant"/>, which is the room's first
+    /// entrant and not always the race's: when the game is driving, the room
+    /// starts at entrant two and the two before it are the seats for people.
+    /// </summary>
+    public static int SlotFor(IReadOnlyList<Player> drivers, string leader, string who)
+    {
+        int inTheRoom = Order(drivers, leader, RoomSize(drivers)).FindIndex(p => p.Name == who);
+        return inTheRoom < 0 ? -1 : inTheRoom + FirstRoomEntrant;
+    }
+
+    /// <summary>How many of the room's drivers a race has room for.</summary>
+    static int RoomSize(IReadOnlyList<Player> drivers) =>
+        Math.Min(drivers.Count, Slots - FirstRoomEntrant);
 
     /// <summary>The most entrants the block has room for.</summary>
     public const int Slots = 6;
@@ -129,7 +142,29 @@ public static class RaceGrid
     static readonly string AiAsked =
         Environment.GetEnvironmentVariable("GT2_AI_DRIVES") ?? "";
 
-    static bool AiDrives => AiAsked.Length > 0;
+    public static bool AiDrives => AiAsked.Length > 0;
+
+    /// <summary>
+    /// The first entrant the room's drivers are written into.
+    ///
+    /// Zero normally. Two when the game is being asked to drive, and that is
+    /// the second attempt at this - the first moved a car off entrant zero and
+    /// it still went nowhere.
+    ///
+    /// The game's own model is the reason. It knows player one, player two and
+    /// COM, which is what its memory editor offers, so entrants zero and one
+    /// are both people's seats: a car moved from the first to the second was
+    /// moved from a pad nobody was holding to a second pad nobody was holding.
+    /// Only entrant two and beyond are the game's to drive.
+    ///
+    /// So a room of two becomes a race of four - the two seats for people, left
+    /// with whatever the arcade put in them, and the room's own cars behind.
+    /// Two extra cars in a test race is a cost worth paying to have the test
+    /// run itself.
+    /// </summary>
+    public const int PeopleSeats = 2;
+
+    public static int FirstRoomEntrant => AiDrives ? PeopleSeats : 0;
 
     static byte AiSkillWanted =>
         byte.TryParse(AiAsked, out byte skill) ? skill : DefaultAiSkill;
@@ -165,8 +200,9 @@ public static class RaceGrid
         for (int i = 0; i < Slots; i++)
             if (m.ReadU32(Block + (uint)(FirstEntrant + i * EntrantSize) + CarId) == 0) return false;
 
-        int racing = Math.Min(drivers.Count, Slots);
-        m.WriteU8(Block + Count, (byte)racing);
+        int racing = RoomSize(drivers);
+        int from = FirstRoomEntrant;
+        m.WriteU8(Block + Count, (byte)(from + racing));
 
         // The human always drives entrant 0 - proven by putting the local
         // player anywhere else and watching them drive entrant 0's car
@@ -178,7 +214,7 @@ public static class RaceGrid
         for (int i = 0; i < racing; i++)
         {
             var player = order[i];
-            uint entrant = Block + (uint)(FirstEntrant + i * EntrantSize);
+            uint entrant = Block + (uint)(FirstEntrant + (from + i) * EntrantSize);
 
             if (CarInfo.TryEncodeCode(player.Car, out uint packed))
                 m.WriteU32(entrant + CarId, packed);
@@ -209,7 +245,7 @@ public static class RaceGrid
             // machines report the same coordinates for the same number here,
             // in four different rotations.
             int place = drivers.Take(racing).ToList().FindIndex(p => p.Name == player.Name);
-            m.WriteU8(entrant + GridPlace, (byte)(place < 0 ? i : place));
+            m.WriteU8(entrant + GridPlace, (byte)(from + (place < 0 ? i : place)));
         }
 
         // And the cars nobody in the room is driving take the places nobody in
@@ -224,8 +260,20 @@ public static class RaceGrid
         // on, all six cars started on the same square, which is worse than the
         // collision it was meant to remove. Off by default until the report
         // below says what the game does with these numbers.
+        // The seats for people go at the front of the grid when there are any,
+        // because +0x8D is what stands a car on a square and two entrants
+        // holding the arcade's own numbers would stand somebody on top of a
+        // car from the room.
+        for (int i = 0; i < from; i++)
+        {
+            uint seat = Block + (uint)(FirstEntrant + i * EntrantSize);
+            m.WriteU8(seat + GridPlace, (byte)i);
+            m.WriteU8(seat + IsAi, 1);
+            m.WriteU8(seat + AiSkill, AiSkillWanted);
+        }
+
         if (PlaceTheLeftovers)
-            for (int i = racing; i < Slots; i++)
+            for (int i = from + racing; i < Slots; i++)
                 m.WriteU8(Block + (uint)(FirstEntrant + i * EntrantSize) + GridPlace, (byte)i);
 
         Say(m, drivers, leader, order, cars);
@@ -246,9 +294,10 @@ public static class RaceGrid
                     List<Player> order, CarCatalogue? cars)
     {
         var said = new System.Text.StringBuilder();
-        for (int slot = 0; slot < order.Count; slot++)
+        for (int i = 0; i < order.Count; i++)
         {
-            var player = order[slot];
+            int slot = i + FirstRoomEntrant;
+            var player = order[i];
             int seat = drivers.ToList().FindIndex(p => p.Name == player.Name);
             var paints = cars?.Colours(player.Car);
             string paint = PaintFor(cars, player) is { } letter
@@ -259,7 +308,7 @@ public static class RaceGrid
                 + $"  {player.Name}  {player.Car}  colour {player.Colour} -> {paint}");
         }
 
-        for (int slot = order.Count; slot < Slots; slot++)
+        for (int slot = order.Count + FirstRoomEntrant; slot < Slots; slot++)
             said.Append($"{Environment.NewLine}[grid]   slot {slot} place "
                 + m.ReadU8(Block + (uint)(FirstEntrant + slot * EntrantSize) + GridPlace)
                 + "  (not in the room)");
