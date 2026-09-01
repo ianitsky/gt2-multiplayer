@@ -224,10 +224,6 @@ public static class RaceStartLine
             RecompOne.Runtime.Memory.MemoryWatch.Arm();
             RecompOne.Runtime.Memory.MemoryWatch.ArmReads();
 
-            // The first frame is where a timed race starts counting, because
-            // the counter it reads has been running since long before it.
-            TimedRace.Begins(m, DirectRace.Racing?.Minutes ?? 0);
-
             if (HoldsHere)
             {
                 _held = true;

@@ -86,11 +86,19 @@ public static class TimedRace
     public static bool Running => _minutes > 0;
 
     /// <summary>
-    /// Starts the clock, at the race's first frame. The reading is kept rather
-    /// than assumed to be zero, because this counter has been running since
-    /// well before the race.
+    /// Starts the clock, on the first frame that finds a timed race running.
+    ///
+    /// Called from <see cref="Tick"/> rather than from the race's first-frame
+    /// hook. That hook is 0x8001584C, which has been measured firing once in a
+    /// race of 271 frames - a phase's entry rather than a frame's - and a race
+    /// where it did not fire at all is a race with no clock: no countdown on
+    /// the screen and, worse, nothing to ever call the last lap. The hook that
+    /// runs every frame is the one that cannot be missed.
+    ///
+    /// The reading is kept rather than assumed to be zero, because this counter
+    /// has been running since well before the race.
     /// </summary>
-    public static void Begins(IMemory m, int minutes)
+    static void Begins(IMemory m, int minutes)
     {
         _minutes = minutes;
         _began = minutes > 0 ? (int)m.ReadU32(Sixtieths) : -1;
@@ -134,6 +142,11 @@ public static class TimedRace
     /// </summary>
     public static void Tick(IMemory m)
     {
+        // Whether this race is timed is the race's own business, asked every
+        // frame until the answer is acted on once.
+        int wanted = DirectRace.Racing?.Minutes ?? ByLaps;
+        if (wanted > ByLaps && _began < 0) Begins(m, wanted);
+
         if (!Running) return;
 
         _secondsLeft = Math.Max(0, _minutes * 60 - SecondsSoFar(m));
