@@ -96,11 +96,31 @@ public static class RaceResult
     /// </summary>
     static int _mostLaps;
 
-    /// <summary>Called once a frame, from the hook that runs every frame.</summary>
+    /// <summary>
+    /// Says when the counter turns, so a race can be held against its own
+    /// results screen.
+    ///
+    /// A one-minute timed race ended with this reporting two laps while the
+    /// game's results screen listed one, of 2:41.391 - and the clock had run
+    /// out at sixty seconds with the first lap still unfinished, its lap time
+    /// and total time both reading 1:03.604. Two readings of the same race
+    /// differing by one is either this counting the crossing that starts the
+    /// race or the game not counting the one that ends it, and the difference
+    /// matters: in a timed race the winner is whoever completed the most laps.
+    ///
+    /// So each turn is timestamped against the game's own race clock. A first
+    /// turn at 1:03.604 says the counter follows the line; a first turn at zero
+    /// says it counts the start.
+    /// </summary>
     public static void Watch(IMemory m)
     {
         int laps = LapsOf(m, 0);
-        if (laps > _mostLaps && laps < 1000) _mostLaps = laps;
+        if (laps <= _mostLaps || laps >= 1000) return;
+
+        _mostLaps = laps;
+        Console.Error.WriteLine(
+            $"[result] the lap counter turned to {laps}"
+            + $" with the race clock at {new Finish(0, (int)m.ReadU32(Milliseconds)).Clock}");
     }
 
     /// <summary>Forgets the race just run, so the next one counts its own laps.</summary>

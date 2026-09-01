@@ -113,11 +113,15 @@ public static class TimedRace
     /// <summary>Forgets the race just run.</summary>
     public static void Forget()
     {
+        // Before the fields, because IsOpen is what keeps LAST LAP on the
+        // screen - and it stayed there through the results screens and into the
+        // lobby, saying something about a race that had ended.
+        Clock.IsOpen = false;
+
         _minutes = 0;
         _began = -1;
         _called = false;
         _secondsLeft = 0;
-        Clock.IsOpen = false;
     }
 
     /// <summary>How long this race has been running, in seconds.</summary>

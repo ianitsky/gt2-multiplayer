@@ -145,9 +145,16 @@ public static class DirectRace
         _armed = true;
         _armedAt = DateTime.UtcNow;
         _said = false;
+        // The length is printed because "I asked for a timed race and got a lap
+        // race" is otherwise unanswerable after the fact: this line says what
+        // the room actually handed over, which separates a control that did not
+        // stick from a race that ignored what it was given.
         Console.Error.WriteLine(
             $"[direct] a race is waiting: {race.Players.Count} driver(s),"
-            + (race.Watching ? $" watching {race.Me} in {race.Car}" : $" {race.Me} in {race.Car}"));
+            + (race.Watching ? $" watching {race.Me} in {race.Car}" : $" {race.Me} in {race.Car}")
+            + (race.Minutes > TimedRace.ByLaps
+                ? $", run over {race.Minutes} minute(s)"
+                : $", run over {race.Laps} lap(s)"));
 
         // Here rather than at the arcade's entry point, which is a frame or
         // two later: this runs while the lobby's overlay hook is still on the

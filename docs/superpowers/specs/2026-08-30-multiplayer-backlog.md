@@ -783,11 +783,21 @@ sitting at zero would be saying the wrong thing rather than nothing.
 The number itself is worked out where the game's memory is at hand, once a
 frame, and read where it is drawn - the thing that draws is handed no memory.
 
-### Laps or a clock, one control
+### Laps or a clock, one control, and it lives in the room
 
 They are one decision - a race is run to one or the other and never to both - so
-the lobby shows one radio pair and one slider. A room showing both sliders would
-be inviting somebody to set the one being ignored.
+there is one radio pair and one slider, not two sliders inviting somebody to set
+the one being ignored.
+
+It is chosen **when the room is made**, beside the track, the class and the
+player limit, and not in the lobby. The lobby is where competitors sort
+themselves out and choose cars; a control there that changes what everybody is
+about to race does not belong among those. So the room is opened already
+decided, rather than opened with a default and corrected afterwards.
+
+The lobby and the room list both show what the room is - `2 laps` or `15 min` -
+as text beside the track. Reading is not choosing, and somebody picking a room
+from the list should know which kind of race it runs before they join it.
 
 Zero minutes means laps, which keeps a room that never heard of any of this
 running exactly as it did. It is also the one value not clamped on the way in

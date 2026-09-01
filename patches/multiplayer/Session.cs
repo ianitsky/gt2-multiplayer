@@ -114,7 +114,17 @@ public sealed class Session
     /// and a caller passing an untrusted or out-of-range value cannot widen
     /// the room past the wire format's own cap.
     /// </summary>
-    public void Host(string roomName, string track, string carGroup, int maxPlayers = RoomState.MaxPlayers)
+    /// <summary>
+    /// Opens a room, with the race it will run already decided.
+    ///
+    /// The length is settled here rather than in the lobby because it is a
+    /// property of the room, like the track and the class: the lobby is where
+    /// competitors sort themselves out and pick cars, and a control that
+    /// changes what everybody is about to race does not belong among them.
+    /// </summary>
+    public void Host(string roomName, string track, string carGroup,
+                     int maxPlayers = RoomState.MaxPlayers,
+                     int laps = RaceLaps.AsBuilt, int minutes = TimedRace.ByLaps)
     {
         Current = new Room(Guid.NewGuid(), roomName, track, carGroup, Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
             [new Player(_playerName, "", false)]);

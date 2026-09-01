@@ -28,6 +28,14 @@ public sealed class MultiplayerPanel : IPanel
     string _track = CourseTable.All[0].Code;
     string _carGroup;
     int _maxPlayers = RoomState.MaxPlayers;
+
+    /// <summary>
+    /// How long the room's race will be, as the create screen has it: a number
+    /// of laps, or a number of minutes when <see cref="_byTheClock"/>.
+    /// </summary>
+    int _laps = RaceLaps.AsBuilt;
+    int _minutes = TimedRace.Shortest;
+    bool _byTheClock;
     bool _creating;
 
     // Set when the Create screen is (re)entered, so the grid scrolls the
@@ -220,7 +228,7 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.PushID(room.Id.ToString());
             var host = room.Players.Count > 0 ? room.Players[0].Name : "";
             var carClass = _carCatalogue.TryFind(room.CarGroup, out var carGroup) ? carGroup.Name : room.CarGroup;
-            var label = $"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}   {carClass}";
+            var label = $"{room.Name}   {host}   {room.Players.Count}/{room.MaxPlayers}   {CourseTable.DisplayName(room.Track)}   {carClass}   {HowLong(room)}";
 
             bool full = room.Players.Count >= room.MaxPlayers;
             string buttonText = full ? "Full" : "Join";
@@ -261,10 +269,13 @@ public sealed class MultiplayerPanel : IPanel
         DrawCarGroupSelector();
         ImGui.SliderInt("Player limit", ref _maxPlayers, 2, RoomState.MaxPlayers);
 
+        DrawHowLongTheRaceWillBe();
+
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_roomName));
         if (ImGui.Button("Create"))
         {
-            _session.Host(_roomName, _track, _carGroup, _maxPlayers);
+            _session.Host(_roomName, _track, _carGroup, _maxPlayers,
+                          _laps, _byTheClock ? _minutes : TimedRace.ByLaps);
             _discovery.LocalRoomId = _session.Current!.Id;
             _creating = false;
         }
@@ -433,11 +444,10 @@ public sealed class MultiplayerPanel : IPanel
     {
         var room = _session.Current!;
 
-        ImGui.TextUnformatted($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
+        ImGui.TextUnformatted(
+            $"{room.Name}   {CourseTable.DisplayName(room.Track)}   {HowLong(room)}");
 
         DrawTheLastRace();
-
-        DrawHowLongTheRaceIs(room);
 
         ImGui.Separator();
 
@@ -512,44 +522,34 @@ public sealed class MultiplayerPanel : IPanel
     }
 
     /// <summary>
-    /// How long the race is: a number of laps, or a number of minutes.
+    /// How long the room's race will be, chosen while the room is being made.
     ///
-    /// The host's to choose and everyone else's to read - the answer travels
-    /// with the room, so a client showing a slider would be offering a choice
-    /// the next room update would take back.
+    /// Here rather than in the lobby: it is a property of the room, like the
+    /// track and the class, and the lobby is where competitors sort themselves
+    /// out and choose cars. A control that changes what everybody is about to
+    /// race does not belong among those.
     ///
-    /// The two are one control rather than two, because they are one decision:
-    /// a race is run to laps or to a clock and never to both, and a room that
-    /// showed both sliders would be inviting somebody to set the one that is
-    /// being ignored.
+    /// Laps and minutes are one control rather than two, because they are one
+    /// decision - a race is run to one or the other and never to both, and
+    /// showing both sliders would invite somebody to set the one being ignored.
     /// </summary>
-    void DrawHowLongTheRaceIs(Room room)
+    void DrawHowLongTheRaceWillBe()
     {
-        if (_session.Phase != SessionPhase.Hosting)
-        {
-            ImGui.TextDisabled(room.ByTheClock
-                ? $"{room.Minutes} minutes"
-                : $"{room.Laps} lap{(room.Laps == 1 ? "" : "s")}");
-            return;
-        }
-
-        bool byLaps = !room.ByTheClock;
-        if (ImGui.RadioButton("Laps", byLaps) && !byLaps) _session.SetMinutes(0);
+        if (ImGui.RadioButton("Laps", !_byTheClock)) _byTheClock = false;
         ImGui.SameLine();
-        if (ImGui.RadioButton("Time", !byLaps) && byLaps) _session.SetMinutes(TimedRace.Shortest);
+        if (ImGui.RadioButton("Time", _byTheClock)) _byTheClock = true;
 
-        if (byLaps)
-        {
-            int laps = room.Laps;
-            if (ImGui.SliderInt("How many", ref laps, RaceLaps.Fewest, RaceLaps.Most))
-                _session.SetLaps(laps);
-            return;
-        }
-
-        int minutes = room.Minutes;
-        if (ImGui.SliderInt("How long", ref minutes, TimedRace.Shortest, TimedRace.Longest, "%d min"))
-            _session.SetMinutes(minutes);
+        if (_byTheClock)
+            ImGui.SliderInt("How long", ref _minutes, TimedRace.Shortest, TimedRace.Longest, "%d min");
+        else
+            ImGui.SliderInt("How many", ref _laps, RaceLaps.Fewest, RaceLaps.Most);
     }
+
+    /// <summary>What the room is racing, for everyone in it to read.</summary>
+    static string HowLong(Room room) =>
+        room.ByTheClock
+            ? $"{room.Minutes} min"
+            : $"{room.Laps} lap{(room.Laps == 1 ? "" : "s")}";
 
     /// <summary>
     /// The two buttons that move a driver up and down the grid, drawn only for
