@@ -453,9 +453,16 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.Separator();
 
-        foreach (var player in Seats.Drivers(room.Players))
+        var grid = Seats.Drivers(room.Players);
+        for (int place = 0; place < grid.Count; place++)
         {
-            ImGui.TextUnformatted($"{(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
+            var player = grid[place];
+
+            // The grid is the room's own order, so the number beside a name is
+            // simply where they sit in it - and moving them is moving the room.
+            if (_session.Phase == SessionPhase.Hosting) MoveButtons(player, place, grid.Count);
+
+            ImGui.TextUnformatted($"{place + 1}.  {(player.Ready ? "[ready]" : "[    ]")}  {player.Name}  {_carCatalogue.DisplayName(player.Car)}");
 
             // Beside the name, because the point of choosing a paint in the
             // lobby is that everyone can see who is in what before the race.
@@ -514,6 +521,31 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.SameLine();
         if (ImGui.Button("Leave")) LeaveRoom();
+    }
+
+    /// <summary>
+    /// The two buttons that move a driver up and down the grid, drawn only for
+    /// the host - the only machine whose order anybody else reads.
+    ///
+    /// Disabled rather than hidden at the ends of the grid, so the row keeps
+    /// the same shape whoever is in it and the list does not jump as drivers
+    /// move through it.
+    /// </summary>
+    void MoveButtons(Player player, int place, int howMany)
+    {
+        ImGui.PushID(player.Name);
+
+        ImGui.BeginDisabled(place == 0);
+        if (ImGui.SmallButton("^")) _session.MoveOnTheGrid(player.Name, -1);
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        ImGui.BeginDisabled(place >= howMany - 1);
+        if (ImGui.SmallButton("v")) _session.MoveOnTheGrid(player.Name, +1);
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        ImGui.PopID();
     }
 
     /// <summary>

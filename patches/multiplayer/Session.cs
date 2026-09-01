@@ -189,6 +189,38 @@ public sealed class Session
         Current = room with { Laps = (byte)RaceLaps.Sensible(laps) };
     }
 
+    /// <summary>
+    /// Moves a driver up or down the grid. The host's alone, like the track and
+    /// the laps: everyone else reads the order off the room the host publishes.
+    /// </summary>
+    public void MoveOnTheGrid(string playerName, int by)
+    {
+        if (Phase != SessionPhase.Hosting) return;
+        if (Current is not { } room) return;
+
+        Current = room with { Players = GridOrder.Move(room.Players, playerName, by) };
+    }
+
+    /// <summary>
+    /// Lines the grid up in the order the last race finished, with the winner
+    /// at the front.
+    ///
+    /// A default rather than a decision - the host can move anybody afterwards.
+    /// Applied once, when the last driver's result arrives, because applying it
+    /// as each result landed would shuffle the grid under the host while they
+    /// were reading it.
+    /// </summary>
+    public void ArrangeByTheLastRace()
+    {
+        if (Phase != SessionPhase.Hosting) return;
+        if (Current is not { } room) return;
+
+        Current = room with
+        {
+            Players = GridOrder.ByTheLastRace(room.Players, RaceStandings.OfTheLastRace),
+        };
+    }
+
     public void SetColour(string playerName, byte colour) =>
         UpdatePlayer(playerName, p => p with { Colour = colour });
 

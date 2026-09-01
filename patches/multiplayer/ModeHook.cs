@@ -699,6 +699,11 @@ public static class ModeHook
         // something again.
         _stopSaying = DateTime.UtcNow;
         _session.LetTheRoomBreatheAgain();
+
+        // And the next grid opens in the order this race finished. Here rather
+        // than as each result lands, so the grid does not shuffle under a host
+        // who is reading it.
+        _session.ArrangeByTheLastRace();
     }
 
     /// <summary>Forgets the last race, so its result is not sent into the next.</summary>

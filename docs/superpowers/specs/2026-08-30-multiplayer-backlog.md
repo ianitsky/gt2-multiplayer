@@ -733,3 +733,34 @@ Today the grid is filled in the order players joined the room. Instead the host
 arranges it, and what the host has not arranged keeps a default order. After a
 race, the grid opens arranged by the finishing order of the race just run -
 which the host can still change.
+
+### The room's order is the grid
+
+There is no second list of grid positions, and there should not be. RaceGrid
+already numbers each entrant from where its player sits in the room, the wire
+already keys everything by that seat, and the byte the game stands a car by
+(+0x8D) is written from it. A separate list saying the same thing in a
+different order would be one more thing able to disagree with the room.
+
+So arranging the grid is rearranging the room, and it is the host's to do - the
+host publishes the room, everyone else reads it, and nothing new goes on the
+wire. Seats move when it happens, which is safe in the lobby and nowhere else:
+by the time a race is built every machine holds the same room.
+
+Viewers are not on the grid and are not moved. They keep the end of the list,
+which is where `Seats` already expects them.
+
+### Three rules, and why each is the way it is
+
+- **A move off either end does nothing** rather than wrapping. Somebody
+  clicking "up" at the front of the grid never means "put me last".
+- **A newcomer joins at the back**, which falls out of the room appending
+  rather than being arranged for.
+- **After a race the grid opens in the finishing order**, winner at the front,
+  applied once when the last result arrives rather than as each one lands -
+  otherwise the grid shuffles under a host who is reading it. A driver the
+  standings do not name keeps their place behind those who are named, rather
+  than being dropped or given a result they did not earn.
+
+The default when the host arranges nothing is the order people joined, which is
+what the room already was.
