@@ -106,7 +106,29 @@ public static class DirectRace
     public sealed record Pending(
         IReadOnlyList<Player> Players, string Me, string Car, string Course, CarCatalogue? Cars,
         bool Watching = false, byte Laps = RaceLaps.AsBuilt,
-        ushort Minutes = TimedRace.ByLaps, bool Qualifying = false);
+        ushort Minutes = TimedRace.ByLaps, bool Qualifying = false,
+        string Driving = "")
+    {
+        /// <summary>
+        /// Which grid slot this machine's own car is in.
+        ///
+        /// Zero in every ordinary race, because every machine leads the grid
+        /// with its own player - the pad drives entrant zero whatever the
+        /// entrant says, so that is where a person's car has to be.
+        ///
+        /// Not zero when the game is driving instead. Then this machine leads
+        /// with somebody else, its own car becomes one of the five the game
+        /// already drives, and everything that used to mean "my car" by saying
+        /// "slot zero" has to ask this instead.
+        /// </summary>
+        public int MySlot =>
+            Driving.Length == 0 || Driving == Me
+                ? 0
+                : Math.Max(0, RaceGrid.SlotFor(Players, Me, Driving));
+
+        /// <summary>Whose race this machine is reporting - its own player.</summary>
+        public string MyName => Driving.Length == 0 ? Me : Driving;
+    }
 
     static Pending? _race;
 

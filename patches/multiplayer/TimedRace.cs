@@ -149,7 +149,7 @@ public static class TimedRace
         // current lap is finished. Adding one to it was reading the field as
         // laps completed, and a car on its first lap then got a two-lap race -
         // "Lap 1/2" on the screen where it should have said 1/1.
-        int onLap = RaceResult.OnLapNow(m, 0);
+        int onLap = RaceResult.OnLapNow(m, DirectRace.Racing?.MySlot ?? 0);
         int last = Math.Clamp(onLap, RaceLaps.Fewest, RaceLaps.Most);
 
         RaceLaps.CallTheLastLap(m, last);

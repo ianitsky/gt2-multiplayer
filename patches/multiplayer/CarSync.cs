@@ -52,14 +52,19 @@ public static class CarSync
         // has to apply every seat, its leader's included, because the car at
         // slot 0 belongs to somebody else. A driver skips its own seat for the
         // opposite reason: slot 0 is the one it is actually steering.
-        int seat = race.Watching ? -1 : Seats.Of(race.Players, race.Me);
+        // MyName rather than Me: the two are the same player in every ordinary
+        // race, and different ones when the game is driving this machine's car,
+        // because then the grid is led by somebody else on purpose.
+        int seat = race.Watching ? -1 : Seats.Of(race.Players, race.MyName);
         if (!race.Watching && seat < 0) return;
+
+        int mine = race.MySlot;
 
         SayWhereTheGridPutUs(m, seat);
 
         if (seat >= 0)
         {
-            wire.SendPlace((byte)seat, RemoteCars.ReadPose(m, 0), ModeHook.HostToAnswer);
+            wire.SendPlace((byte)seat, RemoteCars.ReadPose(m, mine), ModeHook.HostToAnswer);
             _sent++;
         }
 
@@ -71,7 +76,10 @@ public static class CarSync
 
             int slot = RaceGrid.SlotFor(race.Players, race.Me, race.Players[theirSeat].Name);
             if (slot < 0) continue;
-            if (slot == 0 && !race.Watching) continue;
+
+            // Every slot but this machine's own, whichever that is. A viewer
+            // has none and applies them all.
+            if (slot == mine && !race.Watching) continue;
 
             // Before the frame, on purpose: the rebuild that turns these three
             // angles into the matrix the car is drawn from runs later in it.

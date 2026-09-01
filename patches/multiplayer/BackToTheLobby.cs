@@ -101,7 +101,7 @@ public static class BackToTheLobby
         // results screen said, and a reading of what the race ended as.
         if (m is not null)
         {
-            RaceResult.Say(m, 0);
+            RaceResult.Say(m, DirectRace.Racing?.MySlot ?? 0);
             RaceTimeHunt.Look(m);
         }
 

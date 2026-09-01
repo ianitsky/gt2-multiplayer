@@ -165,7 +165,7 @@ public static class RaceResult
 
     public static void Watch(IMemory m)
     {
-        int lap = OnLapNow(m, 0);
+        int lap = OnLapNow(m, DirectRace.Racing?.MySlot ?? 0);
         if (lap <= _mostLaps || lap >= 1000) return;
 
         _mostLaps = lap;

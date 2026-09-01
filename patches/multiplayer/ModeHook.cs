@@ -360,7 +360,7 @@ public static class ModeHook
             DirectRace.Expect(new DirectRace.Pending(
                 Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
                 Watching: IsWatching(room), Laps: room.LapsNext, Minutes: room.MinutesNext,
-                Qualifying: room.QualifyingNext));
+                Qualifying: room.QualifyingNext, Driving: _session.PlayerName));
             c.A0 = ArcadeOverlayIndex;
             c.A1 = ArcadeEntryPoint;
         }
@@ -632,7 +632,11 @@ public static class ModeHook
         // Slot 0 is the car this machine drove - every machine rotates its own
         // player there - so that is the car whose race it can report. A viewer
         // drove nobody and has nothing to say, but still has everything to hear.
-        _myResult = _mySeat >= 0 ? RaceResult.Read(m, 0) : default;
+        // The car this machine drove, which is entrant zero unless the game
+        // was driving it - see Leader.
+        _myResult = _mySeat >= 0
+            ? RaceResult.Read(m, DirectRace.Racing?.MySlot ?? 0)
+            : default;
         _wasQualifying = DirectRace.Racing?.Qualifying ?? false;
         _stopSaying = DateTime.UtcNow + ResultPatience;
         _lastSaid = DateTime.MinValue;
@@ -785,7 +789,7 @@ public static class ModeHook
             DirectRace.Expect(new DirectRace.Pending(
                 Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
                 Watching: IsWatching(room), Laps: room.LapsNext, Minutes: room.MinutesNext,
-                Qualifying: room.QualifyingNext));
+                Qualifying: room.QualifyingNext, Driving: _session.PlayerName));
     }
 
     /// <summary>Whether this machine's player is in the room to watch rather than race.</summary>
@@ -793,14 +797,41 @@ public static class ModeHook
         room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName)?.Watching == true;
 
     /// <summary>
+    /// Whether to hand this machine's car to the game rather than to a person.
+    ///
+    /// Four instances of a race cannot be driven by one person, so a
+    /// four-player race could only ever be checked by driving one car and
+    /// watching three drift into a wall.
+    ///
+    /// Marking the entrant as the game's did not work, and the port already
+    /// knew why: the pad drives entrant zero whatever the entrant says, and
+    /// nothing in gt2_01 so much as reads that byte. So the lever is the one
+    /// that is already true - if the pad takes entrant zero, put this
+    /// machine's car anywhere else. It becomes one of the five the game
+    /// already drives, and the pad steers a car nobody is holding a pad for.
+    /// </summary>
+    static readonly bool GameDrives =
+        Environment.GetEnvironmentVariable("GT2_AI_DRIVES") is not (null or "");
+
+    /// <summary>
     /// The driver this machine's race is built around: its own player when it
     /// is racing, and the driver it is watching when it is not. Null when there
     /// is neither - a room of nothing but viewers has no race to build.
+    ///
+    /// And somebody else entirely when the game is driving this machine's car,
+    /// which is what moves that car off entrant zero. A room of one has nobody
+    /// else to lead with, so there the switch does nothing.
     /// </summary>
-    static Player? Leader(Room room) =>
-        IsWatching(room)
-            ? _session!.WatchedDriver()
-            : room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName);
+    static Player? Leader(Room room)
+    {
+        if (IsWatching(room)) return _session!.WatchedDriver();
+
+        var mine = room.Players.FirstOrDefault(p => p.Name == _session!.PlayerName);
+        if (!GameDrives || mine is null) return mine;
+
+        var drivers = Seats.Drivers(room.Players);
+        return drivers.FirstOrDefault(p => p.Name != mine.Name) ?? mine;
+    }
 
     /// <summary>Frees the session socket, so another instance here can host or join.</summary>
     static void DropSession()
