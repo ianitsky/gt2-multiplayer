@@ -524,8 +524,16 @@ public static class ModeHook
 
             _panel.IsOpen = false;
 
-            // A race is starting, so the last one is over being talked about.
-            if (started) StopSayingHowItWent();
+            if (started)
+            {
+                // A race is starting, so the last one is over being talked
+                // about - and the room has to survive the next one. Nobody
+                // sends lobby traffic while the game is running, and three
+                // seconds of that is all it takes for the room to decide
+                // everybody has left.
+                StopSayingHowItWent();
+                _session!.HoldTheRoomTogether();
+            }
 
             // Told repeatedly: the players are about to leave the lobby, and a
             // single lost datagram would strand one of them in it.
@@ -641,7 +649,21 @@ public static class ModeHook
     static void KeepSayingHowItWent()
     {
         if (_lanSession is null || _session?.Current is not { } room) return;
-        if (DateTime.UtcNow > _stopSaying) return;
+
+        if (DateTime.UtcNow > _stopSaying)
+        {
+            // Somebody never reported - a machine that crashed, or one whose
+            // player closed it on the results screen. The room cannot be held
+            // together for them forever, so the patience running out is what
+            // lets it drop them.
+            if (_session.RoomIsHeldTogether)
+            {
+                Console.Error.WriteLine(
+                    "[result] not everyone reported - the room stops waiting for them");
+                _session.LetTheRoomBreatheAgain();
+            }
+            return;
+        }
 
         var drivers = Seats.Drivers(room.Players);
 
@@ -671,7 +693,12 @@ public static class ModeHook
             + string.Concat(standings.Select(x =>
                 $"{Environment.NewLine}[result]   {x.Place}. {x.Name}  {x.Laps} lap(s)  {x.Clock}")));
 
-        if (_reportsShown >= drivers.Count) _stopSaying = DateTime.UtcNow;
+        if (_reportsShown < drivers.Count) return;
+
+        // Everyone is back and has said how they got on, so silence means
+        // something again.
+        _stopSaying = DateTime.UtcNow;
+        _session.LetTheRoomBreatheAgain();
     }
 
     /// <summary>Forgets the last race, so its result is not sent into the next.</summary>

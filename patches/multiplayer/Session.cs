@@ -22,6 +22,51 @@ public sealed class Session
     readonly Dictionary<string, DateTime> _lastHeard = [];
     DateTime _hostLastHeard;
 
+    /// <summary>
+    /// Until when silence is not evidence that anybody has gone.
+    ///
+    /// Three seconds of quiet means a machine has left - except during a race,
+    /// when it means a machine is racing. Nobody sends lobby traffic while the
+    /// game is running, so without this the room takes itself apart the moment
+    /// it is used: the client loses the room to "The host left the room", the
+    /// host prunes every player who is out on track, and the players who get
+    /// back first find no room to be in and have to join one again by hand.
+    ///
+    /// A race has no length worth guessing at - ninety-nine laps is allowed -
+    /// so the hold does not expire on a timer. It is lifted when every driver
+    /// has said how their race went, which is the first moment silence means
+    /// something again.
+    /// </summary>
+    DateTime _holdUntil = DateTime.MinValue;
+
+    /// <summary>
+    /// Holds the room together across a race, however long it takes and
+    /// whatever order the machines come back in.
+    /// </summary>
+    public void HoldTheRoomTogether() => _holdUntil = DateTime.MaxValue;
+
+    /// <summary>
+    /// Lets the room drop people again, once the race is settled.
+    ///
+    /// Everyone is treated as heard from at this instant. They were not silent,
+    /// they were racing, and releasing the hold without saying so would drop
+    /// the whole room on the very next tick.
+    /// </summary>
+    public void LetTheRoomBreatheAgain()
+    {
+        if (_holdUntil == DateTime.MinValue) return;
+
+        _holdUntil = DateTime.MinValue;
+        _hostLastHeard = _clock();
+
+        if (Current is { } room)
+            foreach (var player in room.Players)
+                _lastHeard[player.Name] = _clock();
+    }
+
+    /// <summary>Whether the room is being held together across a race.</summary>
+    public bool RoomIsHeldTogether => _holdUntil != DateTime.MinValue;
+
     public Session(string playerName, Func<DateTime> clock)
     {
         _playerName = playerName;
@@ -334,6 +379,8 @@ public sealed class Session
     public void Tick()
     {
         if (Current is not { } room) return;
+        if (_clock() < _holdUntil) return;
+
         var now = _clock();
 
         if (Phase == SessionPhase.Joined && now - _hostLastHeard > Timeout)

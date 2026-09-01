@@ -658,7 +658,27 @@ saying how its race went, every quarter second for five minutes or until every
 driver has reported, and keeps listening while the next race is being arranged.
 Nobody has to arrive anywhere at the same moment.
 
-One more thing had to change for that to work at all. The lobby's own two
+### The room has to survive the race it exists to start
+
+Silence times a machine out after three seconds - and nobody sends lobby
+traffic while the game is running. So the room took itself apart every time it
+was used: the client lost it to "The host left the room", the host pruned every
+player who was out on track, and whoever got back first found a room list
+instead of a room and had to join again by hand.
+
+The fix is not a longer timeout. A race has no length worth guessing at, since
+ninety-nine laps is allowed, so the room is *held together* from the moment the
+lobby ends in a race and let go when every driver has said how their race went -
+the first moment silence means something again. Letting go forgives the silence
+it was holding through, or the very next tick would drop the whole room for
+having been quiet all race. A driver who never reports is what the result
+patience is for: when it runs out, the room stops waiting and drops them.
+
+Nobody has to come back in any particular order, and nobody rejoins anything.
+
+### One more thing had to change
+
+One more thing had to change for the results exchange to work at all. The lobby's own two
 receive loops drain the same socket and discard whatever they do not recognise,
 so a result that arrived on their turn rather than on the collector's was simply
 eaten - and which turn it lands on is a coin toss sixty times a second. All
