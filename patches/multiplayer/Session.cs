@@ -1,6 +1,12 @@
 namespace GT2Port.Multiplayer;
 
-public enum SessionPhase { Browsing, Hosting, Joined, Disconnected }
+/// <summary>
+/// Where a session is. <see cref="Knocking"/> is the one that only exists
+/// because of the internet: a room found by announcement arrives whole and is
+/// joined at once, while a room found by address arrives as nothing at all and
+/// has to be asked.
+/// </summary>
+public enum SessionPhase { Browsing, Hosting, Joined, Disconnected, Knocking }
 
 /// <summary>
 /// Room membership, with no sockets and no screen.
@@ -140,6 +146,71 @@ public sealed class Session
         Phase = SessionPhase.Hosting;
         StatusMessage = null;
         _lastHeard.Clear();
+    }
+
+    /// <summary>Where this client is knocking, and what it is saying.</summary>
+    public string KnockingAt { get; private set; } = "";
+    public string KnockingSecret { get; private set; } = "";
+
+    /// <summary>
+    /// Starts asking a host at a typed address to be let in.
+    ///
+    /// A room found by announcement arrives whole - its id, its track, its
+    /// players - and <see cref="Join"/> is handed all of it. A room found by
+    /// address arrives as nothing at all, so there is a phase between browsing
+    /// and being in it: knocking, which is this client repeating an intent at
+    /// an address and waiting to be answered with room state.
+    ///
+    /// Returns false when what was typed is not an address, which is worth
+    /// saying before a single datagram is sent to nowhere.
+    /// </summary>
+    public bool Knock(string address, string secret)
+    {
+        if (!TryReadAddress(address, out _))
+        {
+            StatusMessage = $"\"{(address ?? "").Trim()}\" is not an address and a port.";
+            return false;
+        }
+
+        Current = null;
+        KnockingAt = address.Trim();
+        KnockingSecret = secret;
+        Phase = SessionPhase.Knocking;
+        StatusMessage = "Knocking...";
+        return true;
+    }
+
+    /// <summary>
+    /// Reads "host:port", where the host may be a name or an address.
+    ///
+    /// Parsed here rather than where it is sent, so a typing mistake is a
+    /// message on the screen instead of datagrams into the void.
+    /// </summary>
+    public static bool TryReadAddress(string typed, out System.Net.IPEndPoint where)
+    {
+        where = null!;
+        var parts = (typed ?? "").Trim().Split(':');
+        if (parts.Length != 2) return false;
+        if (!int.TryParse(parts[1], out int port) || port < 1 || port > 65535) return false;
+        if (parts[0].Length == 0) return false;
+
+        if (System.Net.IPAddress.TryParse(parts[0], out var address))
+        {
+            where = new System.Net.IPEndPoint(address, port);
+            return true;
+        }
+
+        try
+        {
+            var found = System.Net.Dns.GetHostAddresses(parts[0]);
+            if (found.Length == 0) return false;
+            where = new System.Net.IPEndPoint(found[0], port);
+            return true;
+        }
+        catch (Exception e) when (e is System.Net.Sockets.SocketException or ArgumentException)
+        {
+            return false;
+        }
     }
 
     public bool Join(Room room)

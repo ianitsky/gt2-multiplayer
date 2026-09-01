@@ -11,7 +11,7 @@ public class LanSessionTests
     // extra LanDiscovery/LanSession ports SessionTests binds (34740, 34741,
     // 34742, 34750, 34751, 34752) - see those files for why each test needs
     // its own port. Offsets below run through BasePort+24.
-    const int BasePort = 34760;
+    internal const int BasePort = 34760;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
     void Advance(double seconds) => _now = _now.AddSeconds(seconds);
@@ -612,7 +612,7 @@ public class LanSessionTests
     /// indistinguishable from one that found the wrong thing - which would
     /// make the negative test above pass for the wrong reason.
     /// </summary>
-    static void WaitForDelivery(LanSession session)
+    internal static void WaitForDelivery(LanSession session)
     {
         for (int i = 0; i < 200 && session.Available == 0; i++) Thread.Sleep(5);
         Assert.True(session.Available > 0, "the datagram never arrived");

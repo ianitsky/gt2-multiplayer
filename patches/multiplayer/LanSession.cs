@@ -408,7 +408,11 @@ public sealed class LanSession : IDisposable
 
             if (!TryDeserialise(data, out var intent)) continue;
             if (!SaidTheSecret(room.Secret, intent.Secret)) continue;
-            if (intent.RoomId != room.Id) continue;
+
+            // Guid.Empty is a knock: a client that reached this host by address
+            // has never heard the room announced and cannot name it. Anything
+            // else naming the wrong room is crossed wires or forgery.
+            if (intent.RoomId != Guid.Empty && intent.RoomId != room.Id) continue;
 
             if (from != null) _known.Add(from);
 
@@ -552,6 +556,25 @@ public sealed class LanSession : IDisposable
     readonly Dictionary<byte, RaceResult.Finish> _results = [];
 
     public IReadOnlyDictionary<byte, RaceResult.Finish> Results => _results;
+
+    /// <summary>
+    /// Asks a host at a known address to be let in, without knowing anything
+    /// about its room - not even its id.
+    ///
+    /// It is an ordinary intent with an empty room id, so the host needs no new
+    /// message to understand one and answers it the way it answers every
+    /// intent: with room state.
+    /// </summary>
+    public void SendKnock(IPEndPoint host, string name, string secret)
+    {
+        if (_disposed) return;
+
+        Secret = secret;
+        var knock = Serialise(new ClientIntent(
+            Guid.Empty, name, "", Ready: false, Leaving: false, Secret: secret));
+
+        Send(knock, host);
+    }
 
     /// <summary>Tells everyone how this machine's driver got on.</summary>
     public void SendResult(byte seat, RaceResult.Finish finish, IPAddress? host = null)
