@@ -1,3 +1,5 @@
+using RecompOne.Runtime.Memory;
+
 namespace GT2Port.Multiplayer;
 
 /// <summary>
@@ -79,7 +81,9 @@ public static class BackToTheLobby
     /// nothing, or runs a whole lobby and agrees the next race before the
     /// arcade it is standing in front of has loaded a byte.
     /// </summary>
-    public static void OverlayArriving(uint entry)
+    public static void OverlayArriving(uint entry) => OverlayArriving(entry, null);
+
+    public static void OverlayArriving(uint entry, IMemory? m)
     {
         var means = WhatItMeans(_racing, entry);
         _racing = means == Arrival.ARaceIsStarting;
@@ -91,6 +95,10 @@ public static class BackToTheLobby
         // what does.
         Console.Error.WriteLine(
             $"[lobby] the race overlay is gone - 0x{entry:X8} is what follows it");
+
+        // The last instant the race's own memory is still standing, and so the
+        // only moment a search for what the results screen said can be made.
+        if (m is not null) RaceTimeHunt.Look(m);
 
         if (!Wanted || means != Arrival.TheRaceIsOverAndTheRoomIsThere) return;
 

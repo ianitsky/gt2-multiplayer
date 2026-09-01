@@ -45,7 +45,7 @@ public static partial class OverlayHook
         // the end of a race, which is where the room is waiting - so the lobby
         // runs again here, and the race it agrees is set up before the arcade
         // this load is fetching has run an instruction.
-        Multiplayer.BackToTheLobby.OverlayArriving(entry);
+        Multiplayer.BackToTheLobby.OverlayArriving(entry, m);
         entry = c.A1;
 
         // The race overlay arriving is the moment the race is settled: the menu

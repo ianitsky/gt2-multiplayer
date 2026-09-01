@@ -4,50 +4,46 @@ using RecompOne.Runtime.Memory;
 namespace GT2Port.Multiplayer;
 
 /// <summary>
-/// Finds the fields a car is *driven* by, as opposed to the ones it is placed
-/// by, by watching which of them move.
+/// Finds the fields a race is run by, by watching which of them move and how.
 ///
-/// Place and heading already travel, and a car that has them is in the right
-/// spot facing the right way with its wheels dead still. What is missing is
-/// everything the game derives rather than stores - wheels turning, wheels
-/// steering, brake lights, the body pitching under load - and a remote car has
-/// none of the state those come from, because this port teleports it every
-/// frame without telling it it is moving.
+/// Three questions have been asked with this, and the first two are answered.
 ///
-/// Two guesses at which fields those are came out of reading gt2_01, and both
-/// were wrong in a way worth keeping:
+/// **Where a car begins.** 0x800A9688, stepping by 0xB40 - printed rather than
+/// deduced, by hooking the function that draws a car and reporting the pointer
+/// it is handed. <see cref="RemoteCars.FirstCar"/> is 0x47C into a car rather
+/// than at its start, which cost two wrong answers the moment gt2_01's own
+/// offsets were read against it.
 ///
-///   +0x5A    read by gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from
-///            into the vector (0, 0, it), turned by the car's matrix and added
-///            to the drawn position - which looked exactly like speed. It reads
-///            500 and stays there while the car accelerates, brakes and stops,
-///            so it is a fixed offset along the nose and not a speed at all.
+/// **What a wheel is drawn at.** One short per wheel at +0x7C6 + wheel * 0x10,
+/// found by counting how often each halfword of a car moved over 1200 frames of
+/// driving. Two guesses taken from reading gt2_01 - a speed at +0x5A, three
+/// angles at +0x7CC - were both wrong: the first reads 500 through acceleration
+/// and braking alike, and the second holds the four wheels' mounting positions.
 ///
-///   +0x7CC + wheel * 0x10
-///            written by gt2_ovr1_race_car_set_its_four_wheels_draw_angles,
-///            which does write three angles per wheel at exactly that stride.
-///            The memory holds (-3055, -5004), (3055, -5004), (-3063, 5024),
-///            (3063, 5024) and never changes - left and right, front and rear.
-///            Those are where the wheels are mounted, so either that function
-///            does not run in this race or it is handed something other than a
-///            car.
+/// **How far a car has got, and how long it has taken.** Neither is a field
+/// this port knows, and both have to come from the game rather than be timed
+/// here. A lap counter is counted rather than integrated, so it moves a handful
+/// of times in a whole race and cannot show up in a report tuned for what moves
+/// constantly. A race clock only ever rises. So this counts three things per
+/// field - how often it moved, how often it rose, how often it fell - and
+/// reports on whichever question is being asked:
 ///
-/// What is not in doubt is where a car begins: this hooks the function that
-/// draws one and prints the pointer it is handed, and the six came back as
-/// 0x800A9688 stepping by 0xB40 - the race context's own car array.
+///   GT2_CAR_LOOK=1       what moves constantly
+///   GT2_CAR_LOOK=rare    what moves a handful of times - a lap, a gear, a place
+///   GT2_CAR_LOOK=clock   what only ever rises - a time, a distance, a counter
 ///
-/// So the base is known and the offsets are not, which is what this now
-/// measures. It keeps a copy of the followed car and counts, per halfword, how
-/// often it changes. A field that moves every frame while the car is driven is
-/// live state; one that never moves is setup. Naming what to look at is then a
-/// matter of reading the ranges that come out, rather than guessing at them.
-///
-/// Off unless GT2_CAR_LOOK is set.
+/// Two places are watched, because a race is not all in one: the car the game
+/// draws first, and the head of the race context at 0x800A9500, which is where
+/// something belonging to the race rather than to a car would live.
 /// </summary>
 public static class CarDriving
 {
-    static readonly bool Looking =
-        Environment.GetEnvironmentVariable("GT2_CAR_LOOK") is not (null or "");
+    static readonly string Wanted =
+        Environment.GetEnvironmentVariable("GT2_CAR_LOOK") ?? "";
+
+    static bool Looking => Wanted.Length > 0;
+    static bool Rare => string.Equals(Wanted, "rare", StringComparison.OrdinalIgnoreCase);
+    static bool Clock => string.Equals(Wanted, "clock", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>How many frames between reports.</summary>
     static readonly int Every =
@@ -55,21 +51,47 @@ public static class CarDriving
             ? n : 600;
 
     /// <summary>
-    /// How often a halfword has to move to be worth printing, as a share of the
-    /// frames watched. Low enough to catch a gear change, high enough that a
-    /// field written once at the start does not fill the report.
+    /// The most times a halfword may move and still count as rare. A three-lap
+    /// race turns a lap counter three times; twenty leaves room for a gearbox.
     /// </summary>
-    static readonly double Often = 0.02;
+    static readonly int AtMost =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_LOOK_ATMOST"), out int n) && n > 0
+            ? n : 20;
+
+    /// <summary>
+    /// How often a halfword has to move to be worth printing when the question
+    /// is what moves constantly, as a share of the frames watched.
+    /// </summary>
+    const double Often = 0.02;
+
+    /// <summary>
+    /// The second place to watch, which starts below the race context rather
+    /// than at it.
+    ///
+    /// The context's own head - 0x800A9500 to the car array at +0x188 - held no
+    /// clock, and neither did any car. But the code that reads a car's lap
+    /// counter finishes by writing a word at 0x800A8D6C, which is 0x794 *below*
+    /// the context: there is race state down there, and a race time is exactly
+    /// the kind of thing that would live in it.
+    ///
+    /// GT2_CAR_LOOK_AT and GT2_CAR_LOOK_LEN move the window, so sweeping for
+    /// something costs a run rather than a rebuild.
+    /// </summary>
+    static readonly uint Watching =
+        uint.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_LOOK_AT"),
+                      System.Globalization.NumberStyles.HexNumber, null, out uint at)
+            ? at : 0x800A8000u;
+
+    static readonly int HowMuch =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_CAR_LOOK_LEN"),
+                     System.Globalization.NumberStyles.HexNumber, null, out int len) && len > 0
+            ? len : 0x1688;
 
     /// <summary>Every pointer the drawing code has been handed a car through.</summary>
     static readonly SortedSet<uint> _drawnFrom = [];
 
-    /// <summary>The first of them, which is the one this follows.</summary>
-    static uint _following;
-
-    static byte[]? _was;
-    static int[]? _moved;
-    static int _frames;
+    static Watched? _car;
+    static Watched? _context;
 
     /// <summary>
     /// Pre-hook on gt2_ovr1_race_car_build_the_matrices_it_is_drawn_from, which
@@ -90,66 +112,128 @@ public static class CarDriving
                 + (fromArray >= 0 && fromArray % RemoteCars.CarStride == 0
                     ? $", which is car {fromArray / RemoteCars.CarStride} of it"
                     : ", which is not a car of it"));
-            if (_following == 0u) _following = car;
+
+            _car ??= new Watched("the first car drawn", car, RemoteCars.CarStride);
+            _context ??= new Watched(
+                $"the race state around 0x{Watching:X8}", Watching, HowMuch);
         }
 
-        if (car != _following) return;
+        if (_car is not { } watched || car != watched.At) return;
 
-        Watch(m, car);
-    }
+        watched.Sample(m);
+        _context!.Sample(m);
 
-    /// <summary>
-    /// Counts how often each halfword of the car moves, and reports the ones
-    /// that move at all.
-    /// </summary>
-    static void Watch(IMemory m, uint car)
-    {
-        int halves = RemoteCars.CarStride / 2;
-        _was ??= new byte[RemoteCars.CarStride];
-        _moved ??= new int[halves];
-
-        bool first = _frames == 0;
-        for (int i = 0; i < halves; i++)
-        {
-            uint at = car + (uint)(i * 2);
-            byte low = m.ReadU8(at), high = m.ReadU8(at + 1u);
-            if (!first && (low != _was[i * 2] || high != _was[i * 2 + 1])) _moved[i]++;
-            _was[i * 2] = low;
-            _was[i * 2 + 1] = high;
-        }
-
-        if (++_frames % Every != 0) return;
-
-        int enough = (int)(_frames * Often);
-        var said = new System.Text.StringBuilder();
-        int from = -1, count = 0;
-
-        for (int i = 0; i <= halves; i++)
-        {
-            bool live = i < halves && _moved[i] > enough;
-            if (live && from < 0) { from = i; count = 0; }
-            if (live) count++;
-            if (live || from < 0) continue;
-
-            int busiest = 0;
-            for (int j = from; j < from + count; j++) busiest = Math.Max(busiest, _moved[j]);
-            said.Append($"{Environment.NewLine}[drive]   +0x{from * 2:X3}..+0x{(from + count) * 2 - 1:X3}"
-                + $"  {count * 2,4} bytes  moved up to {busiest}/{_frames}"
-                + $"  now {(short)m.ReadU16(car + (uint)(from * 2)),7}");
-            from = -1;
-        }
-
-        Console.Error.WriteLine(
-            $"[drive] 0x{car:X8} after {_frames} frames, what moved more than {enough} times:" + said);
+        if (watched.Frames % Every != 0) return;
+        Console.Error.WriteLine(watched.Report(m));
+        Console.Error.WriteLine(_context.Report(m));
     }
 
     /// <summary>Forgets the race just run, so the next one counts its own.</summary>
     public static void Forget()
     {
-        _frames = 0;
-        _following = 0u;
-        _was = null;
-        _moved = null;
+        _car = null;
+        _context = null;
         _drawnFrom.Clear();
+    }
+
+    /// <summary>
+    /// A stretch of memory, and what each halfword of it has been seen to do.
+    ///
+    /// Three counts rather than one: how often it changed, how often it rose,
+    /// how often it fell. A field that only ever rises is a clock or a counter
+    /// however fast it moves, and telling that apart from something that
+    /// oscillates is the whole of what separates a race time from a suspension
+    /// travel.
+    /// </summary>
+    sealed class Watched(string name, uint at, int length)
+    {
+        public uint At => at;
+        public int Frames { get; private set; }
+
+        readonly short[] _was = new short[length / 2];
+        readonly int[] _moved = new int[length / 2];
+
+        /// <summary>
+        /// And the same again over words, which is what a clock has to be
+        /// counted in.
+        ///
+        /// A race time is thirty-two bits, and a thirty-two bit counter's low
+        /// half wraps every 65536 - which reads as a fall, so counting rises
+        /// and falls over halfwords finds no clock however plainly one is
+        /// running. It found none, twice, which is what said to count words.
+        /// </summary>
+        readonly int[] _wasWord = new int[length / 4];
+        readonly int[] _rose = new int[length / 4];
+        readonly int[] _fell = new int[length / 4];
+
+        public void Sample(IMemory m)
+        {
+            bool first = Frames == 0;
+            for (int i = 0; i < _was.Length; i++)
+            {
+                short now = (short)m.ReadU16(at + (uint)(i * 2));
+                if (!first && now != _was[i]) _moved[i]++;
+                _was[i] = now;
+            }
+
+            for (int i = 0; i < _wasWord.Length; i++)
+            {
+                int now = (int)m.ReadU32(at + (uint)(i * 4));
+                if (!first && now != _wasWord[i])
+                {
+                    if (now > _wasWord[i]) _rose[i]++; else _fell[i]++;
+                }
+                _wasWord[i] = now;
+            }
+            Frames++;
+        }
+
+        /// <summary>
+        /// Whether the field at <paramref name="i"/> answers the question asked
+        /// - counted in halfwords for the two questions about movement, and in
+        /// words for the one about a clock.
+        /// </summary>
+        bool Interesting(int i) =>
+            Rare ? _moved[i] > 0 && _moved[i] <= AtMost
+            : Clock ? _rose[i] > 0 && _fell[i] == 0
+            : _moved[i] > (int)(Frames * Often);
+
+        /// <summary>How wide the thing being counted is.</summary>
+        int Step => Clock ? 4 : 2;
+
+        int Fields => Clock ? _wasWord.Length : _was.Length;
+
+        public string Report(IMemory m)
+        {
+            var said = new System.Text.StringBuilder();
+            int from = -1, count = 0;
+
+            for (int i = 0; i <= Fields; i++)
+            {
+                bool live = i < Fields && Interesting(i);
+                if (live && from < 0) { from = i; count = 0; }
+                if (live) count++;
+                if (live || from < 0) continue;
+
+                int moved = 0;
+                for (int j = from; j < from + count; j++)
+                    moved = Math.Max(moved, Clock ? _rose[j] : _moved[j]);
+
+                said.Append($"{Environment.NewLine}[drive]   +0x{from * Step:X3}..+0x{(from + count) * Step - 1:X3}"
+                    + $"  moved {moved}"
+                    + (Clock ? $" of {Frames}, never down" : "")
+                    + "  now " + string.Join(" ", Enumerable.Range(from, count)
+                        .Select(j => Clock
+                            ? ((int)m.ReadU32(at + (uint)(j * 4))).ToString()
+                            : ((short)m.ReadU16(at + (uint)(j * 2))).ToString())));
+                from = -1;
+            }
+
+            return $"[drive] {name} at 0x{at:X8}, after {Frames} frames, what moved "
+                + (Rare ? $"between 1 and {AtMost} times:"
+                   : Clock ? "and never fell:"
+                   : "constantly:")
+                + (said.Length == 0 ? " nothing" : said.ToString());
+        }
     }
 }

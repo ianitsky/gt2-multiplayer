@@ -573,7 +573,43 @@ differs, which cannot go stale.
 
 Who came where, and what each driver's race time was. The return to the lobby is
 already the end of a race (see item 5), so this is what to show on the way
-through it.
+through it. Both numbers come from the game rather than being timed here.
+
+### How far a car has got: +0x634
+
+A short in the car, counting the laps that car has completed. Found by asking
+for the opposite of what the wheel hunt asked for - the fields that move a
+*handful* of times in a whole race rather than every frame - and confirmed
+across two races that differed: it read 3 after three laps and 2 after two, and
+never fell.
+
+Its neighbour `+0x630` is a word that goes with it: the code at 0x80010CC8 reads
+both and passes them together to 0x800117C4, which is how far round the lap the
+car is.
+
+### How long it has taken: still open
+
+Three passes have not found it, and each failure narrowed the question.
+
+- **Not a field that always rises.** Counting rises and falls over *halfwords*
+  finds no clock at all, because a 32-bit counter's low half wraps every 65536
+  and that reads as a fall. Counting words instead found two, and neither is the
+  race time: `0x800A8D72` counts frames exactly, and `0x800A8C64` counts two per
+  frame. Both were already running before the lights went green.
+- **Which is also why a rising-field search cannot find it.** A clock that is
+  reset at the green light falls once, and a search for what never falls throws
+  away the one field it is looking for.
+- **Not in the race's own 64 kilobytes.** A race that ended at 2:24.009 held
+  144009 nowhere in 0x800A0000..0x800B0000 - nor 8640 sixtieths, 10800
+  seventy-fifths, 14400 hundredths or 4320 thirtieths - and no offset in a car
+  held six values that could be six finishing times.
+
+So the time is kept somewhere else, and guessing where has cost more than
+reading everything would. `GT2_DUMP_END` now keeps the whole two megabytes at
+the moment the race overlay is replaced, which is the last instant the race's
+memory is still standing. One pass, one file, searched here afterwards in
+whatever encoding it takes - and it can ride along with a race being run for
+some other reason.
 
 ## 9. A race by laps or by time
 
