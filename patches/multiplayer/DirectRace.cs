@@ -106,7 +106,7 @@ public static class DirectRace
     public sealed record Pending(
         IReadOnlyList<Player> Players, string Me, string Car, string Course, CarCatalogue? Cars,
         bool Watching = false, byte Laps = RaceLaps.AsBuilt,
-        ushort Minutes = TimedRace.ByLaps);
+        ushort Minutes = TimedRace.ByLaps, bool Qualifying = false);
 
     static Pending? _race;
 
@@ -154,7 +154,8 @@ public static class DirectRace
             + (race.Watching ? $" watching {race.Me} in {race.Car}" : $" {race.Me} in {race.Car}")
             + (race.Minutes > TimedRace.ByLaps
                 ? $", run over {race.Minutes} minute(s)"
-                : $", run over {race.Laps} lap(s)"));
+                : $", run over {race.Laps} lap(s)")
+            + (race.Qualifying ? " - qualifying" : ""));
 
         // Here rather than at the arcade's entry point, which is a frame or
         // two later: this runs while the lobby's overlay hook is still on the

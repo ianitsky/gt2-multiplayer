@@ -499,8 +499,10 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const byte Result = 5;
 
-    /// <summary>The magic, the kind, whose it is, their laps, their time.</summary>
-    const int ResultBytes = 3 + 1 + 4;
+    /// <summary>
+    /// The magic, the kind, whose it is, their laps, their time, their best lap.
+    /// </summary>
+    const int ResultBytes = 3 + 1 + 4 + 4;
 
     /// <summary>
     /// How wide a place message is: the magic, the kind, whose it is, three
@@ -555,6 +557,7 @@ public sealed class LanSession : IDisposable
         data[2] = seat;
         data[3] = (byte)Math.Clamp(finish.Laps, 0, 255);
         BitConverter.TryWriteBytes(data.AsSpan(4), finish.Milliseconds);
+        BitConverter.TryWriteBytes(data.AsSpan(8), finish.BestLapMilliseconds);
 
         _results[seat] = finish;
 
@@ -618,7 +621,8 @@ public sealed class LanSession : IDisposable
 
         byte seat = data[2];
         if (!_results.ContainsKey(seat))
-            _results[seat] = new RaceResult.Finish(data[3], BitConverter.ToInt32(data, 4));
+            _results[seat] = new RaceResult.Finish(
+                data[3], BitConverter.ToInt32(data, 4), BitConverter.ToInt32(data, 8));
 
         return true;
     }

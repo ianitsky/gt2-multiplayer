@@ -78,13 +78,43 @@ public static class RaceResult
     /// </summary>
     static readonly uint[] AlsoHeldIt = [0x8005AC80u, 0x801B75D4u];
 
+    /// <summary>
+    /// The counter that rises by exactly two every frame, which is the rate the
+    /// screen's own clock runs at.
+    ///
+    /// It is the only clock of the game's that can be read while a race is
+    /// running. <see cref="Milliseconds"/> is written when a race ends and
+    /// reads zero throughout - a lap turning mid-race reported the race clock
+    /// as "--:--.---", which settles a question the notes had left open.
+    ///
+    /// Free-running since long before the lights, so only differences mean
+    /// anything: the gap between two laps turning is a lap time, in sixtieths.
+    /// </summary>
+    public const uint Sixtieths = 0x800A8C64u;
+
+    /// <summary>How many of those go by in a second.</summary>
+    public const int PerSecond = 60;
+
+    /// <summary>The race clock as it reads now, in sixtieths.</summary>
+    public static int TicksNow(IMemory m) => (int)m.ReadU32(Sixtieths);
+
+    static int InMilliseconds(int ticks) => (int)(ticks * 1000L / PerSecond);
+
     /// <summary>What this machine's driver did, as the game recorded it.</summary>
-    public readonly record struct Finish(int Laps, int Milliseconds)
+    public readonly record struct Finish(int Laps, int Milliseconds, int BestLapMilliseconds = 0)
     {
         /// <summary>The time as the game would show it: m:ss.mmm.</summary>
-        public string Clock =>
-            Milliseconds <= 0 ? "--:--.---"
-            : $"{Milliseconds / 60000}:{Milliseconds % 60000 / 1000:00}.{Milliseconds % 1000:000}";
+        public string Clock => Show(Milliseconds);
+
+        /// <summary>And the best lap of it, the same way.</summary>
+        public string BestLap => Show(BestLapMilliseconds);
+
+        /// <summary>Whether a lap was ever finished, and so timed.</summary>
+        public bool HasABestLap => BestLapMilliseconds > 0;
+
+        static string Show(int ms) =>
+            ms <= 0 ? "--:--.---"
+            : $"{ms / 60000}:{ms % 60000 / 1000:00}.{ms % 1000:000}";
     }
 
     /// <summary>
@@ -120,19 +150,47 @@ public static class RaceResult
     /// turn at 1:03.604 says the counter follows the line; a first turn at zero
     /// says it counts the start.
     /// </summary>
+    /// <summary>
+    /// When the last lap turned, and the shortest gap between two turns - which
+    /// is this driver's best lap.
+    ///
+    /// Measured between the laps rather than read out of the game, because the
+    /// only clock that runs while a race does is the one that counts sixtieths.
+    /// So a lap time here is exact to a sixtieth of a second and the screen's
+    /// own is finer - which is honest to say and good enough to qualify on,
+    /// since every machine measures the same way from the same counter.
+    /// </summary>
+    static int _lastTurn = -1;
+    static int _bestLapTicks;
+
     public static void Watch(IMemory m)
     {
         int lap = OnLapNow(m, 0);
         if (lap <= _mostLaps || lap >= 1000) return;
 
         _mostLaps = lap;
+
+        int ticks = TicksNow(m);
+        if (_lastTurn >= 0)
+        {
+            int thisLap = ticks - _lastTurn;
+            if (thisLap > 0 && (_bestLapTicks == 0 || thisLap < _bestLapTicks))
+                _bestLapTicks = thisLap;
+        }
+        _lastTurn = ticks;
+
         Console.Error.WriteLine(
             $"[result] the car is now on lap {lap} - {Completed(lap)} completed"
-            + $" - with the race clock at {new Finish(0, (int)m.ReadU32(Milliseconds)).Clock}");
+            + $" - best lap so far {new Finish(0, 0, InMilliseconds(_bestLapTicks)).BestLap}");
     }
 
     /// <summary>Forgets the race just run, so the next one counts its own laps.</summary>
-    public static void Forget() => _mostLaps = 0;
+    public static void Forget()
+    {
+        _mostLaps = 0;
+        _lastTurn = -1;
+        _bestLapTicks = 0;
+    }
 
     /// <summary>Which lap a car is on, as the game counts it.</summary>
     public static int OnLapNow(IMemory m, int slot) => (short)m.ReadU16(
@@ -152,7 +210,8 @@ public static class RaceResult
     public static Finish Read(IMemory m, int slot)
     {
         int onLap = Math.Max(OnLapNow(m, slot), _mostLaps);
-        return new Finish(Completed(onLap), (int)m.ReadU32(Milliseconds));
+        return new Finish(
+            Completed(onLap), (int)m.ReadU32(Milliseconds), InMilliseconds(_bestLapTicks));
     }
 
     /// <summary>
@@ -167,6 +226,7 @@ public static class RaceResult
         var finish = Read(m, slot);
         Console.Error.WriteLine(
             $"[result] car {slot} finished {finish.Laps} lap(s) in {finish.Clock}"
+            + $", best lap {finish.BestLap}"
             + $" - the car is on lap {OnLapNow(m, slot)}, the highest seen was {_mostLaps}"
             + " - the two that also held the time read "
             + string.Join("  ", AlsoHeldIt.Select(a => $"0x{a:X8}={AsATime(m, a)}")));

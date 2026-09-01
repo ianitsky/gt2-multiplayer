@@ -848,3 +848,64 @@ which is where `Seats` already expects them.
 
 The default when the host arranges nothing is the order people joined, which is
 what the room already was.
+
+# Qualifying, agreed 2026-09-01
+
+The host may have the room run a qualifying session before the race. Off by
+default. Two laps, always. The lobby waits for the host to start it, comes back
+afterwards, and waits again for the host to start the race. Each driver's best
+lap is shown, and the grid is ordered from the quickest to the slowest.
+
+## Almost none of it is new
+
+A qualifying session *is* a race - the same launch, the same start barrier, the
+same return to the lobby, the same exchange of results - differing in three
+things:
+
+- it is always two laps, whatever the room races over;
+- it is scored on the best lap rather than on distance and time;
+- when it ends, the room moves on to arranging the race.
+
+## One value, not two flags
+
+The room carries a **stage**: qualifying, or racing. Not a "has qualifying" flag
+beside a "has qualified" flag, because two would allow a state that means
+nothing - qualified without qualifying - and every machine has to agree on what
+the Start button is about to do. It travels with the room like the track and the
+length do (wire version 7), and it only ever moves one way: the grid qualifying
+produced is what the race is about to use, so a room falling back would be
+throwing that away.
+
+Two laps rather than the room's own length is a rule and not a default. A room's
+lap count and clock are what the *race* is; qualifying borrowing them would let
+a three-hour qualifying session be asked for by accident.
+
+## Where a best lap comes from
+
+Measured between two turns of the lap counter, on the counter at `0x800A8C64`
+that rises by exactly two a frame.
+
+It has to be that one. `0x801D5F80` holds the race time and matched the results
+screen exactly - but a lap turning mid-race reported it as `--:--.---`, so it is
+written when a race ends and reads zero throughout. That settles a question
+these notes had left open: the millisecond clock cannot be read while a race is
+running, and the sixtieths counter can.
+
+So a lap time here is exact to a sixtieth of a second where the game's own is
+finer. Every machine measures the same way from the same counter, which is what
+qualifying on it requires.
+
+## Scored on the best lap alone
+
+A race asks who got furthest quickest, so laps come first and time breaks the
+tie. Qualifying asks nothing about distance: everybody runs the same two laps
+and only the best counts, so a driver who spun on one lap and was quickest on
+the other qualifies on the quick one. A driver who never finished a lap has no
+time to qualify on and goes last, rather than first with a zero.
+
+## The lobby says which it is
+
+The same room is a qualifying lobby and then a race lobby, so it carries a title
+saying which, the Start button reads "Start qualifying" or "Start race", and the
+results table shows what the session was decided on - best laps after
+qualifying, laps and total time after a race.

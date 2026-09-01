@@ -36,6 +36,9 @@ public sealed class MultiplayerPanel : IPanel
     int _laps = RaceLaps.AsBuilt;
     int _minutes = TimedRace.Shortest;
     bool _byTheClock;
+
+    /// <summary>Whether the room being made runs a qualifying session first.</summary>
+    bool _qualifying;
     bool _creating;
 
     // Set when the Create screen is (re)entered, so the grid scrolls the
@@ -271,11 +274,15 @@ public sealed class MultiplayerPanel : IPanel
 
         DrawHowLongTheRaceWillBe();
 
+        // Off by default: a room that says nothing about qualifying runs the
+        // race straight away, which is what every room did before this existed.
+        ImGui.Checkbox($"Qualifying first ({Qualifying.Laps} laps)", ref _qualifying);
+
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_roomName));
         if (ImGui.Button("Create"))
         {
             _session.Host(_roomName, _track, _carGroup, _maxPlayers,
-                          _laps, _byTheClock ? _minutes : TimedRace.ByLaps);
+                          _laps, _byTheClock ? _minutes : TimedRace.ByLaps, _qualifying);
             _discovery.LocalRoomId = _session.Current!.Id;
             _creating = false;
         }
@@ -444,8 +451,13 @@ public sealed class MultiplayerPanel : IPanel
     {
         var room = _session.Current!;
 
-        ImGui.TextUnformatted(
-            $"{room.Name}   {CourseTable.DisplayName(room.Track)}   {HowLong(room)}");
+        // What this lobby is for, said plainly: the same room is a qualifying
+        // lobby and then a race lobby, and the difference decides what the
+        // Start button is about to do.
+        ImGui.TextUnformatted(Qualifying.Title(room));
+        ImGui.TextDisabled(
+            $"{room.Name}   {CourseTable.DisplayName(room.Track)}"
+            + $"   {(room.QualifyingNext ? $"{Qualifying.Laps} laps" : HowLong(room))}");
 
         DrawTheLastRace();
 
@@ -511,7 +523,7 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.Separator();
         ImGui.BeginDisabled(!_session.CanStart);
-        if (ImGui.Button("Start race")) StartRequested = true;
+        if (ImGui.Button(Qualifying.StartSays(room))) StartRequested = true;
         ImGui.EndDisabled();
 
         if (_session.Phase == SessionPhase.Hosting && !_session.CanStart)
@@ -589,15 +601,23 @@ public sealed class MultiplayerPanel : IPanel
         var standings = RaceStandings.OfTheLastRace;
         if (standings.Count == 0) return;
 
+        bool qualifying = RaceStandings.WereQualifying;
+
         ImGui.Separator();
-        ImGui.TextDisabled("Last race");
+        ImGui.TextDisabled(Qualifying.ResultsAre(qualifying));
 
         foreach (var driver in standings)
         {
-            string laps = driver.Laps == 1 ? "1 lap" : $"{driver.Laps} laps";
+            // A qualifying session is about one lap and a race is about all of
+            // them, so each shows what it was decided on rather than both
+            // showing everything.
+            string what = qualifying
+                ? driver.BestLap
+                : $"{(driver.Laps == 1 ? "1 lap" : $"{driver.Laps} laps")}   {driver.Clock}";
+
             ImGui.TextUnformatted(
                 $"{driver.Place}.  {driver.Name}   {_carCatalogue.DisplayName(driver.Car)}"
-                + $"   {laps}   {driver.Clock}"
+                + $"   {what}"
                 + (driver.Reported ? "" : "   (no report)"));
         }
     }

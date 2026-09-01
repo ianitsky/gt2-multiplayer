@@ -54,6 +54,20 @@ public static class Seats
 }
 
 /// <summary>
+/// What the room is arranging next.
+///
+/// A room with qualifying opens on <see cref="Qualifying"/> and moves to
+/// <see cref="Racing"/> once the qualifying session has been run. A room
+/// without it is <see cref="Racing"/> from the start and never leaves.
+///
+/// One value rather than a "has qualifying" flag and a "has qualified" flag,
+/// because two would allow a state that means nothing - qualified without
+/// qualifying - and every machine has to agree on what the Start button is
+/// about to do.
+/// </summary>
+public enum RoomStage : byte { Racing = 0, Qualifying = 1 }
+
+/// <summary>
 /// A room, and the race it is arranging.
 ///
 /// <paramref name="Laps"/> is how many laps that race is run over - the host's
@@ -66,10 +80,22 @@ public static class Seats
 /// </summary>
 public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers,
                    IReadOnlyList<Player> Players, byte Laps = RaceLaps.AsBuilt,
-                   ushort Minutes = TimedRace.ByLaps)
+                   ushort Minutes = TimedRace.ByLaps,
+                   RoomStage Stage = RoomStage.Racing)
 {
     /// <summary>Whether this room's race is run to a clock.</summary>
     public bool ByTheClock => Minutes > TimedRace.ByLaps;
+
+    /// <summary>Whether the next session out of this lobby is a qualifying one.</summary>
+    public bool QualifyingNext => Stage == RoomStage.Qualifying;
+
+    /// <summary>
+    /// How long the next session is, which is not the room's own length while
+    /// there is qualifying to do: qualifying is always two laps.
+    /// </summary>
+    public byte LapsNext => QualifyingNext ? Qualifying.Laps : Laps;
+
+    public ushort MinutesNext => QualifyingNext ? TimedRace.ByLaps : Minutes;
 }
 
 /// <summary>
@@ -84,7 +110,7 @@ public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxP
 /// </summary>
 public static class RoomState
 {
-    const byte Version = 6;
+    const byte Version = 7;
     public const int MaxPlayers = 6;
     public const int MaxStringBytes = 64;
 
@@ -118,6 +144,7 @@ public static class RoomState
         buffer.Add((byte)room.MaxPlayers);
         buffer.Add(room.Laps);
         buffer.AddRange(BitConverter.GetBytes(room.Minutes));
+        buffer.Add((byte)room.Stage);
         buffer.Add((byte)room.Players.Count);
         foreach (var player in room.Players)
         {
@@ -148,6 +175,7 @@ public static class RoomState
         if (!TryByte(data, ref offset, out byte minutesLow)) return false;
         if (!TryByte(data, ref offset, out byte minutesHigh)) return false;
         int minutes = minutesLow | (minutesHigh << 8);
+        if (!TryByte(data, ref offset, out byte stage)) return false;
         if (!TryByte(data, ref offset, out byte count) || count > MaxPlayers) return false;
 
         var players = new List<Player>(count);
@@ -169,7 +197,9 @@ public static class RoomState
         // run to laps says.
         room = new Room(id, name, track, carGroup, maxPlayers, players,
                         (byte)RaceLaps.Sensible(laps),
-                        minutes == 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes));
+                        minutes == 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes),
+                        stage == (byte)RoomStage.Qualifying
+                            ? RoomStage.Qualifying : RoomStage.Racing);
         return true;
     }
 

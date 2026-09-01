@@ -4,15 +4,21 @@ namespace GT2Port.Multiplayer;
 /// <param name="Place">Counted from one, as a person would say it.</param>
 /// <param name="Laps">Laps completed, which is what separates the finishers.</param>
 /// <param name="Milliseconds">The race time, or 0 from a driver who never reported.</param>
-public sealed record Standing(int Place, string Name, string Car, int Laps, int Milliseconds)
+public sealed record Standing(int Place, string Name, string Car, int Laps, int Milliseconds,
+                              int BestLapMilliseconds = 0)
 {
-    /// <summary>The time as the game would show it: m:ss.mmm.</summary>
-    public string Clock =>
-        Milliseconds <= 0 ? "--:--.---"
-        : $"{Milliseconds / 60000}:{Milliseconds % 60000 / 1000:00}.{Milliseconds % 1000:000}";
+    /// <summary>The race time as the game would show it: m:ss.mmm.</summary>
+    public string Clock => Show(Milliseconds);
+
+    /// <summary>And their best lap of it.</summary>
+    public string BestLap => Show(BestLapMilliseconds);
 
     /// <summary>Whether this driver's machine ever said how they got on.</summary>
-    public bool Reported => Milliseconds > 0;
+    public bool Reported => Milliseconds > 0 || BestLapMilliseconds > 0;
+
+    static string Show(int ms) =>
+        ms <= 0 ? "--:--.---"
+        : $"{ms / 60000}:{ms % 60000 / 1000:00}.{ms % 1000:000}";
 }
 
 /// <summary>
@@ -35,21 +41,39 @@ public sealed record Standing(int Place, string Name, string Car, int Laps, int 
 /// </summary>
 public static class RaceStandings
 {
+    /// <summary>
+    /// Puts the drivers in order - of finishing, or of their best lap when the
+    /// session was a qualifying one.
+    ///
+    /// Two different questions, and they need different rules. A race asks who
+    /// got furthest quickest, so laps come first and time breaks the tie. A
+    /// qualifying session asks nothing about distance at all: everybody runs
+    /// the same two laps and only the best of them counts, so a driver who
+    /// spun on one lap and was quickest on the other qualifies on the quick one.
+    /// </summary>
     public static List<Standing> From(
         IReadOnlyList<Player> drivers,
-        IReadOnlyDictionary<byte, RaceResult.Finish> results)
+        IReadOnlyDictionary<byte, RaceResult.Finish> results,
+        bool qualifying = false)
     {
-        var sorted = drivers
+        var said = drivers
             .Select((driver, seat) => (driver, seat,
-                     finish: results.TryGetValue((byte)seat, out var f) ? f : default))
-            .OrderByDescending(x => x.finish.Milliseconds > 0)
-            .ThenByDescending(x => x.finish.Laps)
-            .ThenBy(x => x.finish.Milliseconds)
-            .ThenBy(x => x.seat)
-            .ToList();
+                     finish: results.TryGetValue((byte)seat, out var f) ? f : default));
+
+        var sorted = qualifying
+            ? said.OrderByDescending(x => x.finish.HasABestLap)
+                  .ThenBy(x => x.finish.BestLapMilliseconds)
+                  .ThenBy(x => x.seat)
+                  .ToList()
+            : said.OrderByDescending(x => x.finish.Milliseconds > 0)
+                  .ThenByDescending(x => x.finish.Laps)
+                  .ThenBy(x => x.finish.Milliseconds)
+                  .ThenBy(x => x.seat)
+                  .ToList();
 
         return [.. sorted.Select((x, i) => new Standing(
-            i + 1, x.driver.Name, x.driver.Car, x.finish.Laps, x.finish.Milliseconds))];
+            i + 1, x.driver.Name, x.driver.Car, x.finish.Laps, x.finish.Milliseconds,
+            x.finish.BestLapMilliseconds))];
     }
 
     /// <summary>
@@ -62,8 +86,19 @@ public static class RaceStandings
     /// </summary>
     public static IReadOnlyList<Standing> OfTheLastRace { get; private set; } = [];
 
-    public static void Show(IReadOnlyList<Standing> standings) => OfTheLastRace = standings;
+    /// <summary>Whether what is shown above is a qualifying session's.</summary>
+    public static bool WereQualifying { get; private set; }
+
+    public static void Show(IReadOnlyList<Standing> standings, bool qualifying = false)
+    {
+        OfTheLastRace = standings;
+        WereQualifying = qualifying;
+    }
 
     /// <summary>Forgets the last race, which is what leaving a room does.</summary>
-    public static void Forget() => OfTheLastRace = [];
+    public static void Forget()
+    {
+        OfTheLastRace = [];
+        WereQualifying = false;
+    }
 }

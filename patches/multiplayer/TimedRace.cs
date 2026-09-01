@@ -54,17 +54,6 @@ public static class TimedRace
     /// <summary>Clamps a length to what the host may choose.</summary>
     public static int Sensible(int minutes) => Math.Clamp(minutes, Shortest, Longest);
 
-    /// <summary>
-    /// The counter that rises by two every frame, which is the rate the screen's
-    /// own clock runs at: a race shown as 2:21.456 had run frames * 2 / 60
-    /// seconds. Free-running from before the lights, so only the difference
-    /// since the race began means anything.
-    /// </summary>
-    const uint Sixtieths = 0x800A8C64u;
-
-    /// <summary>How many of those go by in a second.</summary>
-    const int PerSecond = 60;
-
     static int _minutes;
     static int _began = -1;
     static bool _called;
@@ -101,7 +90,7 @@ public static class TimedRace
     static void Begins(IMemory m, int minutes)
     {
         _minutes = minutes;
-        _began = minutes > 0 ? (int)m.ReadU32(Sixtieths) : -1;
+        _began = minutes > 0 ? RaceResult.TicksNow(m) : -1;
         _called = false;
         _secondsLeft = minutes * 60;
 
@@ -134,7 +123,7 @@ public static class TimedRace
 
     /// <summary>How long this race has been running, in seconds.</summary>
     public static int SecondsSoFar(IMemory m) =>
-        _began < 0 ? 0 : ((int)m.ReadU32(Sixtieths) - _began) / PerSecond;
+        _began < 0 ? 0 : (RaceResult.TicksNow(m) - _began) / RaceResult.PerSecond;
 
     /// <summary>
     /// Called once a frame. Calls the last lap when the time is up, and does

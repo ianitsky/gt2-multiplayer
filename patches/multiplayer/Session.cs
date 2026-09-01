@@ -124,7 +124,8 @@ public sealed class Session
     /// </summary>
     public void Host(string roomName, string track, string carGroup,
                      int maxPlayers = RoomState.MaxPlayers,
-                     int laps = RaceLaps.AsBuilt, int minutes = TimedRace.ByLaps)
+                     int laps = RaceLaps.AsBuilt, int minutes = TimedRace.ByLaps,
+                     bool qualifying = false)
     {
         // Clamped here as everywhere else, because the same two numbers reach
         // this from a slider, from a socket and from a test.
@@ -133,7 +134,8 @@ public sealed class Session
             Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
             [new Player(_playerName, "", false)],
             (byte)RaceLaps.Sensible(laps),
-            minutes <= 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes));
+            minutes <= 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes),
+            qualifying ? RoomStage.Qualifying : RoomStage.Racing);
         Phase = SessionPhase.Hosting;
         StatusMessage = null;
         _lastHeard.Clear();
@@ -203,6 +205,22 @@ public sealed class Session
     {
         if (Current is not { } room) return;
         Current = room with { Laps = (byte)RaceLaps.Sensible(laps) };
+    }
+
+    /// <summary>
+    /// Says the qualifying session has been run, so the room is arranging a
+    /// race now.
+    ///
+    /// The host's, like everything the room says about itself. A room only ever
+    /// moves this way: nothing puts a room back to qualifying, because the
+    /// grid it produced is the thing the race is about to use.
+    /// </summary>
+    public void QualifyingIsOver()
+    {
+        if (Phase != SessionPhase.Hosting) return;
+        if (Current is not { Stage: RoomStage.Qualifying } room) return;
+
+        Current = room with { Stage = RoomStage.Racing };
     }
 
     /// <summary>

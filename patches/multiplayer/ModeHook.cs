@@ -359,7 +359,8 @@ public static class ModeHook
         {
             DirectRace.Expect(new DirectRace.Pending(
                 Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
-                Watching: IsWatching(room), Laps: room.Laps, Minutes: room.Minutes));
+                Watching: IsWatching(room), Laps: room.LapsNext, Minutes: room.MinutesNext,
+                Qualifying: room.QualifyingNext));
             c.A0 = ArcadeOverlayIndex;
             c.A1 = ArcadeEntryPoint;
         }
@@ -685,13 +686,16 @@ public static class ModeHook
         if (_lanSession.Results.Count == _reportsShown) return;
         _reportsShown = _lanSession.Results.Count;
 
-        var standings = RaceStandings.From(drivers, _lanSession.Results);
-        RaceStandings.Show(standings);
+        bool qualifying = DirectRace.Racing?.Qualifying ?? false;
+        var standings = RaceStandings.From(drivers, _lanSession.Results, qualifying);
+        RaceStandings.Show(standings, qualifying);
 
         Console.Error.WriteLine(
-            $"[result] {_reportsShown} of {drivers.Count} driver(s) have reported:"
+            $"[result] {_reportsShown} of {drivers.Count} driver(s) have reported"
+            + (qualifying ? " (qualifying)" : "") + ":"
             + string.Concat(standings.Select(x =>
-                $"{Environment.NewLine}[result]   {x.Place}. {x.Name}  {x.Laps} lap(s)  {x.Clock}")));
+                $"{Environment.NewLine}[result]   {x.Place}. {x.Name}  {x.Laps} lap(s)"
+                + $"  {x.Clock}  best lap {x.BestLap}")));
 
         if (_reportsShown < drivers.Count) return;
 
@@ -700,10 +704,16 @@ public static class ModeHook
         _stopSaying = DateTime.UtcNow;
         _session.LetTheRoomBreatheAgain();
 
-        // And the next grid opens in the order this race finished. Here rather
-        // than as each result lands, so the grid does not shuffle under a host
-        // who is reading it.
+        // And the next grid opens in the order this session ended - the order
+        // they finished a race, or the order of their best laps if it was a
+        // qualifying session, which is the whole point of running one. Here
+        // rather than as each result lands, so the grid does not shuffle under
+        // a host who is reading it.
         _session.ArrangeByTheLastRace();
+
+        // A qualifying session is over the moment it has been scored, and the
+        // room is arranging a race from here on.
+        _session.QualifyingIsOver();
     }
 
     /// <summary>Forgets the last race, so its result is not sent into the next.</summary>
@@ -759,7 +769,8 @@ public static class ModeHook
         if (DirectRace.Enabled && Leader(room) is { } lead)
             DirectRace.Expect(new DirectRace.Pending(
                 Seats.Drivers(room.Players), lead.Name, lead.Car, room.Track, _carCatalogue,
-                Watching: IsWatching(room), Laps: room.Laps, Minutes: room.Minutes));
+                Watching: IsWatching(room), Laps: room.LapsNext, Minutes: room.MinutesNext,
+                Qualifying: room.QualifyingNext));
     }
 
     /// <summary>Whether this machine's player is in the room to watch rather than race.</summary>
