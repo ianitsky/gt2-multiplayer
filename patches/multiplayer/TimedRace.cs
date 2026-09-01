@@ -1,3 +1,7 @@
+using System.Numerics;
+using ImGuiNET;
+using RecompOne.Runtime.Host;
+using RecompOne.Runtime.Host.Window;
 using RecompOne.Runtime.Memory;
 
 namespace GT2Port.Multiplayer;
@@ -59,6 +63,19 @@ public static class TimedRace
     static int _began = -1;
     static bool _called;
 
+    /// <summary>
+    /// Seconds left, as the last frame worked them out.
+    ///
+    /// Kept rather than computed where it is shown: the clock is a number in
+    /// the game's memory and the thing that draws it is handed no memory to
+    /// read. One is written every frame by the code that has it, and read by
+    /// the code that does not.
+    /// </summary>
+    static int _secondsLeft;
+
+    static readonly Countdown Clock = new();
+    static bool _registered;
+
     /// <summary>Whether the race now running is being run to a clock.</summary>
     public static bool Running => _minutes > 0;
 
@@ -72,10 +89,19 @@ public static class TimedRace
         _minutes = minutes;
         _began = minutes > 0 ? (int)m.ReadU32(Sixtieths) : -1;
         _called = false;
+        _secondsLeft = minutes * 60;
 
-        if (minutes > 0)
-            Console.Error.WriteLine(
-                $"[timed] a {minutes} minute race - the clock reads {_began} at the first frame");
+        if (minutes <= 0) return;
+
+        if (!_registered)
+        {
+            _registered = true;
+            PanelManager.Register(Clock);
+        }
+        Clock.IsOpen = true;
+
+        Console.Error.WriteLine(
+            $"[timed] a {minutes} minute race - the clock reads {_began} at the first frame");
     }
 
     /// <summary>Forgets the race just run.</summary>
@@ -84,6 +110,8 @@ public static class TimedRace
         _minutes = 0;
         _began = -1;
         _called = false;
+        _secondsLeft = 0;
+        Clock.IsOpen = false;
     }
 
     /// <summary>How long this race has been running, in seconds.</summary>
@@ -96,8 +124,12 @@ public static class TimedRace
     /// </summary>
     public static void Tick(IMemory m)
     {
-        if (!Running || _called) return;
-        if (SecondsSoFar(m) < _minutes * 60) return;
+        if (!Running) return;
+
+        _secondsLeft = Math.Max(0, _minutes * 60 - SecondsSoFar(m));
+
+        if (_called) return;
+        if (_secondsLeft > 0) return;
 
         _called = true;
 
@@ -113,5 +145,63 @@ public static class TimedRace
             $"[timed] {_minutes} minute(s) are up after {SecondsSoFar(m)}s"
             + $" - this car has completed {completed} lap(s), so the race ends on lap {last}"
             + $" (0x801D5F80 reads {(int)m.ReadU32(RaceResult.Milliseconds)})");
+    }
+
+    /// <summary>
+    /// How long is left, in the corner of the screen, while a timed race runs.
+    ///
+    /// A race against a clock is unplayable without one: a lap race tells the
+    /// driver where they are on every frame - Lap 2/5 - and a timed race
+    /// otherwise tells them nothing at all until it suddenly ends.
+    ///
+    /// Drawn by the host rather than into the game's own HUD. The game has no
+    /// idea this race is timed, so there is nothing of its to add a field to,
+    /// and putting one there would mean finding out how it lays a HUD out.
+    /// This is a corner of the window, which the port already owns.
+    /// </summary>
+    sealed class Countdown : IFloatingPanel
+    {
+        public string Name => "Time left";
+        public bool IsOpen { get; set; }
+
+        /// <summary>How far in from the corner, so it does not touch the edge.</summary>
+        static readonly Vector2 FromTheCorner = new(16f, 16f);
+
+        /// <summary>When to start saying it in red rather than plainly.</summary>
+        const int NearlyOver = 30;
+
+        public void Draw()
+        {
+            var size = ImGui.GetIO().DisplaySize;
+            ImGui.SetNextWindowPos(
+                new Vector2(FromTheCorner.X, size.Y - FromTheCorner.Y),
+                ImGuiCond.Always,
+                new Vector2(0f, 1f));
+
+            if (ImGui.Begin(Name,
+                    ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove
+                    | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.AlwaysAutoResize
+                    | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoTitleBar
+                    | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav))
+            {
+                if (_called)
+                {
+                    // The clock has run out and the race now ends when this lap
+                    // does, so a countdown at zero would be saying the wrong
+                    // thing rather than nothing.
+                    ImGui.TextColored(new Vector4(1f, 0.55f, 0.2f, 1f), "LAST LAP");
+                }
+                else
+                {
+                    var colour = _secondsLeft <= NearlyOver
+                        ? new Vector4(1f, 0.4f, 0.4f, 1f)
+                        : new Vector4(1f, 1f, 1f, 1f);
+
+                    ImGui.TextColored(colour, $"{_secondsLeft / 60}:{_secondsLeft % 60:00}");
+                }
+            }
+
+            ImGui.End();
+        }
     }
 }

@@ -763,6 +763,24 @@ So the deadline is measured against the counter that is known to be running, and
 both are printed when the last lap is called. One timed race settles which to
 keep.
 
+### How long is left, in the corner
+
+A race against a clock is unplayable without it. A lap race tells the driver
+where they are on every frame - Lap 2/5 - and a timed race otherwise says
+nothing at all until it suddenly ends.
+
+Drawn by the host in the bottom-left of the window rather than into the game's
+own HUD. The game has no idea this race is timed, so there is nothing of its to
+add a field to, and putting one there would mean working out how it lays a HUD
+out. The corner of the window is already the port's.
+
+It turns red under thirty seconds, and when the clock runs out it says LAST LAP
+rather than 0:00 - by then the race ends when the lap does, and a countdown
+sitting at zero would be saying the wrong thing rather than nothing.
+
+The number itself is worked out where the game's memory is at hand, once a
+frame, and read where it is drawn - the thing that draws is handed no memory.
+
 ### Laps or a clock, one control
 
 They are one decision - a race is run to one or the other and never to both - so
