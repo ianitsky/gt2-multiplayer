@@ -651,8 +651,13 @@ public static class ModeHook
             _lanSession.SendResult((byte)_mySeat, _myResult, HostToAnswer);
         }
 
-        _lanSession.CollectResults();
-
+        // Nothing is collected here. The lobby's own loops already keep a
+        // result out of whatever they read, and CollectResults drains the
+        // socket and throws away everything that is not one - which, called
+        // from this loop, ate the clients' own intents. The host then stopped
+        // hearing them and dropped them for going quiet, so a client could not
+        // stay in the room at all.
+        //
         // Redrawn only when something new arrived: the standings are a list the
         // player is reading, not a thing to rebuild sixty times a second.
         if (_lanSession.Results.Count == _reportsShown) return;

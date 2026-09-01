@@ -568,6 +568,14 @@ public sealed class LanSession : IDisposable
     /// The first rather than the latest, which is the opposite of a place: a
     /// place is a snapshot and an old one is worthless, while a result is final
     /// the moment it is sent and is repeated only in case a datagram was lost.
+    ///
+    /// **Not to be called while the lobby is running.** Like every drain on
+    /// this socket it throws away what it is not looking for, and in the lobby
+    /// that is the clients' own intents: called from the lobby loop, it stopped
+    /// the host hearing its clients, which dropped them for going quiet and
+    /// made the room impossible to stay in. The lobby's loops keep results
+    /// themselves - see <see cref="KeptAResult"/> - so nothing there needs
+    /// this.
     /// </summary>
     public void CollectResults()
     {
