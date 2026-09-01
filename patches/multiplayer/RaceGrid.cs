@@ -105,6 +105,38 @@ public static class RaceGrid
         Environment.GetEnvironmentVariable("GT2_GRID_LEFTOVERS") is not (null or "");
 
     /// <summary>
+    /// Whether to let the game drive this machine's own car.
+    ///
+    /// For testing, and it earns its keep the moment a test needs more than one
+    /// machine: four instances of a race cannot be driven by one person, so
+    /// everything about a four-player race - the grid, the colours, the wheels,
+    /// the results coming back, the room surviving - could only ever be checked
+    /// by someone driving one car and watching three drift into a wall.
+    ///
+    /// An entrant is marked as the game's to drive by +0x82 and given a skill
+    /// at +0x42, which is what the other five already get. This gives entrant
+    /// zero - this machine's own - the same marks.
+    ///
+    /// GT2_AI_DRIVES on its own means a skill of 100; a number sets it, so a
+    /// room of machines can be told to drive at different speeds and produce a
+    /// finishing order worth reading.
+    ///
+    /// What this cannot say is whether the pad is also still driving that car.
+    /// The port already knows the pad follows entrant zero whatever the entrant
+    /// is marked as, so both may steer at once - which for an unattended test
+    /// is harmless, since nobody is holding the pad.
+    /// </summary>
+    static readonly string AiAsked =
+        Environment.GetEnvironmentVariable("GT2_AI_DRIVES") ?? "";
+
+    static bool AiDrives => AiAsked.Length > 0;
+
+    static byte AiSkillWanted =>
+        byte.TryParse(AiAsked, out byte skill) ? skill : DefaultAiSkill;
+
+    const byte DefaultAiSkill = 100;
+
+    /// <summary>
     /// The letter a player's chosen paint is called, or null when the car
     /// database cannot say - in which case the entrant keeps whatever the
     /// arcade left there, which is a paint the car really has.
@@ -162,9 +194,11 @@ public static class RaceGrid
             // on the track.
             WriteText(m, entrant + CarName, cars?.DisplayName(player.Car) ?? player.Car, CarNameRoom);
 
-            bool human = i == 0;
+            // Entrant 0 is this machine's own, and the only one a person
+            // drives - unless the game has been asked to drive it too.
+            bool human = i == 0 && !AiDrives;
             m.WriteU8(entrant + IsAi, (byte)(human ? 0 : 1));
-            m.WriteU8(entrant + AiSkill, (byte)(human ? 0 : 100));
+            m.WriteU8(entrant + AiSkill, human ? (byte)0 : AiSkillWanted);
 
             // The place comes from the room, not from the entrant slot. Slots
             // are rotated so each machine drives its own car, but the room's
@@ -232,6 +266,7 @@ public static class RaceGrid
 
         Console.Error.WriteLine(
             $"[grid] {drivers.Count} driver(s), led by {leader}"
+            + (AiDrives ? $", driven by the game at skill {AiSkillWanted}" : "")
             + $", leftovers {(PlaceTheLeftovers ? "renumbered" : "left alone")}:" + said);
     }
 
