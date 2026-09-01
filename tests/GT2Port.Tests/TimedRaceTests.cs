@@ -61,6 +61,39 @@ public class TimedRaceTests
     }
 
     /// <summary>
+    /// A room opens with the race the create screen chose. This is the one that
+    /// would have caught the bug it was written after: Host took a length and
+    /// quietly ignored it, so every room came out as the two-lap default and a
+    /// race asked for by the clock started by laps.
+    /// </summary>
+    [Fact]
+    public void A_room_opens_with_the_race_it_was_created_for()
+    {
+        var byTheClock = new Session("ian", () => DateTime.UtcNow);
+        byTheClock.Host("timed", "seattle_short", "special", 6, laps: 2, minutes: 15);
+
+        Assert.Equal(15, byTheClock.Current!.Minutes);
+        Assert.True(byTheClock.Current!.ByTheClock);
+
+        var byLaps = new Session("ian", () => DateTime.UtcNow);
+        byLaps.Host("lapped", "seattle_short", "special", 6, laps: 7);
+
+        Assert.Equal(7, byLaps.Current!.Laps);
+        Assert.False(byLaps.Current!.ByTheClock);
+    }
+
+    /// <summary>And what it is created with is clamped, like everything else.</summary>
+    [Fact]
+    public void A_room_cannot_be_created_with_a_length_nobody_may_choose()
+    {
+        var session = new Session("ian", () => DateTime.UtcNow);
+        session.Host("silly", "seattle_short", "special", 6, laps: 0, minutes: 600);
+
+        Assert.Equal(RaceLaps.Fewest, session.Current!.Laps);
+        Assert.Equal(TimedRace.Longest, session.Current!.Minutes);
+    }
+
+    /// <summary>
     /// And the shortest race the host may ask for is one minute, which exists
     /// so the ending can be watched without waiting five for it.
     /// </summary>

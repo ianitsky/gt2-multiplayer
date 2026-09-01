@@ -126,8 +126,14 @@ public sealed class Session
                      int maxPlayers = RoomState.MaxPlayers,
                      int laps = RaceLaps.AsBuilt, int minutes = TimedRace.ByLaps)
     {
-        Current = new Room(Guid.NewGuid(), roomName, track, carGroup, Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
-            [new Player(_playerName, "", false)]);
+        // Clamped here as everywhere else, because the same two numbers reach
+        // this from a slider, from a socket and from a test.
+        Current = new Room(
+            Guid.NewGuid(), roomName, track, carGroup,
+            Math.Clamp(maxPlayers, 2, RoomState.MaxPlayers),
+            [new Player(_playerName, "", false)],
+            (byte)RaceLaps.Sensible(laps),
+            minutes <= 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes));
         Phase = SessionPhase.Hosting;
         StatusMessage = null;
         _lastHeard.Clear();
