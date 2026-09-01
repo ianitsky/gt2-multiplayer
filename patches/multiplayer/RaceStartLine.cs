@@ -139,6 +139,9 @@ public static class RaceStartLine
         // And every frame because a clock runs out between two of them.
         TimedRace.Tick(m);
 
+        // And every frame because a button is held between two of them.
+        PadWatch.Tick(m);
+
 
         if (WatchReadsAt >= 0 && _frames == WatchReadsAt)
         {

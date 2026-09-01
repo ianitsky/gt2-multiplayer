@@ -57,6 +57,47 @@ public static class PadWatch
             + $" (callback 0x{c.A2:X8})");
     }
 
+    /// <summary>
+    /// Whether to report the buttons themselves, as they change.
+    ///
+    /// Wanted for the last of the visible effects. A remote car's wheels turn
+    /// now and its body leans, because both are written from the wire - but
+    /// nothing tells it that its driver is braking, so if the game lights a
+    /// car's brake lights from a flag rather than from its deceleration, a
+    /// remote car never shows them.
+    ///
+    /// Sending the bit is easy once it is known which bit it is, and the
+    /// decoder's own account says the sixteen button bits live in the raw
+    /// buffer this reads. So this prints the word whenever it changes, and one
+    /// run with a few deliberate stabs at the brake names the bit.
+    ///
+    /// Off unless GT2_PAD_BITS is set.
+    /// </summary>
+    static readonly bool ShowingBits =
+        Environment.GetEnvironmentVariable("GT2_PAD_BITS") is not (null or "");
+
+    /// <summary>Where the sixteen button bits sit in a raw buffer.</summary>
+    const uint ButtonsIn = 0x02u;
+
+    static int _wasPressed = -1;
+
+    /// <summary>
+    /// Called once a frame. Says what the first pad is holding, whenever that
+    /// changes - which for a driver is a handful of lines a lap rather than one
+    /// a frame.
+    /// </summary>
+    public static void Tick(IMemory m)
+    {
+        if (!ShowingBits) return;
+
+        int now = m.ReadU16(FirstRawBuffer + ButtonsIn);
+        if (now == _wasPressed) return;
+        _wasPressed = now;
+
+        Console.Error.WriteLine(
+            $"[pad] pad 0 holds 0x{now:X4}  {Convert.ToString(now, 2).PadLeft(16, '0')}");
+    }
+
     /// <summary>How often to report a decode, per pad.</summary>
     const int Every = 120;
 
