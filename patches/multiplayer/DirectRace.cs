@@ -76,11 +76,22 @@ public static class DirectRace
     static readonly TimeSpan CarPatience = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Off unless GT2_DIRECT_LAUNCH is set. It is still untried against a path
-    /// that works.
+    /// Whether a room's race is launched rather than walked to through the
+    /// arcade's menus. On, and it has to be: it is what a race started from the
+    /// lobby *is*.
+    ///
+    /// It was off by default while it was new and unproven, which was right
+    /// then and became a trap. A build run without the switch pressed Start,
+    /// agreed a race with everybody, printed a line saying it was not going to
+    /// launch it, and let the game walk into Simulation - so the first person
+    /// to run the .exe without a shell full of environment variables watched
+    /// the race never begin.
+    ///
+    /// GT2_USE_THE_MENUS turns it off, for looking at what the arcade does on
+    /// its own.
     /// </summary>
     public static bool Enabled { get; } =
-        Environment.GetEnvironmentVariable("GT2_DIRECT_LAUNCH") is not (null or "");
+        Environment.GetEnvironmentVariable("GT2_USE_THE_MENUS") is (null or "");
 
     /// <summary>Whether this ended the arcade's first screen rather than the player.</summary>
     public static bool EndedTheScreen { get; private set; }
@@ -159,7 +170,8 @@ public static class DirectRace
     {
         if (!Enabled)
         {
-            Console.Error.WriteLine("[direct] a race is ready but GT2_DIRECT_LAUNCH is not set - using the menus");
+            Console.Error.WriteLine(
+                "[direct] a race is ready but GT2_USE_THE_MENUS is set - the arcade keeps it");
             return;
         }
 

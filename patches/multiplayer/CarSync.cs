@@ -27,12 +27,14 @@ namespace GT2Port.Multiplayer;
 /// already agree on. A viewer is built around the driver it is watching, and
 /// so applies every seat rather than every seat but one.
 ///
-/// Off unless GT2_CAR_SYNC is set.
+/// On by default, because a multiplayer race without it is several people
+/// driving alone on the same track. GT2_LONE_CARS turns it off, which is what
+/// tells apart a fault in the sync from a fault under it.
 /// </summary>
 public static class CarSync
 {
     public static bool Enabled { get; } =
-        Environment.GetEnvironmentVariable("GT2_CAR_SYNC") is not (null or "");
+        Environment.GetEnvironmentVariable("GT2_LONE_CARS") is (null or "");
 
     static int _sent;
     static int _applied;
