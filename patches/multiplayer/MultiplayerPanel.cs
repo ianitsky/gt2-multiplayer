@@ -39,6 +39,13 @@ public sealed class MultiplayerPanel : IPanel
 
     /// <summary>Whether the room being made runs a qualifying session first.</summary>
     bool _qualifying;
+
+    /// <summary>What the room list's "join by address" rows hold.</summary>
+    string _address = "";
+    string _addressSecret = "";
+
+    /// <summary>And what the create screen's secret field holds.</summary>
+    string _secret = "";
     bool _creating;
 
     // Set when the Create screen is (re)entered, so the grid scrolls the
@@ -253,6 +260,25 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.PopID();
         }
 
+        // A room nobody announced can only be reached by being told where it
+        // is - which is every room that is not on this network.
+        ImGui.Separator();
+        ImGui.TextUnformatted("Or join by address");
+
+        ImGui.InputText("Address", ref _address, 64);
+        ImGui.InputText("Secret", ref _addressSecret, 64);
+
+        ImGui.BeginDisabled(_address.Trim().Length == 0);
+        if (ImGui.Button("Join by address")) _session.Knock(_address, _addressSecret);
+        ImGui.EndDisabled();
+
+        if (_session.Phase == SessionPhase.Knocking)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Stop")) _session.Leave();
+            ImGui.TextDisabled($"Knocking at {_session.KnockingAt}...");
+        }
+
         ImGui.Separator();
         if (ImGui.Button("Create a room"))
         {
@@ -278,11 +304,14 @@ public sealed class MultiplayerPanel : IPanel
         // race straight away, which is what every room did before this existed.
         ImGui.Checkbox($"Qualifying first ({Qualifying.Laps} laps)", ref _qualifying);
 
+        ImGui.InputText("Secret", ref _secret, 64);
+        ImGui.TextDisabled("Empty lets anybody in. A room reachable from the internet wants one.");
+
         ImGui.BeginDisabled(string.IsNullOrWhiteSpace(_roomName));
         if (ImGui.Button("Create"))
         {
             _session.Host(_roomName, _track, _carGroup, _maxPlayers,
-                          _laps, _byTheClock ? _minutes : TimedRace.ByLaps, _qualifying);
+                          _laps, _byTheClock ? _minutes : TimedRace.ByLaps, _qualifying, _secret);
             _discovery.LocalRoomId = _session.Current!.Id;
             _creating = false;
         }
@@ -458,6 +487,11 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.TextDisabled(
             $"{room.Name}   {CourseTable.DisplayName(room.Track)}"
             + $"   {(room.QualifyingNext ? $"{Qualifying.Laps} laps" : HowLong(room))}");
+
+        // The host is the only machine that can be joined at an address, and
+        // the only one that cannot look its own up.
+        if (_session.Phase == SessionPhase.Hosting)
+            ImGui.TextDisabled($"Others join at your address, port {ModeHook.SessionPortNumber}");
 
         DrawTheLastRace();
 

@@ -38,6 +38,13 @@ public static class ModeHook
     const int DiscoveryPort = 34718;
     const int SessionPort = 34719;
 
+    /// <summary>
+    /// The port a client reaches this host on, for the lobby to tell the host
+    /// what to hand out. A room on a local network is found without anybody
+    /// knowing this; a room on the internet is not found at all without it.
+    /// </summary>
+    public static int SessionPortNumber => SessionPort;
+
     static Session? _session;
     static LanDiscovery? _discovery;
     static LanSession? _lanSession;
