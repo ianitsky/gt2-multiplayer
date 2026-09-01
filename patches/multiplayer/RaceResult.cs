@@ -47,11 +47,24 @@ public static class RaceResult
     public const uint Laps = 0x634u;
 
     /// <summary>
-    /// The three addresses that held the race time, most believable first.
-    /// Reported together until one of them is shown to track the screen across
-    /// races - at which point the other two go, and this becomes one address.
+    /// The race time, in milliseconds.
+    ///
+    /// Chosen from the three addresses that held it rather than proven to be
+    /// it - see the account above. GT2_RACE_TIME_AT moves it, so if a race
+    /// shows one of the others tracking the screen instead, saying so costs a
+    /// run rather than a build.
     /// </summary>
-    static readonly uint[] Candidates = [0x801D5F80u, 0x8005AC80u, 0x801B75D4u];
+    public static readonly uint Milliseconds =
+        uint.TryParse(Environment.GetEnvironmentVariable("GT2_RACE_TIME_AT"),
+                      System.Globalization.NumberStyles.HexNumber, null, out uint at)
+            ? at : 0x801D5F80u;
+
+    /// <summary>
+    /// The other two, kept and printed beside it. They cost one line a race and
+    /// they are what would name the right one the moment this one is seen to
+    /// disagree with the screen.
+    /// </summary>
+    static readonly uint[] AlsoHeldIt = [0x8005AC80u, 0x801B75D4u];
 
     /// <summary>What this machine's driver did, as the game recorded it.</summary>
     public readonly record struct Finish(int Laps, int Milliseconds)
@@ -73,7 +86,7 @@ public static class RaceResult
         int laps = (short)m.ReadU16(
             RemoteCars.FirstCarObject + (uint)(slot * RemoteCars.CarStride) + Laps);
 
-        return new Finish(laps, (int)m.ReadU32(Candidates[0]));
+        return new Finish(laps, (int)m.ReadU32(Milliseconds));
     }
 
     /// <summary>
@@ -88,12 +101,11 @@ public static class RaceResult
         var finish = Read(m, slot);
         Console.Error.WriteLine(
             $"[result] car {slot} finished {finish.Laps} lap(s) in {finish.Clock}"
-            + " - the candidates read "
-            + string.Join("  ", Candidates.Select(a =>
-                $"0x{a:X8}={Milliseconds(m, a)}")));
+            + " - the two that also held it read "
+            + string.Join("  ", AlsoHeldIt.Select(a => $"0x{a:X8}={AsATime(m, a)}")));
     }
 
-    static string Milliseconds(IMemory m, uint at)
+    static string AsATime(IMemory m, uint at)
     {
         int ms = (int)m.ReadU32(at);
         return ms <= 0 || ms > 60 * 60 * 1000

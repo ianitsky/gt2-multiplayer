@@ -105,6 +105,9 @@ public sealed class Session
 
     public void Leave()
     {
+        // The standings belong to the room that ran the race. Carrying them out
+        // would show the next room a race none of its players were in.
+        RaceStandings.Forget();
         Current = null;
         Phase = SessionPhase.Browsing;
         StatusMessage = null;

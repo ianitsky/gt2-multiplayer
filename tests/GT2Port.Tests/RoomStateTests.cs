@@ -51,8 +51,7 @@ public class RoomStateTests
         var one = RoomState.Serialise(Sample() with { Laps = 1 });
         var two = RoomState.Serialise(Sample() with { Laps = 2 });
 
-        var differ = Enumerable.Range(0, one.Length).Where(i => one[i] != two[i]).ToList();
-        int at = Assert.Single(differ);
+        int at = Assert.Single(Enumerable.Range(0, one.Length), i => one[i] != two[i]);
 
         one[at] = 0;
         Assert.True(RoomState.TryDeserialise(one, out var back));
@@ -138,7 +137,7 @@ public class RoomStateTests
         // between the limit and the player count.
         var five = RoomState.Serialise(room with { MaxPlayers = 5 });
         int maxPlayersByteIndex = Assert.Single(
-            Enumerable.Range(0, data.Count).Where(i => data[i] != five[i]));
+            Enumerable.Range(0, data.Count), i => data[i] != five[i]);
 
         // Positive precondition: the untouched packet round-trips, so the
         // rejection below is the forged byte's doing, not a broken parser

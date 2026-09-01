@@ -629,6 +629,39 @@ be run for any reason names the real one: a two-lap race that took 2:21.456 says
 Lap times were looked for too, as a corroboration, and are not stored as
 adjacent millisecond words: no pair or triple anywhere in RAM sums to the total.
 
+`0x801D5F80` is taken as the time, on the argument above rather than on proof.
+`GT2_RACE_TIME_AT` moves it, so if a race shows one of the other two tracking
+the screen instead, saying so costs a run rather than a build.
+
+### Everyone times their own race
+
+Nobody can time anybody else's. Every other car on a screen was teleported there
+frame by frame, so when it appeared to cross the line is a fact about the network
+rather than about the race - which makes each driver's own machine the only one
+that raced them.
+
+So each machine reads its own driver's laps and time at the moment the race
+overlay is replaced, and reports them keyed by the room's seat, under a wire
+code of their own. Told repeatedly, because one lost datagram would leave a
+driver with no result at all, and the *first* report from a seat wins - the
+opposite of a place, which is a snapshot where only the latest is worth having.
+A result is final the moment it is sent.
+
+### The order, and who is not in it
+
+Most laps first, then least time. Laps have to come first: a car a lap down can
+be quicker over the distance it covered, and sorting on time alone would put it
+ahead of the car that beat it. It is also the rule a timed race will need.
+
+A driver nobody heard from goes last, keeping the room's order among their own
+kind, and is shown with no time rather than a guessed one.
+
+The standings are not part of the room and the host does not publish them: every
+machine works out the same list from the same reports. They are shown in the
+lobby itself, above the room about to run another race, because the lobby is
+where a race ends now - a results screen the player had to dismiss would be a
+door in the way of the thing they came back for. Leaving the room forgets them.
+
 ## 9. A race by laps or by time
 
 The host picks which. A timed race runs from five minutes to three hours, chosen

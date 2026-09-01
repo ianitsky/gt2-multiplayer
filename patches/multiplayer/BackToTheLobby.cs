@@ -115,6 +115,11 @@ public static class BackToTheLobby
             return;
         }
 
+        // Before the state is forgotten and before the lobby reopens: what the
+        // race ended as is read out of the race's own memory, which the next
+        // overlay is about to land on top of.
+        if (m is not null) ModeHook.GatherTheResults(m);
+
         ForgetTheRaceJustRun();
         ModeHook.ReturnToTheLobby();
     }

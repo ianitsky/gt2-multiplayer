@@ -487,6 +487,18 @@ public sealed class LanSession : IDisposable
     const byte Place = 3;
 
     /// <summary>
+    /// How one player's race ended, as only their own machine can say.
+    ///
+    /// Every machine teleports every other car here every frame, so this
+    /// machine's idea of when somebody else crossed the line is a fact about
+    /// the network. A driver's own machine is the only one that raced them.
+    /// </summary>
+    const byte Result = 5;
+
+    /// <summary>The magic, the kind, whose it is, their laps, their time.</summary>
+    const int ResultBytes = 3 + 1 + 4;
+
+    /// <summary>
     /// How wide a place message is: the magic, the kind, whose it is, three
     /// coordinates as words, and three angles as shorts.
     ///
@@ -522,6 +534,66 @@ public sealed class LanSession : IDisposable
     readonly Dictionary<byte, RemoteCars.Pose> _places = [];
 
     public IReadOnlyDictionary<byte, RemoteCars.Pose> Places => _places;
+
+    /// <summary>What each seat's own machine said their race ended as.</summary>
+    readonly Dictionary<byte, RaceResult.Finish> _results = [];
+
+    public IReadOnlyDictionary<byte, RaceResult.Finish> Results => _results;
+
+    /// <summary>Tells everyone how this machine's driver got on.</summary>
+    public void SendResult(byte seat, RaceResult.Finish finish, IPAddress? host = null)
+    {
+        if (_disposed) return;
+
+        var data = new byte[ResultBytes];
+        data[0] = StartMagic;
+        data[1] = Result;
+        data[2] = seat;
+        data[3] = (byte)Math.Clamp(finish.Laps, 0, 255);
+        BitConverter.TryWriteBytes(data.AsSpan(4), finish.Milliseconds);
+
+        _results[seat] = finish;
+
+        if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
+        foreach (var player in _known.Union(_atTheLine)) Send(data, player);
+    }
+
+    /// <summary>
+    /// Drains the socket for results, keeping the first from each seat.
+    ///
+    /// The first rather than the latest, which is the opposite of a place: a
+    /// place is a snapshot and an old one is worthless, while a result is final
+    /// the moment it is sent and is repeated only in case a datagram was lost.
+    /// </summary>
+    public void CollectResults()
+    {
+        if (_disposed) return;
+
+        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        {
+            IPEndPoint? from = null;
+            byte[] data;
+            try
+            {
+                data = _socket.Receive(ref from);
+            }
+            catch (SocketException)
+            {
+                return;
+            }
+
+            if (data.Length < ResultBytes || data[0] != StartMagic || data[1] != Result) continue;
+
+            Relay(data, from);
+
+            byte seat = data[2];
+            if (_results.ContainsKey(seat)) continue;
+            _results[seat] = new RaceResult.Finish(data[3], BitConverter.ToInt32(data, 4));
+        }
+    }
+
+    /// <summary>Forgets the last race's results, so the next race collects its own.</summary>
+    public void ForgetTheResults() => _results.Clear();
 
     /// <summary>Tells everyone where this machine's car is and which way it faces.</summary>
     public void SendPlace(byte seat, RemoteCars.Pose pose, IPAddress? host = null)

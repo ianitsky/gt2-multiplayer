@@ -435,6 +435,8 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.TextUnformatted($"{room.Name}   {CourseTable.DisplayName(room.Track)}");
 
+        DrawTheLastRace();
+
         // The host's to choose and everyone else's to read: the number travels
         // with the room, so a client showing a slider would be offering a
         // choice the next room update would take back.
@@ -512,6 +514,32 @@ public sealed class MultiplayerPanel : IPanel
 
         ImGui.SameLine();
         if (ImGui.Button("Leave")) LeaveRoom();
+    }
+
+    /// <summary>
+    /// The race just run, above the room that is about to run another.
+    ///
+    /// Shown here rather than on a screen of its own because the lobby is where
+    /// a race ends now - the return from a race reopens this panel - and a
+    /// results screen the player had to dismiss would be a door in the way of
+    /// the thing they came back for.
+    /// </summary>
+    void DrawTheLastRace()
+    {
+        var standings = RaceStandings.OfTheLastRace;
+        if (standings.Count == 0) return;
+
+        ImGui.Separator();
+        ImGui.TextDisabled("Last race");
+
+        foreach (var driver in standings)
+        {
+            string laps = driver.Laps == 1 ? "1 lap" : $"{driver.Laps} laps";
+            ImGui.TextUnformatted(
+                $"{driver.Place}.  {driver.Name}   {_carCatalogue.DisplayName(driver.Car)}"
+                + $"   {laps}   {driver.Clock}"
+                + (driver.Reported ? "" : "   (no report)"));
+        }
     }
 
     // However little room is left, the list keeps at least this many rows

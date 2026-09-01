@@ -559,6 +559,68 @@ public static class ModeHook
         }
     }
 
+    /// <summary>How long to wait for everyone's result before showing what arrived.</summary>
+    static readonly TimeSpan ResultPatience = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// Collects what every machine says its own driver's race ended as, and
+    /// puts the room in the order they finished.
+    ///
+    /// Each machine times its own race and nobody else's. That is not a design
+    /// choice so much as the only honest arrangement available: every other car
+    /// on this screen was teleported here frame by frame, so when it appeared
+    /// to cross the line is a fact about the network rather than about the race.
+    ///
+    /// Told repeatedly for the same reason the lobby's own messages are - one
+    /// lost datagram would leave a driver with no result at all - and the first
+    /// report from a seat wins, since a result is final the moment it is sent.
+    ///
+    /// Called at the moment the race overlay is replaced, which is the last
+    /// instant the race's own memory is still standing.
+    /// </summary>
+    public static void GatherTheResults(RecompOne.Runtime.Memory.IMemory m)
+    {
+        if (_session?.Current is not { } room) return;
+
+        var drivers = Seats.Drivers(room.Players);
+        int seat = Seats.Of(room.Players, _session.PlayerName);
+
+        // Slot 0 is the car this machine drove - every machine rotates its own
+        // player there - so that is the car whose race it can report. A viewer
+        // drove nobody and has nothing to say.
+        var mine = seat >= 0 ? RaceResult.Read(m, 0) : default;
+
+        if (_lanSession is null || drivers.Count < 2)
+        {
+            if (seat >= 0)
+                RaceStandings.Show(RaceStandings.From(drivers,
+                    new Dictionary<byte, RaceResult.Finish> { [(byte)seat] = mine }));
+            return;
+        }
+
+        _lanSession.ForgetTheResults();
+
+        var until = DateTime.UtcNow + ResultPatience;
+        while (DateTime.UtcNow < until)
+        {
+            RecompOne.Runtime.Runtime.PumpHost();
+
+            if (seat >= 0) _lanSession.SendResult((byte)seat, mine, HostToAnswer);
+            _lanSession.CollectResults();
+
+            if (_lanSession.Results.Count >= drivers.Count) break;
+            Thread.Sleep(50);
+        }
+
+        var standings = RaceStandings.From(drivers, _lanSession.Results);
+        RaceStandings.Show(standings);
+
+        Console.Error.WriteLine(
+            $"[result] {_lanSession.Results.Count} of {drivers.Count} driver(s) reported:"
+            + string.Concat(standings.Select(x =>
+                $"{Environment.NewLine}[result]   {x.Place}. {x.Name}  {x.Laps} lap(s)  {x.Clock}")));
+    }
+
     /// <summary>
     /// Whether there is a room to come back to once a race is over.
     ///
