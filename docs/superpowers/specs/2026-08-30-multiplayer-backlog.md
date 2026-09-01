@@ -633,6 +633,28 @@ adjacent millisecond words: no pair or triple anywhere in RAM sums to the total.
 `GT2_RACE_TIME_AT` moves it, so if a race shows one of the other two tracking
 the screen instead, saying so costs a run rather than a build.
 
+### What the end-of-race snapshot settled
+
+The two-megabyte snapshot was taken to find the race time, and answered three
+more questions at no cost - the last of them without running the game again.
+
+- **The lap counter is cleared by the teardown.** All six cars read 0 at the
+  moment the overlay is replaced, so a race that had plainly been driven
+  reported "0 laps". It is watched every frame now, highest reading winning,
+  since the last frame before the end may already be the one that cleared it.
+  It counts laps *completed*: the field-watching runs show its value equal to
+  the number of times it changed, from zero.
+- **`+0x0F` really is the lap count.** The record read 1 for a race the room
+  had set to one lap - a second, independent confirmation of what the HUD probe
+  named.
+- **`+0x8D` does not become the finishing order.** The entrants still read the
+  grid this port wrote plus the numbers the arcade left in the spare ones. It is
+  the starting place and stays the starting place, so the order a race finished
+  in has to come from comparing laps and times, which is what this does.
+
+`+0x630` is per-car and belongs to the race: it held the same large value for
+the two cars that raced and zero for the four that did not.
+
 ### Everyone times their own race
 
 Nobody can time anybody else's. Every other car on a screen was teleported there

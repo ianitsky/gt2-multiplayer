@@ -80,10 +80,16 @@ public static class RaceResult
     ///
     /// Watched during the race rather than read at the end of it, because at
     /// the end it reads zero: a race that had plainly been driven reported
-    /// "0 laps" beside a race time that was exactly right. Whatever tears a
-    /// race down clears the counter before the overlay is replaced, and the
-    /// overlay being replaced is the only moment this port hears that a race
-    /// is over.
+    /// "0 laps" beside a race time that was exactly right. The end-of-race
+    /// snapshot settles why - every one of the six cars reads 0 there, so it is
+    /// the teardown that clears the counter, not this port reading the wrong
+    /// car. And the overlay being replaced is the only moment this port hears
+    /// that a race is over, which is already too late.
+    ///
+    /// It counts laps completed rather than the lap in progress. The
+    /// field-watching runs show why: the value equals the number of times it
+    /// changed, from zero - 1 after one crossing, 2 after two - so nothing has
+    /// to be subtracted from it.
     ///
     /// The highest seen rather than the last seen, for the same reason: the
     /// last frame before the end may already be the one that cleared it.
