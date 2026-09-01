@@ -706,6 +706,64 @@ public class LanSessionTests
     }
 
     /// <summary>
+    /// A result is final the moment it is sent, and is repeated only in case a
+    /// datagram was lost - so the first report from a seat wins. Taking the
+    /// latest instead would let a machine that has already gone back to the
+    /// arcade overwrite a real result with whatever its memory then held.
+    /// </summary>
+    [Fact]
+    public void The_first_result_from_a_seat_is_the_one_that_stands()
+    {
+        const int hostPort = BasePort + 26;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var client = LanSession.ForClient(hostPort, () => _now);
+
+        var at = IPAddress.Loopback;
+        client.SendResult(2, new RaceResult.Finish(3, 141456), at);
+        WaitForDelivery(host);
+        host.CollectResults();
+
+        client.SendResult(2, new RaceResult.Finish(0, 7), at);
+        WaitForDelivery(host);
+        host.CollectResults();
+
+        Assert.Equal(new RaceResult.Finish(3, 141456), host.Results[2]);
+    }
+
+    /// <summary>
+    /// And the host passes one on, for the same reason it passes a place on: a
+    /// client's socket knows only the host's address, so without the relay two
+    /// clients never hear each other and each shows a table with a hole in it.
+    /// </summary>
+    [Fact]
+    public void A_host_passes_a_result_on_to_the_other_clients()
+    {
+        const int hostPort = BasePort + 27;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var first = LanSession.ForClient(hostPort, () => _now);
+        using var second = new UdpClient(0);
+
+        var secondAt = (IPEndPoint)second.Client.LocalEndPoint!;
+        host.KnowsAbout(new IPEndPoint(IPAddress.Loopback, secondAt.Port));
+
+        first.SendResult(1, new RaceResult.Finish(2, 139002), IPAddress.Loopback);
+        WaitForDelivery(host);
+        host.CollectResults();
+
+        Assert.Equal(new RaceResult.Finish(2, 139002), host.Results[1]);
+
+        second.Client.ReceiveTimeout = 1000;
+        IPEndPoint? from = null;
+        var got = second.Receive(ref from);
+
+        Assert.Equal(0xA5, got[0]);
+        Assert.Equal(5, got[1]);
+        Assert.Equal(1, got[2]);
+        Assert.Equal(2, got[3]);
+        Assert.Equal(139002, BitConverter.ToInt32(got, 4));
+    }
+
+    /// <summary>
     /// And not back to whoever sent it. A car does not need to be told where it
     /// is, and a room of six would otherwise spend a sixth of its traffic
     /// saying so.

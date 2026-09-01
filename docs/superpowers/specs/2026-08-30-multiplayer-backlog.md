@@ -642,10 +642,27 @@ that raced them.
 
 So each machine reads its own driver's laps and time at the moment the race
 overlay is replaced, and reports them keyed by the room's seat, under a wire
-code of their own. Told repeatedly, because one lost datagram would leave a
-driver with no result at all, and the *first* report from a seat wins - the
-opposite of a place, which is a snapshot where only the latest is worth having.
-A result is final the moment it is sent.
+code of their own. The *first* report from a seat wins - the opposite of a
+place, which is a snapshot where only the latest is worth having. A result is
+final the moment it is sent, and is repeated only in case a datagram was lost.
+
+### Machines are not together in time
+
+The first attempt collected for three seconds at the end of a race, and
+recorded nothing but the machine's own result. Two screens from the same race
+read **1:35.970** and **3:43.780**: the windows did not overlap at all, and
+while a machine is still racing it is not listening for results anyway.
+
+So the exchange lives in the lobby loop instead. A machine that is back keeps
+saying how its race went, every quarter second for five minutes or until every
+driver has reported, and keeps listening while the next race is being arranged.
+Nobody has to arrive anywhere at the same moment.
+
+One more thing had to change for that to work at all. The lobby's own two
+receive loops drain the same socket and discard whatever they do not recognise,
+so a result that arrived on their turn rather than on the collector's was simply
+eaten - and which turn it lands on is a coin toss sixty times a second. All
+three loops now keep a result.
 
 ### The order, and who is not in it
 

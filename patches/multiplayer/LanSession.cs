@@ -398,6 +398,8 @@ public sealed class LanSession : IDisposable
                 return;
             }
 
+            if (KeptAResult(data, from)) continue;
+
             if (!TryDeserialise(data, out var intent)) continue;
             if (intent.RoomId != room.Id) continue;
 
@@ -442,6 +444,8 @@ public sealed class LanSession : IDisposable
                 HostSaidLeaveTheLobby = true;
                 continue;
             }
+
+            if (KeptAResult(data, from)) continue;
 
             if (!RoomState.TryDeserialise(data, out var room)) continue;
             session.OnRemoteState(room);
@@ -582,18 +586,34 @@ public sealed class LanSession : IDisposable
                 return;
             }
 
-            if (data.Length < ResultBytes || data[0] != StartMagic || data[1] != Result) continue;
-
-            Relay(data, from);
-
-            byte seat = data[2];
-            if (_results.ContainsKey(seat)) continue;
-            _results[seat] = new RaceResult.Finish(data[3], BitConverter.ToInt32(data, 4));
+            KeptAResult(data, from);
         }
     }
 
     /// <summary>Forgets the last race's results, so the next race collects its own.</summary>
     public void ForgetTheResults() => _results.Clear();
+
+    /// <summary>
+    /// Takes a result out of a datagram that was being read for something else.
+    ///
+    /// The lobby's own two loops drain this same socket and discard whatever
+    /// they do not recognise, so without this a result that arrived on their
+    /// turn rather than on CollectResults' turn was simply eaten - and which
+    /// turn it lands on is a coin toss sixty times a second. Returns whether
+    /// the datagram was a result, so the caller can stop looking at it.
+    /// </summary>
+    bool KeptAResult(byte[] data, IPEndPoint? from)
+    {
+        if (data.Length < ResultBytes || data[0] != StartMagic || data[1] != Result) return false;
+
+        Relay(data, from);
+
+        byte seat = data[2];
+        if (!_results.ContainsKey(seat))
+            _results[seat] = new RaceResult.Finish(data[3], BitConverter.ToInt32(data, 4));
+
+        return true;
+    }
 
     /// <summary>Tells everyone where this machine's car is and which way it faces.</summary>
     public void SendPlace(byte seat, RemoteCars.Pose pose, IPAddress? host = null)

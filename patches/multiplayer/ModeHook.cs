@@ -430,6 +430,11 @@ public static class ModeHook
                 _discovery!.Tick();
                 _session!.Tick();
 
+                // The race just run is still being settled while the next one
+                // is being arranged - see KeepSayingHowItWent for why the two
+                // overlap.
+                KeepSayingHowItWent();
+
                 switch (DecideSocketAction(_lanSessionRole, _session.Phase))
                 {
                     case SocketAction.RebuildAsHost:
@@ -519,6 +524,9 @@ public static class ModeHook
 
             _panel.IsOpen = false;
 
+            // A race is starting, so the last one is over being talked about.
+            if (started) StopSayingHowItWent();
+
             // Told repeatedly: the players are about to leave the lobby, and a
             // single lost datagram would strand one of them in it.
             if (started && _session!.Phase == SessionPhase.Hosting)
@@ -559,66 +567,116 @@ public static class ModeHook
         }
     }
 
-    /// <summary>How long to wait for everyone's result before showing what arrived.</summary>
-    static readonly TimeSpan ResultPatience = TimeSpan.FromSeconds(3);
+    /// <summary>
+    /// How long after a race to keep saying how it went, and keep listening.
+    ///
+    /// Long, and it has to be. Two machines do not finish a race at the same
+    /// moment - one screen read 1:35.970 while the other read 3:43.780 - and
+    /// while a machine is still racing it is not listening for results at all.
+    /// A window that opened at the end of one machine's race and closed three
+    /// seconds later had no overlap with the other machine's whatsoever, so the
+    /// host recorded only itself and the client only itself.
+    /// </summary>
+    static readonly TimeSpan ResultPatience = TimeSpan.FromMinutes(5);
+
+    /// <summary>How often to repeat it, which is often enough to survive losses.</summary>
+    static readonly TimeSpan ResultEvery = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>What this machine's driver did, while it is still worth saying.</summary>
+    static RaceResult.Finish _myResult;
+    static int _mySeat = -1;
+    static DateTime _stopSaying;
+    static DateTime _lastSaid;
+    static int _reportsShown;
 
     /// <summary>
-    /// Collects what every machine says its own driver's race ended as, and
-    /// puts the room in the order they finished.
+    /// Reads what this machine's own race ended as, says so, and leaves the
+    /// lobby to go on saying it.
     ///
     /// Each machine times its own race and nobody else's. That is not a design
     /// choice so much as the only honest arrangement available: every other car
     /// on this screen was teleported here frame by frame, so when it appeared
     /// to cross the line is a fact about the network rather than about the race.
     ///
-    /// Told repeatedly for the same reason the lobby's own messages are - one
-    /// lost datagram would leave a driver with no result at all - and the first
-    /// report from a seat wins, since a result is final the moment it is sent.
-    ///
     /// Called at the moment the race overlay is replaced, which is the last
-    /// instant the race's own memory is still standing.
+    /// instant the race's own memory is still standing - and the last moment
+    /// this can be read at all.
     /// </summary>
     public static void GatherTheResults(RecompOne.Runtime.Memory.IMemory m)
     {
         if (_session?.Current is not { } room) return;
 
         var drivers = Seats.Drivers(room.Players);
-        int seat = Seats.Of(room.Players, _session.PlayerName);
+        _mySeat = Seats.Of(room.Players, _session.PlayerName);
 
         // Slot 0 is the car this machine drove - every machine rotates its own
         // player there - so that is the car whose race it can report. A viewer
-        // drove nobody and has nothing to say.
-        var mine = seat >= 0 ? RaceResult.Read(m, 0) : default;
+        // drove nobody and has nothing to say, but still has everything to hear.
+        _myResult = _mySeat >= 0 ? RaceResult.Read(m, 0) : default;
+        _stopSaying = DateTime.UtcNow + ResultPatience;
+        _lastSaid = DateTime.MinValue;
+        _reportsShown = 0;
 
-        if (_lanSession is null || drivers.Count < 2)
+        _lanSession?.ForgetTheResults();
+        if (_mySeat >= 0 && _lanSession is null)
+            RaceStandings.Show(RaceStandings.From(drivers,
+                new Dictionary<byte, RaceResult.Finish> { [(byte)_mySeat] = _myResult }));
+
+        Console.Error.WriteLine(
+            $"[result] this machine finished {_myResult.Laps} lap(s) in {_myResult.Clock}"
+            + $" - saying so for the next {ResultPatience.TotalMinutes:F0} minute(s)");
+    }
+
+    /// <summary>
+    /// Says how this machine's race went, and listens for everyone else's, from
+    /// inside the lobby loop.
+    ///
+    /// Here rather than in a wait at the end of a race because the machines are
+    /// not together in time: the first one back sits in the lobby while the
+    /// last is still on its final lap, and a result sent to a machine that is
+    /// racing is a result nobody hears. Repeating it until every driver has
+    /// reported costs a datagram every quarter second and needs nobody to
+    /// arrive anywhere at the same moment.
+    /// </summary>
+    static void KeepSayingHowItWent()
+    {
+        if (_lanSession is null || _session?.Current is not { } room) return;
+        if (DateTime.UtcNow > _stopSaying) return;
+
+        var drivers = Seats.Drivers(room.Players);
+
+        if (_mySeat >= 0 && DateTime.UtcNow - _lastSaid > ResultEvery)
         {
-            if (seat >= 0)
-                RaceStandings.Show(RaceStandings.From(drivers,
-                    new Dictionary<byte, RaceResult.Finish> { [(byte)seat] = mine }));
-            return;
+            _lastSaid = DateTime.UtcNow;
+            _lanSession.SendResult((byte)_mySeat, _myResult, HostToAnswer);
         }
 
-        _lanSession.ForgetTheResults();
+        _lanSession.CollectResults();
 
-        var until = DateTime.UtcNow + ResultPatience;
-        while (DateTime.UtcNow < until)
-        {
-            RecompOne.Runtime.Runtime.PumpHost();
-
-            if (seat >= 0) _lanSession.SendResult((byte)seat, mine, HostToAnswer);
-            _lanSession.CollectResults();
-
-            if (_lanSession.Results.Count >= drivers.Count) break;
-            Thread.Sleep(50);
-        }
+        // Redrawn only when something new arrived: the standings are a list the
+        // player is reading, not a thing to rebuild sixty times a second.
+        if (_lanSession.Results.Count == _reportsShown) return;
+        _reportsShown = _lanSession.Results.Count;
 
         var standings = RaceStandings.From(drivers, _lanSession.Results);
         RaceStandings.Show(standings);
 
         Console.Error.WriteLine(
-            $"[result] {_lanSession.Results.Count} of {drivers.Count} driver(s) reported:"
+            $"[result] {_reportsShown} of {drivers.Count} driver(s) have reported:"
             + string.Concat(standings.Select(x =>
                 $"{Environment.NewLine}[result]   {x.Place}. {x.Name}  {x.Laps} lap(s)  {x.Clock}")));
+
+        if (_reportsShown >= drivers.Count) _stopSaying = DateTime.UtcNow;
+    }
+
+    /// <summary>Forgets the last race, so its result is not sent into the next.</summary>
+    static void StopSayingHowItWent()
+    {
+        _mySeat = -1;
+        _myResult = default;
+        _stopSaying = DateTime.MinValue;
+        _reportsShown = 0;
+        _lanSession?.ForgetTheResults();
     }
 
     /// <summary>
