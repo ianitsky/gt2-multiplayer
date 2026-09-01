@@ -141,6 +141,12 @@ public sealed class MultiplayerPanel : IPanel
         switch (_session.Phase)
         {
             case SessionPhase.Browsing:
+            // Knocking is the room list with a line saying so, not a screen of
+            // its own - and it has to be *a* screen, because the only way out
+            // of a knock at an address nobody is listening at is the Stop
+            // button the room list draws. Without this case the panel drew
+            // nothing at all and the client had no way back.
+            case SessionPhase.Knocking:
                 if (_creating) DrawCreate(); else DrawRoomList();
                 break;
             case SessionPhase.Disconnected:
