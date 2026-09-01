@@ -38,8 +38,14 @@ namespace GT2Port.Multiplayer;
 /// </summary>
 public static class TimedRace
 {
-    /// <summary>The shortest and longest race the host may ask for, in minutes.</summary>
-    public const int Shortest = 5;
+    /// <summary>
+    /// The shortest and longest race the host may ask for, in minutes.
+    ///
+    /// One minute is far shorter than anybody would race, and is the point: the
+    /// ending has to be watched to be believed, and watching it at five minutes
+    /// a go costs five minutes a go.
+    /// </summary>
+    public const int Shortest = 1;
     public const int Longest = 180;
 
     /// <summary>A race that is not run to a clock at all.</summary>

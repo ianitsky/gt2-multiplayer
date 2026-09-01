@@ -51,13 +51,29 @@ public class TimedRaceTests
     [Fact]
     public void A_length_off_the_wire_is_clamped_but_zero_still_means_laps()
     {
-        var wire = RoomState.Serialise(Room(minutes: 1));
-        Assert.True(RoomState.TryDeserialise(wire, out var tooShort));
-        Assert.Equal(TimedRace.Shortest, tooShort.Minutes);
+        var wire = RoomState.Serialise(Room(minutes: 600));
+        Assert.True(RoomState.TryDeserialise(wire, out var tooLong));
+        Assert.Equal(TimedRace.Longest, tooLong.Minutes);
 
         Assert.True(RoomState.TryDeserialise(RoomState.Serialise(Room()), out var laps));
         Assert.Equal(TimedRace.ByLaps, laps.Minutes);
         Assert.False(laps.ByTheClock);
+    }
+
+    /// <summary>
+    /// And the shortest race the host may ask for is one minute, which exists
+    /// so the ending can be watched without waiting five for it.
+    /// </summary>
+    [Fact]
+    public void A_race_can_be_one_minute_long()
+    {
+        var session = new Session("ian", () => DateTime.UtcNow);
+        session.Host("ian's room", "seattle_short", "special");
+
+        session.SetMinutes(1);
+
+        Assert.Equal(1, session.Current!.Minutes);
+        Assert.True(session.Current!.ByTheClock);
     }
 
     [Fact]

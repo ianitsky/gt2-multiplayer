@@ -723,8 +723,10 @@ door in the way of the thing they came back for. Leaving the room forgets them.
 
 ## 9. A race by laps or by time
 
-The host picks which. A timed race runs from five minutes to three hours, chosen
-on a slider. When the time runs out the cars finish the lap they are on, and the
+The host picks which. A timed race runs from one minute to three hours, chosen
+on a slider - five was the shortest asked for, and one is there because the
+ending has to be watched to be believed and watching it five minutes at a time
+costs five minutes at a time. When the time runs out the cars finish the lap they are on, and the
 race ends there: most laps in the least time wins.
 
 ### Nothing here ends a race
