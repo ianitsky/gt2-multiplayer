@@ -77,11 +77,20 @@ public enum RoomStage : byte { Racing = 0, Qualifying = 1 }
 /// <paramref name="Minutes"/> is how long instead, when the host has asked for
 /// a race against a clock rather than a lap count. Zero means laps, which keeps
 /// a room that has never heard of this running exactly as it did.
+///
+/// <paramref name="Secret"/> is what a client has to say to be let in, and it is
+/// the one thing about a room that is never published. A room announced on a
+/// local network is announced to everyone on it, so a secret in that
+/// announcement would be a secret told to the people it is meant to keep out.
+/// It travels one way only: from a client that is asking, to the host that
+/// decides. Empty means the room is open, which is what every room was before
+/// there was anything to keep out.
 /// </summary>
 public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxPlayers,
                    IReadOnlyList<Player> Players, byte Laps = RaceLaps.AsBuilt,
                    ushort Minutes = TimedRace.ByLaps,
-                   RoomStage Stage = RoomStage.Racing)
+                   RoomStage Stage = RoomStage.Racing,
+                   string Secret = "")
 {
     /// <summary>Whether this room's race is run to a clock.</summary>
     public bool ByTheClock => Minutes > TimedRace.ByLaps;

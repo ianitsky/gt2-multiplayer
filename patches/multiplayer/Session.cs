@@ -125,7 +125,7 @@ public sealed class Session
     public void Host(string roomName, string track, string carGroup,
                      int maxPlayers = RoomState.MaxPlayers,
                      int laps = RaceLaps.AsBuilt, int minutes = TimedRace.ByLaps,
-                     bool qualifying = false)
+                     bool qualifying = false, string secret = "")
     {
         // Clamped here as everywhere else, because the same two numbers reach
         // this from a slider, from a socket and from a test.
@@ -135,7 +135,8 @@ public sealed class Session
             [new Player(_playerName, "", false)],
             (byte)RaceLaps.Sensible(laps),
             minutes <= 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes),
-            qualifying ? RoomStage.Qualifying : RoomStage.Racing);
+            qualifying ? RoomStage.Qualifying : RoomStage.Racing,
+            secret);
         Phase = SessionPhase.Hosting;
         StatusMessage = null;
         _lastHeard.Clear();

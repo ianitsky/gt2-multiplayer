@@ -41,7 +41,7 @@ public sealed class LanSession : IDisposable
     /// the older format rejects this outright rather than reading the colour
     /// byte as the start of something else.
     /// </summary>
-    const byte Version = 2;
+    const byte Version = 3;
     const int MaxStringBytes = RoomState.MaxStringBytes;
 
     const byte ReadyFlag = 1 << 0;
@@ -66,6 +66,12 @@ public sealed class LanSession : IDisposable
     /// first thing the socket itself has to decide.
     /// </summary>
     readonly bool _hosting;
+
+    /// <summary>
+    /// What this client says to be let in. Empty on a host, which never has to
+    /// ask itself anything.
+    /// </summary>
+    internal string Secret { get; set; } = "";
     readonly Func<DateTime> _clock;
     DateTime? _lastIntentSent;
     bool _disposed;
@@ -401,6 +407,7 @@ public sealed class LanSession : IDisposable
             if (KeptAResult(data, from)) continue;
 
             if (!TryDeserialise(data, out var intent)) continue;
+            if (!SaidTheSecret(room.Secret, intent.Secret)) continue;
             if (intent.RoomId != room.Id) continue;
 
             if (from != null) _known.Add(from);
@@ -459,7 +466,7 @@ public sealed class LanSession : IDisposable
         var self = current.Players.FirstOrDefault(p => p.Name == session.PlayerName);
         var intent = new ClientIntent(current.Id, session.PlayerName,
             self?.Car ?? "", self?.Ready ?? false, Leaving: false, Colour: self?.Colour ?? 0,
-            Watching: self?.Watching ?? false);
+            Watching: self?.Watching ?? false, Secret: Secret);
         SendIntent(intent, hostAddress);
         _lastIntentSent = now;
     }
@@ -477,7 +484,7 @@ public sealed class LanSession : IDisposable
         var self = current.Players.FirstOrDefault(p => p.Name == session.PlayerName);
         var intent = new ClientIntent(current.Id, session.PlayerName,
             self?.Car ?? "", self?.Ready ?? false, Leaving: true, Colour: self?.Colour ?? 0,
-            Watching: self?.Watching ?? false);
+            Watching: self?.Watching ?? false, Secret: Secret);
         SendIntent(intent, hostAddress);
     }
 
@@ -751,7 +758,19 @@ public sealed class LanSession : IDisposable
 
     internal readonly record struct ClientIntent(
         Guid RoomId, string Name, string Car, bool Ready, bool Leaving,
-        byte Colour = 0, bool Watching = false);
+        byte Colour = 0, bool Watching = false, string Secret = "");
+
+    /// <summary>
+    /// Whether a client that said <paramref name="said"/> may join a room whose
+    /// secret is <paramref name="roomSecret"/>.
+    ///
+    /// A room with no secret is open, which is what every room was before there
+    /// was an address to reach one at. A room with one is closed to everything
+    /// that does not repeat it exactly - and on a port that faces the internet,
+    /// most of what arrives is a scanner rather than a player.
+    /// </summary>
+    internal static bool SaidTheSecret(string roomSecret, string said) =>
+        roomSecret.Length == 0 || string.Equals(roomSecret, said, StringComparison.Ordinal);
 
     internal static byte[] Serialise(ClientIntent intent)
     {
@@ -769,6 +788,7 @@ public sealed class LanSession : IDisposable
         WriteString(buffer, intent.Name);
         WriteString(buffer, intent.Car);
         buffer.Add(intent.Colour);
+        WriteString(buffer, intent.Secret);
         return [.. buffer];
     }
 
@@ -790,10 +810,11 @@ public sealed class LanSession : IDisposable
         if (!TryString(span, ref offset, out string name)) return false;
         if (!TryString(span, ref offset, out string car)) return false;
         if (!TryByte(span, ref offset, out byte colour)) return false;
+        if (!TryString(span, ref offset, out string secret)) return false;
 
         intent = new ClientIntent(roomId, name, car,
             Ready: (flags & ReadyFlag) != 0, Leaving: (flags & LeavingFlag) != 0,
-            Colour: colour, Watching: (flags & WatchingFlag) != 0);
+            Colour: colour, Watching: (flags & WatchingFlag) != 0, Secret: secret);
         return true;
     }
 
