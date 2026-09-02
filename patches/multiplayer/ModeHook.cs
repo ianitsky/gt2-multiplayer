@@ -335,7 +335,7 @@ public static class ModeHook
                 _archive = VolArchive.TryOpen(RecompOne.Runtime.Runtime.CdPath);
             }
             _carInfo = CarInfo.TryLoad(_archive);
-            _carCatalogue = CarCatalogue.Load(_carInfo, Path.Combine("config", "car-groups.json"));
+            _carCatalogue = CarCatalogue.Load(_carInfo, GameFiles.Find("config", "car-groups.json"));
         }
 
         // LanSession itself isn't built here: which factory to call depends

@@ -70,7 +70,7 @@ public static class DirectRace
     const uint Parameters = 0x801C3350u;
     const int ParametersSize = 0x2D0;
 
-    static readonly string ParametersPath = Path.Combine("config", "race-params.bin");
+    static readonly string ParametersPath = GameFiles.Find("config", "race-params.bin");
 
     /// <summary>How long to let the car load before starting anyway.</summary>
     static readonly TimeSpan CarPatience = TimeSpan.FromSeconds(30);
@@ -166,8 +166,30 @@ public static class DirectRace
     }
 
     /// <summary>Called by the lobby when a race has been agreed and is to start.</summary>
+    /// <summary>
+    /// The captured parameter block, or null when there is none to be found.
+    ///
+    /// Read once and kept, because it is asked for twice: when a race is agreed
+    /// and again when the builder wants it.
+    /// </summary>
+    static byte[]? TheParameters =>
+        _parameters ??= File.Exists(ParametersPath) ? File.ReadAllBytes(ParametersPath) : null;
+
     public static void Expect(Pending race)
     {
+        // Refused here rather than discovered later. Without the capture there
+        // is nothing to build a race out of: the parameter block stays zero,
+        // the record is never filled, and the game runs a race whose course is
+        // 0x00000000 until it calls an address that does not exist. Keeping the
+        // arcade is survivable; that is not.
+        if (TheParameters is not { Length: >= ParametersSize })
+        {
+            Console.Error.WriteLine(
+                $"[direct] no race parameters at {ParametersPath} - not launching a race"
+                + " that would be empty. The build has to ship config/race-params.bin.");
+            return;
+        }
+
         if (!Enabled)
         {
             Console.Error.WriteLine(
@@ -502,15 +524,14 @@ public static class DirectRace
     {
         if (!EndedTheScreen) return;
 
-        _parameters ??= File.Exists(ParametersPath) ? File.ReadAllBytes(ParametersPath) : null;
-        if (_parameters is not { Length: >= ParametersSize })
+        if (TheParameters is not { } parameters)
         {
             Console.Error.WriteLine($"[direct] no race parameters at {ParametersPath}");
             return;
         }
 
         for (int i = 0; i < ParametersSize; i++)
-            m.WriteU8(Parameters + (uint)i, _parameters[i]);
+            m.WriteU8(Parameters + (uint)i, parameters[i]);
 
         // The capture names the car it was taken with. Naming the room's
         // instead is the whole fix: the builder resolves it to the car's own

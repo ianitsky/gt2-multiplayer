@@ -22,6 +22,20 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The port reads files out of config/ while it runs - the captured
+             race parameters among them - and without those a launched race is
+             built empty and the game jumps to an address that is not one. They
+             were only ever found because the working directory happened to be
+             the repository; the first person to run the built .exe found out
+             otherwise.
+
+             All of config/ rather than the two files the runtime reads today,
+             so adding a third does not quietly break a shipped build again.
+             It is about a hundred kilobytes. -->
+        <None Include="config/**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <!-- LanSession's ClientIntent/Serialise/TryDeserialise are internal per
              the interface they were specified against, and the brief asks the
              test suite to round-trip them directly - same contract as
