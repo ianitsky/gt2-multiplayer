@@ -472,10 +472,17 @@ public class LanSessionTests
     static readonly byte[] LeaveTheLobbyDatagram = [0xA5, 2];
 
     /// <summary>The host's "everyone is at the line, begin".</summary>
-    static readonly byte[] StartTheRaceDatagram = [0xA5, 4];
 
     /// <summary>A player's "I have the race loaded and am holding".</summary>
     static readonly byte[] AtTheLineDatagram = [0xA5, 1];
+
+    /// <summary>
+    /// A start naming how long is left of the wait, which is what one carries
+    /// now: the instant is agreed rather than announced, so the flight time
+    /// stops deciding when a machine goes.
+    /// </summary>
+    static byte[] StartInMilliseconds(int left) =>
+        [0xA5, 4, (byte)(left & 0xFF), (byte)(left >> 8)];
 
     [Fact]
     public void A_client_holding_at_the_line_hears_the_hosts_start()
@@ -486,10 +493,50 @@ public class LanSessionTests
 
         Assert.False(client.HostSaidStartTheRace);
 
-        Deliver(host, client, StartTheRaceDatagram);
+        Deliver(host, client, StartInMilliseconds(400));
         client.CollectTheStart();
 
         Assert.True(client.HostSaidStartTheRace);
+        Assert.Equal(_now.AddMilliseconds(400), client.StartsAt);
+    }
+
+    /// <summary>
+    /// A later start moves the instant, because it says what was left when it
+    /// was sent - so one that crossed faster corrects one that crawled. Taking
+    /// the first would keep whatever the first flight happened to cost.
+    /// </summary>
+    [Fact]
+    public void A_fresher_start_moves_the_instant()
+    {
+        const int hostPort = BasePort + 30;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        Deliver(host, client, StartInMilliseconds(400));
+        client.CollectTheStart();
+
+        Deliver(host, client, StartInMilliseconds(120));
+        client.CollectTheStart();
+
+        Assert.Equal(_now.AddMilliseconds(120), client.StartsAt);
+    }
+
+    /// <summary>
+    /// And a start with nothing left of it is still a start: the wait is over,
+    /// not absent.
+    /// </summary>
+    [Fact]
+    public void A_start_with_no_time_left_still_starts()
+    {
+        const int hostPort = BasePort + 31;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(0);
+
+        Deliver(host, client, StartInMilliseconds(0));
+        client.CollectTheStart();
+
+        Assert.True(client.HostSaidStartTheRace);
+        Assert.Equal(_now, client.StartsAt);
     }
 
     [Fact]
@@ -551,7 +598,7 @@ public class LanSessionTests
         using var client = LanSession.ForClient(hostPort, () => _now);
         using var host = new UdpClient(0);
 
-        Deliver(host, client, StartTheRaceDatagram);
+        Deliver(host, client, StartInMilliseconds(400));
         client.CollectTheStart();
         Assert.True(client.HostSaidStartTheRace);
 
@@ -571,7 +618,7 @@ public class LanSessionTests
 
         // Arrived before the line opened, and still sitting in the socket:
         // clearing the flag alone would leave the first collect to undo it.
-        Deliver(host, client, StartTheRaceDatagram);
+        Deliver(host, client, StartInMilliseconds(400));
         client.OpenTheStartLine();
         client.CollectTheStart();
 

@@ -217,7 +217,20 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const byte AtTheLine = 1;      // a player has the race loaded and is holding
     const byte LeaveTheLobby = 2;  // the host says the race is on - come to the race
-    const byte StartTheRace = 4;   // the host says everyone is here - begin now
+    /// <summary>
+    /// The host says everyone is here, and how long from now the race begins.
+    ///
+    /// A deadline rather than a starting pistol. "Begin now" means begin when
+    /// this arrives, which is a different moment on every machine - one flight
+    /// time apart on a local network and a tenth of a second apart across a bad
+    /// one. Saying "begin in N milliseconds" instead takes the flight out of
+    /// it: the number is computed fresh at every send, so a machine that hears
+    /// only the last of them still works out the same instant.
+    /// </summary>
+    const byte StartTheRace = 4;
+
+    /// <summary>The magic, the kind, and the milliseconds left as a halfword.</summary>
+    const int StartBytes = 4;
 
     /// <summary>Where each player holding at the line came from, so the start can reach them.</summary>
     readonly HashSet<IPEndPoint> _atTheLine = [];
@@ -256,7 +269,7 @@ public sealed class LanSession : IDisposable
         if (_disposed) return;
 
         _atTheLine.Clear();
-        HostSaidStartTheRace = false;
+        StartsAt = null;
 
         for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
         {
@@ -323,10 +336,13 @@ public sealed class LanSession : IDisposable
     /// <see cref="SendLeaveTheLobby"/> on purpose - see the codes above for
     /// what happened while they were the same one.
     /// </summary>
-    public void SendStartTheRace()
+    public void SendStartTheRace(int millisecondsFromNow)
     {
         if (_disposed) return;
-        foreach (var player in _known.Union(_atTheLine)) Send([StartMagic, StartTheRace], player);
+        ushort left = (ushort)Math.Clamp(millisecondsFromNow, 0, ushort.MaxValue);
+        byte[] go = [StartMagic, StartTheRace, (byte)(left & 0xFF), (byte)(left >> 8)];
+
+        foreach (var player in _known.Union(_atTheLine)) Send(go, player);
     }
 
     /// <summary>
@@ -352,7 +368,19 @@ public sealed class LanSession : IDisposable
     /// <see cref="CollectTheStart"/>, so it says something about this race
     /// rather than about the lobby that led to it.
     /// </summary>
-    public bool HostSaidStartTheRace { get; private set; }
+    /// <summary>
+    /// When the race begins, by this machine's own clock, or null until the
+    /// host has said.
+    ///
+    /// Local, and it has to be: the two machines' clocks are minutes apart -
+    /// one of these logs reads 16:06 while the other reads 16:08 for the same
+    /// race - so an instant one of them names means nothing to the other. A
+    /// duration does.
+    /// </summary>
+    public DateTime? StartsAt { get; private set; }
+
+    /// <summary>Whether the host has said anything about starting yet.</summary>
+    public bool HostSaidStartTheRace => StartsAt is not null;
 
     /// <summary>
     /// Looks for the host's start, for a client holding at the line.
@@ -380,8 +408,14 @@ public sealed class LanSession : IDisposable
                 return;
             }
 
-            if (data.Length == 2 && data[0] == StartMagic && data[1] == StartTheRace)
-                HostSaidStartTheRace = true;
+            if (data.Length < StartBytes || data[0] != StartMagic || data[1] != StartTheRace)
+                continue;
+
+            // The latest is the freshest: each carries what was left when it
+            // was sent, so a later one has crossed less of the wait. Taking the
+            // earliest would keep whatever the first flight cost.
+            int left = data[2] | (data[3] << 8);
+            StartsAt = _clock() + TimeSpan.FromMilliseconds(left);
         }
     }
 

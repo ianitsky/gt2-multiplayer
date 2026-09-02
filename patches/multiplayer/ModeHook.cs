@@ -213,6 +213,18 @@ public static class ModeHook
     static readonly TimeSpan StartPatience = TimeSpan.FromSeconds(20);
 
     /// <summary>
+    /// How far ahead the host sets the starting instant once everyone is at
+    /// the line.
+    ///
+    /// Long enough for the word to cross a bad connection several times, short
+    /// enough that nobody reads it as a hang. Every send carries what is left
+    /// of it rather than the whole of it, so a machine that hears only the last
+    /// one still works out the same instant - which is what makes the start
+    /// independent of how long the message took to arrive.
+    /// </summary>
+    static readonly TimeSpan StartsIn = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
     /// Holds the race here until everyone is ready to begin.
     ///
     /// The race overlay has loaded and nothing has drawn yet, so every machine
@@ -269,17 +281,7 @@ public static class ModeHook
                 _lanSession.CollectAtTheLine();
                 if (_lanSession.WaitingAtTheLine >= room.Players.Count)
                 {
-                    // Sent more than once: a lost Go would leave that player
-                    // holding until their patience runs out, racing a start
-                    // everyone else has already had.
-                    for (int i = 0; i < 5; i++)
-                    {
-                        _lanSession.SendStartTheRace();
-                        Thread.Sleep(16);
-                    }
-                    Console.Error.WriteLine(
-                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} everyone is at the line - start"
-                        + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
+                    HoldUntilTheAgreedInstant(began);
                     return;
                 }
             }
@@ -287,10 +289,12 @@ public static class ModeHook
             {
                 _lanSession.ReportAtTheLine(host);
                 _lanSession.CollectTheStart();
-                if (_lanSession.HostSaidStartTheRace)
+
+                if (_lanSession.StartsAt is { } startsAt)
                 {
+                    WaitOutTheRest(startsAt);
                     Console.Error.WriteLine(
-                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host said start"
+                        $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host set the start"
                         + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
                     return;
                 }
@@ -302,6 +306,57 @@ public static class ModeHook
         Console.Error.WriteLine(
             $"[start] {DateTime.UtcNow:HH:mm:ss.fff} gave up waiting - starting anyway"
             + $" (nobody answered in {StartPatience.TotalSeconds:F0}s)");
+    }
+
+    /// <summary>
+    /// Names the instant the race begins, tells everyone repeatedly how long is
+    /// left of it, and waits it out here too.
+    ///
+    /// The host waits as well, which is the point. Releasing itself the moment
+    /// it decided would put it ahead of every client by exactly the time its
+    /// word took to arrive - and that time is the thing this is trying to stop
+    /// mattering.
+    /// </summary>
+    static void HoldUntilTheAgreedInstant(DateTime began)
+    {
+        var startAt = DateTime.UtcNow + StartsIn;
+
+        while (DateTime.UtcNow < startAt)
+        {
+            RecompOne.Runtime.Runtime.PumpHost();
+
+            // Recomputed every time rather than repeated: a machine that hears
+            // only the last of these still arrives at the same instant, and a
+            // lost one costs nothing at all.
+            _lanSession!.SendStartTheRace(
+                (int)(startAt - DateTime.UtcNow).TotalMilliseconds);
+
+            Thread.Sleep(8);
+        }
+
+        Console.Error.WriteLine(
+            $"[start] {DateTime.UtcNow:HH:mm:ss.fff} everyone is at the line -"
+            + $" started on the agreed instant (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
+    }
+
+    /// <summary>
+    /// Waits until the instant the host named, keeping the window alive.
+    ///
+    /// Later messages move it: each says what was left when it was sent, so a
+    /// second one that crossed faster corrects the first. What is never done is
+    /// starting on arrival, which is what made the start as early or as late as
+    /// the connection happened to be.
+    /// </summary>
+    static void WaitOutTheRest(DateTime startsAt)
+    {
+        while (DateTime.UtcNow < startsAt)
+        {
+            RecompOne.Runtime.Runtime.PumpHost();
+            _lanSession!.CollectTheStart();
+
+            if (_lanSession.StartsAt is { } fresher) startsAt = fresher;
+            Thread.Sleep(4);
+        }
     }
 
     public static bool TryEnterLobby(RecompOne.Runtime.Context.CpuContext c,
