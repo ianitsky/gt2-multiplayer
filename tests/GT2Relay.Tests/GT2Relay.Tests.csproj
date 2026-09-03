@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../GT2Port.Rendezvous/GT2Port.Rendezvous.csproj" />
+        <ProjectReference Include="../../GT2Relay/GT2Relay.csproj" />
     </ItemGroup>
 
 </Project>

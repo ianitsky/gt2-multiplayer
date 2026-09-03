@@ -2015,11 +2015,9 @@ Create `GT2Relay/GT2Relay.csproj`:
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>gt2relay</AssemblyName>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 
@@ -2029,6 +2027,10 @@ Create `GT2Relay/GT2Relay.csproj`:
 
 </Project>
 ```
+
+A library for now. It becomes the program in Task 3, which is where `Program.cs`
+arrives - an `Exe` with no entry point does not compile, so the two have to
+land together.
 
 Add to `tests/GT2Relay.Tests/GT2Relay.Tests.csproj`, inside the existing `ItemGroup` that holds the `ProjectReference`:
 
@@ -2627,7 +2629,7 @@ public sealed class RoomRegistry(Func<DateTime> clock, Random random)
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `dotnet test tests/GT2Relay.Tests -c Debug`
-Expected: PASS — `EnvelopeTests`, `RoomCodeTests` and `RoomRegistryTests`.
+Expected: PASS, 49 tests - `EnvelopeTests`, `RoomCodeTests` and `RoomRegistryTests`.
 
 - [ ] **Step 6: Commit**
 
@@ -2972,7 +2974,15 @@ Expected: PASS — all four suites.
 
 - [ ] **Step 5: Write `Program`**
 
-Create `GT2Relay/Program.cs`:
+First make the project a program. In `GT2Relay/GT2Relay.csproj`, add to the
+`PropertyGroup`:
+
+```xml
+        <OutputType>Exe</OutputType>
+        <AssemblyName>gt2relay</AssemblyName>
+```
+
+Then create `GT2Relay/Program.cs`:
 
 ```csharp
 using GT2Relay;
