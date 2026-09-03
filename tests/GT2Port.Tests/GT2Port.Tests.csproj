@@ -16,6 +16,9 @@
     <ItemGroup>
         <ProjectReference Include="../../RecompOne/RecompOne.Runtime/RecompOne.Runtime.csproj" />
         <ProjectReference Include="../../GT2Port.csproj" />
+        <!-- The relay, so these tests talk to the real server rather than
+             to a hand-written stand-in that could drift away from it. -->
+        <ProjectReference Include="../../GT2Relay/GT2Relay.csproj" />
     </ItemGroup>
 
 </Project>
