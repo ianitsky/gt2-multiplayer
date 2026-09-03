@@ -1,5 +1,6 @@
 using System.Numerics;
 using ImGuiNET;
+using RecompOne.Runtime.Config;
 using RecompOne.Runtime.Host.Window;
 
 namespace GT2Port.Multiplayer;
@@ -233,6 +234,13 @@ public sealed class MultiplayerPanel : IPanel
     string _roomCodeTyped = "";
 
     /// <summary>
+    /// What a player is typing into the server box, started from whatever is
+    /// already configured so that changing it is editing rather than
+    /// retyping.
+    /// </summary>
+    string _relayTyped = RelaySettings.Address;
+
+    /// <summary>
     /// The relay, if one is configured. A function rather than an instance:
     /// it is built and dropped as the address setting changes, and the panel
     /// outlives any one of them.
@@ -292,11 +300,13 @@ public sealed class MultiplayerPanel : IPanel
         // Rooms that were never on this network. Same row, same button - where
         // a room was found is not something a player should have to think
         // about, only whether they can get into it.
+        ImGui.Separator();
+        ImGui.TextUnformatted("Rooms on the internet");
+
+        DrawRelayAddress();
+
         if (_relay() is { } relay)
         {
-            ImGui.Separator();
-            ImGui.TextUnformatted("Rooms on the internet");
-
             var adverts = relay.Rooms;
             if (adverts.Count == 0) ImGui.TextDisabled("None right now");
 
@@ -362,6 +372,7 @@ public sealed class MultiplayerPanel : IPanel
         {
             ImGui.Separator();
             ImGui.TextUnformatted("Or join by code");
+
             ImGui.InputText("Code", ref _roomCodeTyped, 16);
             ImGui.SameLine();
             if (ImGui.Button("Join by code")) byCode.JoinByCode(_roomCodeTyped);
@@ -448,6 +459,47 @@ public sealed class MultiplayerPanel : IPanel
         ImGui.TextDisabled("The host must forward UDP to the port above, on its own machine's");
         ImGui.TextDisabled("address, and its firewall must allow this app. Check that the address");
         ImGui.TextDisabled("is the host's public one, not the one it sees itself as.");
+    }
+
+    /// <summary>
+    /// Where the rendezvous server is, as a box to paste into.
+    ///
+    /// Without this the address could only be set by an environment variable
+    /// or by hand-editing interface.ini, which is the same kind of demand as
+    /// asking somebody to forward a port - and this whole feature exists to
+    /// stop making demands like that.
+    /// </summary>
+    void DrawRelayAddress()
+    {
+        if (RelaySettings.ForcedByEnvironment)
+        {
+            ImGui.TextDisabled($"Server: {RelaySettings.Address} (set by GT2_RELAY)");
+            return;
+        }
+
+        ImGui.InputText("Server", ref _relayTyped, 64);
+        ImGui.SameLine();
+
+        bool changed = _relayTyped.Trim() != RelaySettings.Address.Trim();
+        ImGui.BeginDisabled(!changed);
+        if (ImGui.Button("Use"))
+        {
+            RelaySettings.Address = _relayTyped.Trim();
+
+            // Written out now rather than at shutdown: a player who pastes an
+            // address and then has the game crash should not have to paste it
+            // again.
+            try { ConfigManager.SaveView(PanelManager.Panels); }
+            catch (IOException) { /* the value still holds for this run */ }
+        }
+        ImGui.EndDisabled();
+
+        if (_relayTyped.Trim().Length == 0)
+            ImGui.TextDisabled("Paste the address of a relay to see rooms outside this network");
+        else if (!RelaySettings.TryReadAddress(_relayTyped, out _))
+            DrawWarning($"\"{_relayTyped.Trim()}\" is not an address this can reach.");
+        else if (_relay() is null)
+            ImGui.TextDisabled("Not connected yet");
     }
 
     void DrawCreate()

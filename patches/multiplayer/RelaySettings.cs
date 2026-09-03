@@ -56,6 +56,14 @@ public static class RelaySettings
     public static bool Configured => TryReadAddress(Address, out _);
 
     /// <summary>
+    /// Whether GT2_RELAY is deciding this, in which case the settings screen
+    /// must say so rather than offer a box that quietly does nothing. A field
+    /// a player types into and which then has no effect is worse than no field
+    /// at all.
+    /// </summary>
+    public static bool ForcedByEnvironment => FromTheEnvironment.Length > 0;
+
+    /// <summary>
     /// Reads "host" or "host:port", where the host may be a name. Parsed here
     /// rather than where it is used, so a typing mistake is a message on a
     /// screen instead of datagrams into the void - the same reason
