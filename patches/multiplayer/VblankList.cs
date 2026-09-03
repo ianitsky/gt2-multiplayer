@@ -74,6 +74,13 @@ public static class VblankList
     /// </summary>
     public static void AboutToRun(CpuContext c, IMemory m)
     {
+        // Borrowed as a frame tick. This hook runs the console's vblank list,
+        // so it is the one place already called every frame on every screen -
+        // including the title menu, which no race hook ever sees. VramDump
+        // returns immediately unless it has been asked for.
+        VramDump.Tick();
+        TitleLabel.Tick();
+
         if (!Watching) return;
 
         uint head = c.A0;
