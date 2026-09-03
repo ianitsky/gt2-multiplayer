@@ -970,6 +970,10 @@ public static class ModeHook
             Console.Error.WriteLine($"[relay] talking to {where}");
         }
 
+        // Read first, or nothing the server says is ever taken in: while the
+        // room list is up there is no session draining this link.
+        _relay.Tick();
+
         // A room with a secret is not listed. The secret is what makes a room
         // private, and listing a private room defeats it while still turning
         // everybody away at the door.

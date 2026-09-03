@@ -177,6 +177,18 @@ public sealed class RelaySession : IGameLink
         catch (SocketException) { /* the next tick tries again */ }
     }
 
+    /// <summary>
+    /// Reads whatever the server has said, without anybody asking for a
+    /// payload.
+    ///
+    /// A link only advances when it is read, and during a race that reading is
+    /// LanSession draining it every frame. In the room list there is no
+    /// LanSession at all - the phase holds no socket - so without this the
+    /// answers to Publish and AskForRooms would sit in the receive buffer and
+    /// the list would stay empty forever. Which it did.
+    /// </summary>
+    public void Tick() => Pump();
+
     // ---- IGameLink ----
 
     /// <summary>
@@ -191,6 +203,27 @@ public sealed class RelaySession : IGameLink
             Pump();
             return _waiting.Count;
         }
+    }
+
+    /// <summary>
+    /// The peer at that address, as the server introduced it.
+    ///
+    /// A host behind NAT answers on whatever port its router handed out, not
+    /// on the game's well-known one, and the relay forwards only to endpoints
+    /// that are members of the room. Addressing the well-known port names
+    /// nobody, so every intent a client sent was dropped in silence - which is
+    /// exactly what the first end-to-end test found.
+    ///
+    /// Falling back to the well-known port when no peer is known keeps this
+    /// honest rather than clever: it will not work, and it is what the caller
+    /// would have built anyway.
+    /// </summary>
+    public IPEndPoint HostAt(IPAddress address, int hostPort)
+    {
+        foreach (var peer in _peers)
+            if (peer.Address.Equals(address)) return peer;
+
+        return new IPEndPoint(address, hostPort);
     }
 
     public byte[] Receive(ref IPEndPoint? from)

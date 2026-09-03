@@ -33,4 +33,17 @@ public interface IGameLink : IDisposable
 
     /// <summary>The port this machine is reachable on, as this machine sees it.</summary>
     int BoundPort { get; }
+
+    /// <summary>
+    /// Where to send something to the host, given the address it was found at
+    /// and the well-known port a host answers on.
+    ///
+    /// On a local network that is simply the two put together, which is what
+    /// every caller used to build for itself. Through a relay it is not: the
+    /// host is reached at the public endpoint the server saw, whose port is
+    /// whatever its NAT handed out, and a datagram addressed to the well-known
+    /// port names nobody the relay will forward to. That is an addressing
+    /// question, so it belongs to the thing that does the addressing.
+    /// </summary>
+    IPEndPoint HostAt(IPAddress address, int hostPort);
 }

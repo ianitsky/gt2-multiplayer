@@ -52,6 +52,8 @@ public sealed class DirectLink : IGameLink
         return new DirectLink(socket);
     }
 
+    public IPEndPoint HostAt(IPAddress address, int hostPort) => new(address, hostPort);
+
     public int Available => _disposed ? 0 : _socket.Available;
 
     public byte[] Receive(ref IPEndPoint? from) => _socket.Receive(ref from);

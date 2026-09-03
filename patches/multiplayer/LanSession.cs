@@ -296,7 +296,7 @@ public sealed class LanSession : IDisposable
     public void ReportAtTheLine(IPAddress hostAddress)
     {
         if (_disposed) return;
-        Send([StartMagic, AtTheLine], new IPEndPoint(hostAddress, _hostPort));
+        Send([StartMagic, AtTheLine], _link.HostAt(hostAddress, _hostPort));
     }
 
     /// <summary>
@@ -551,7 +551,7 @@ public sealed class LanSession : IDisposable
     }
 
     void SendIntent(ClientIntent intent, IPAddress hostAddress) =>
-        Send(Serialise(intent), new IPEndPoint(hostAddress, _hostPort));
+        Send(Serialise(intent), _link.HostAt(hostAddress, _hostPort));
 
     void SendRoomState(Room room, IPEndPoint to) =>
         Send(RoomState.Serialise(room), to);
@@ -650,7 +650,7 @@ public sealed class LanSession : IDisposable
 
         _results[seat] = finish;
 
-        if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
+        if (host is not null) Send(data, _link.HostAt(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
     }
 
@@ -734,7 +734,7 @@ public sealed class LanSession : IDisposable
         for (int wheel = 0; wheel < PlaceWheels; wheel++)
             BitConverter.TryWriteBytes(data.AsSpan(21 + wheel * 2), pose.Wheels[wheel]);
 
-        if (host is not null) Send(data, new IPEndPoint(host, _hostPort));
+        if (host is not null) Send(data, _link.HostAt(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
     }
 
