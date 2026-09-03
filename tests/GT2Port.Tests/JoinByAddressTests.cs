@@ -103,6 +103,116 @@ public class JoinByAddressTests
         Assert.Contains(host.Current!.Players, p => p.Name == "les");
     }
 
+    /// <summary>
+    /// And the client reads the answer.
+    ///
+    /// Every other test here stops at the host: the knock is sent, the secret
+    /// is checked, the room takes the player. None of them ever asked whether
+    /// the client hears the room state that comes back - and it did not, so a
+    /// knock was answered into a socket nobody drained and the panel said
+    /// "Knocking..." until somebody pressed Stop.
+    /// </summary>
+    [Fact]
+    public void A_knocking_client_reads_the_answer_and_is_in_the_room()
+    {
+        const int hostPort = LanSessionTests.BasePort + 32;
+
+        var host = new Session("ian", () => DateTime.UtcNow);
+        host.Host("ian's room", "seattle_short", "special", 6, secret: "hunter2");
+
+        var guest = new Session("les", () => DateTime.UtcNow);
+        Assert.True(guest.Knock($"127.0.0.1:{hostPort}", "hunter2"));
+
+        using var hostWire = LanSession.ForHost(hostPort, () => DateTime.UtcNow);
+        using var guestWire = LanSession.ForClient(hostPort, () => DateTime.UtcNow);
+
+        guestWire.SendKnock(
+            new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, hostPort),
+            "les", "hunter2");
+
+        LanSessionTests.WaitForDelivery(hostWire);
+        hostWire.HostTick(host);
+
+        LanSessionTests.WaitForDelivery(guestWire);
+        guestWire.ClientTick(guest, System.Net.IPAddress.Loopback);
+
+        Assert.Equal(SessionPhase.Joined, guest.Phase);
+        Assert.Equal(host.Current!.Id, guest.Current!.Id);
+    }
+
+    /// <summary>
+    /// What a silent knock can still be told about itself. UDP reports no
+    /// failure, so these counts are the only difference between "not getting
+    /// there" and "getting there and being refused".
+    /// </summary>
+    [Fact]
+    public void A_knock_is_counted_even_when_nothing_answers()
+    {
+        const int hostPort = LanSessionTests.BasePort + 33;
+
+        using var wire = LanSession.ForClient(hostPort, () => DateTime.UtcNow);
+
+        Assert.Equal(0, wire.KnocksSent);
+        Assert.Equal(0, wire.DatagramsHeard);
+
+        // 127.0.0.2 with nothing listening: sent, never answered.
+        wire.SendKnock(
+            new System.Net.IPEndPoint(System.Net.IPAddress.Parse("127.0.0.2"), hostPort),
+            "les", "hunter2");
+
+        Assert.Equal(1, wire.KnocksSent);
+        Assert.Equal(0, wire.DatagramsHeard);
+    }
+
+    [Fact]
+    public void And_what_comes_back_is_counted_too()
+    {
+        const int hostPort = LanSessionTests.BasePort + 34;
+
+        var host = new Session("ian", () => DateTime.UtcNow);
+        host.Host("ian's room", "seattle_short", "special", 6, secret: "hunter2");
+
+        var guest = new Session("les", () => DateTime.UtcNow);
+        guest.Knock($"127.0.0.1:{hostPort}", "hunter2");
+
+        using var hostWire = LanSession.ForHost(hostPort, () => DateTime.UtcNow);
+        using var guestWire = LanSession.ForClient(hostPort, () => DateTime.UtcNow);
+
+        guestWire.SendKnock(
+            new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, hostPort),
+            "les", "hunter2");
+
+        LanSessionTests.WaitForDelivery(hostWire);
+        hostWire.HostTick(host);
+
+        LanSessionTests.WaitForDelivery(guestWire);
+        guestWire.ClientTick(guest, System.Net.IPAddress.Loopback);
+
+        Assert.Equal(1, guestWire.DatagramsHeard);
+        Assert.Equal(hostPort, guestWire.LastHeardFrom!.Port);
+    }
+
+    /// <summary>
+    /// And how long it has been going, which is what turns a line that never
+    /// changes into one that says something is wrong.
+    /// </summary>
+    [Fact]
+    public void A_knock_says_how_long_it_has_been_knocking()
+    {
+        var now = new DateTime(2026, 9, 2, 12, 0, 0, DateTimeKind.Utc);
+        var session = new Session("les", () => now);
+
+        Assert.Equal(TimeSpan.Zero, session.KnockingFor);
+
+        session.Knock("192.168.0.9:34719", "hunter2");
+        now = now.AddSeconds(12);
+
+        Assert.Equal(12d, session.KnockingFor.TotalSeconds, 1);
+
+        session.Leave();
+        Assert.Equal(TimeSpan.Zero, session.KnockingFor);
+    }
+
     [Fact]
     public void And_ignores_one_that_does_not_know_the_secret()
     {

@@ -182,6 +182,23 @@ public sealed class LanSession : IDisposable
     public SocketException? LastSendFailure { get; private set; }
 
     /// <summary>
+    /// How many knocks have gone out, and how many datagrams have come back.
+    ///
+    /// A knock that is never answered says nothing by itself - UDP has no
+    /// failure to report, so a blocked port, a wrong address, a host that is
+    /// not running and a network that is fine all look identical from here.
+    /// These two do separate them: knocks rising with nothing heard means the
+    /// datagrams are not getting there or not getting back, while anything
+    /// heard at all means the round trip works and the argument is about what
+    /// was said.
+    /// </summary>
+    public int KnocksSent { get; private set; }
+    public int DatagramsHeard { get; private set; }
+
+    /// <summary>Who spoke last, which is not always who was spoken to.</summary>
+    public IPEndPoint? LastHeardFrom { get; private set; }
+
+    /// <summary>
     /// Drains the socket. For every well-formed client message whose room id
     /// matches <c>session.Current.Id</c>, applies it to the session and
     /// replies to that sender with the room state as it stands after
@@ -438,6 +455,9 @@ public sealed class LanSession : IDisposable
                 return;
             }
 
+            DatagramsHeard++;
+            LastHeardFrom = from;
+
             if (KeptAResult(data, from)) continue;
 
             if (!TryDeserialise(data, out var intent)) continue;
@@ -469,7 +489,18 @@ public sealed class LanSession : IDisposable
     public void ClientTick(Session session, IPAddress hostAddress)
     {
         if (_disposed) return;
-        if (session.Phase != SessionPhase.Joined) return;
+
+        // Knocking drains too, and that is the whole of it: a knock is answered
+        // with room state, Session.OnRemoteState already knows how to adopt one
+        // while knocking, and this is the only thing that ever reads the
+        // socket. Refusing anything but Joined meant the answer arrived, sat in
+        // the receive buffer, and was thrown away when the client gave up -
+        // "Knocking..." forever, on a network that was working perfectly.
+        //
+        // The half below sends nothing while knocking: it needs a room, and a
+        // knocking client has none until this drain gives it one. ModeHook
+        // repeats the knock itself.
+        if (session.Phase is not (SessionPhase.Joined or SessionPhase.Knocking)) return;
 
         for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
         {
@@ -483,6 +514,9 @@ public sealed class LanSession : IDisposable
             {
                 return;
             }
+
+            DatagramsHeard++;
+            LastHeardFrom = from;
 
             if (data.Length >= 2 && data[0] == StartMagic && data[1] == LeaveTheLobby)
             {
@@ -607,6 +641,7 @@ public sealed class LanSession : IDisposable
         var knock = Serialise(new ClientIntent(
             Guid.Empty, name, "", Ready: false, Leaving: false, Secret: secret));
 
+        KnocksSent++;
         Send(knock, host);
     }
 

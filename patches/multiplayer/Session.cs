@@ -153,6 +153,17 @@ public sealed class Session
     public string KnockingSecret { get; private set; } = "";
 
     /// <summary>
+    /// When the knocking started, so the panel can say how long it has been
+    /// going. A knock has no other clock: it is the same datagram repeated,
+    /// and nothing about the tenth is different from the first.
+    /// </summary>
+    public DateTime KnockingSince { get; private set; }
+
+    /// <summary>How long this client has been knocking.</summary>
+    public TimeSpan KnockingFor =>
+        Phase == SessionPhase.Knocking ? _clock() - KnockingSince : TimeSpan.Zero;
+
+    /// <summary>
     /// Starts asking a host at a typed address to be let in.
     ///
     /// A room found by announcement arrives whole - its id, its track, its
@@ -176,7 +187,8 @@ public sealed class Session
         KnockingAt = address.Trim();
         KnockingSecret = secret;
         Phase = SessionPhase.Knocking;
-        StatusMessage = "Knocking...";
+        KnockingSince = _clock();
+        StatusMessage = null;
         return true;
     }
 

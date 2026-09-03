@@ -282,7 +282,7 @@ public sealed class MultiplayerPanel : IPanel
         {
             ImGui.SameLine();
             if (ImGui.Button("Stop")) _session.Leave();
-            ImGui.TextDisabled($"Knocking at {_session.KnockingAt}...");
+            DrawKnocking();
         }
 
         ImGui.Separator();
@@ -291,6 +291,78 @@ public sealed class MultiplayerPanel : IPanel
             _creating = true;
             _scrollToSelection = true;
         }
+    }
+
+    /// <summary>
+    /// How long to knock unanswered before saying what is probably wrong.
+    ///
+    /// A knock across a working network is answered in one round trip. Ten
+    /// seconds is long past that and short of the patience of somebody staring
+    /// at a screen that has told them nothing.
+    /// </summary>
+    static readonly TimeSpan LongEnoughToWorry = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// What is happening to a knock, in as much detail as the socket has.
+    ///
+    /// UDP reports no failure, so an unanswered knock looks the same whether
+    /// the address is wrong, the port is closed, the host is not running, or
+    /// the datagrams are arriving and being refused. What separates those is
+    /// not one fact but the shape of several: knocks going out, datagrams
+    /// coming back, the address they were actually sent to, and whether the
+    /// socket itself refused to send. All four are on the screen, because the
+    /// person reading it is the one who can check the router.
+    /// </summary>
+    void DrawKnocking()
+    {
+        var wire = _lanSession();
+        var waited = _session.KnockingFor;
+
+        string where = Session.TryReadAddress(_session.KnockingAt, out var resolved)
+            ? resolved.ToString()
+            : _session.KnockingAt;
+
+        // Names resolve to addresses, and the address is what a router rule and
+        // a packet capture are written against.
+        string typedHost = _session.KnockingAt.Split(':')[0];
+        string alsoKnownAs = where.StartsWith(typedHost + ":") ? "" : $" ({_session.KnockingAt})";
+
+        ImGui.TextDisabled($"Knocking at {where}{alsoKnownAs} - {waited.TotalSeconds:F0}s");
+
+        if (wire is null)
+        {
+            DrawWarning("No session socket on this machine - nothing has been sent.");
+            return;
+        }
+
+        ImGui.TextDisabled(
+            $"{wire.KnocksSent} knock(s) sent from port {wire.BoundPort},"
+            + $" {wire.DatagramsHeard} datagram(s) heard back");
+
+        if (wire.LastSendFailure is { } failure)
+        {
+            DrawWarning($"Sending failed: {failure.Message}");
+            return;
+        }
+
+        if (wire.DatagramsHeard > 0)
+        {
+            // Something answered, so the round trip works and the silence is
+            // about content rather than reachability - a wrong secret is the
+            // one the host drops without a word.
+            ImGui.TextDisabled($"Last heard from {wire.LastHeardFrom}");
+            if (waited > LongEnoughToWorry)
+                DrawWarning("Answered, but not let in - the room's secret may be wrong,"
+                    + " or the room may be full.");
+            return;
+        }
+
+        if (waited <= LongEnoughToWorry) return;
+
+        DrawWarning($"Nothing has come back in {waited.TotalSeconds:F0}s.");
+        ImGui.TextDisabled("The host must forward UDP to the port above, on its own machine's");
+        ImGui.TextDisabled("address, and its firewall must allow this app. Check that the address");
+        ImGui.TextDisabled("is the host's public one, not the one it sees itself as.");
     }
 
     void DrawCreate()
@@ -497,7 +569,26 @@ public sealed class MultiplayerPanel : IPanel
         // The host is the only machine that can be joined at an address, and
         // the only one that cannot look its own up.
         if (_session.Phase == SessionPhase.Hosting)
+        {
             ImGui.TextDisabled($"Others join at your address, port {ModeHook.SessionPortNumber}");
+
+            // The other half of a knock nobody answered. A router that is not
+            // forwarding and a firewall that is dropping are invisible to the
+            // client - both are simply silence - and they are equally invisible
+            // to a host that is only told about the players who got through.
+            // This is told about the ones who did not: a count that stays at
+            // zero while somebody is knocking says the datagrams are not
+            // reaching this machine at all, which is a different problem in a
+            // different place from anything the client can see.
+            if (_lanSession() is { } wire)
+            {
+                ImGui.TextDisabled($"{wire.DatagramsHeard} datagram(s) heard on it"
+                    + (wire.LastHeardFrom is { } last ? $", last from {last}" : ""));
+
+                if (wire.LastSendFailure is { } failure)
+                    DrawWarning($"Sending failed: {failure.Message}");
+            }
+        }
 
         DrawTheLastRace();
 
