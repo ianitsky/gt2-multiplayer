@@ -498,6 +498,13 @@ public static class ModeHook
                 _discovery!.Tick();
                 _session!.Tick();
 
+                // A room is open, so the port should be. Idempotent by
+                // design: the work happens on the first pass through here and
+                // every later one costs a comparison, which is what lets it
+                // sit in a loop with no other notion of "still hosting".
+                if (_session.Phase == SessionPhase.Hosting) PortMapping.Want(SessionPort);
+                else PortMapping.Release();
+
                 // The race just run is still being settled while the next one
                 // is being arranged - see KeepSayingHowItWent for why the two
                 // overlap.
@@ -924,5 +931,10 @@ public static class ModeHook
         _lanSession?.Dispose();
         _lanSession = null;
         _lanSessionRole = null;
+
+        // And the port with it. A router that insisted on a permanent mapping
+        // keeps one until something removes it, so a mapping left behind
+        // outlives the game that asked for it.
+        PortMapping.Release();
     }
 }

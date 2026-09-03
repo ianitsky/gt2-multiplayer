@@ -308,13 +308,23 @@ public class UpnpTests
         string xml = """
             <?xml version="1.0"?>
             <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-              <s:Body><u:AddPortMappingResponse /></s:Body>
+              <s:Body>
+                <u:AddPortMappingResponse
+                  xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1" />
+              </s:Body>
             </s:Envelope>
             """;
 
         Assert.False(Upnp.TryReadFault(xml, out _));
     }
 
+    /// <summary>
+    /// The namespace declaration on the response element is not decoration:
+    /// without it the prefix is undeclared, the document is not XML at all,
+    /// and a parser rightly refuses the whole thing. A sample written without
+    /// it here passed the "refuses a fault" test for entirely the wrong
+    /// reason.
+    /// </summary>
     [Fact]
     public void The_external_address_is_read_back()
     {
@@ -322,7 +332,8 @@ public class UpnpTests
             <?xml version="1.0"?>
             <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
               <s:Body>
-                <u:GetExternalIPAddressResponse>
+                <u:GetExternalIPAddressResponse
+                  xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1">
                   <NewExternalIPAddress>189.40.11.2</NewExternalIPAddress>
                 </u:GetExternalIPAddressResponse>
               </s:Body>
@@ -340,7 +351,8 @@ public class UpnpTests
             <?xml version="1.0"?>
             <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
               <s:Body>
-                <u:GetExternalIPAddressResponse>
+                <u:GetExternalIPAddressResponse
+                  xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1">
                   <NewExternalIPAddress>100.75.3.9</NewExternalIPAddress>
                 </u:GetExternalIPAddressResponse>
               </s:Body>
@@ -592,7 +604,7 @@ public static class Upnp
 - [ ] **Step 4: Run it to verify it passes**
 
 Run: `dotnet test tests/GT2Port.Tests -c Debug --filter UpnpTests`
-Expected: PASS, 20 tests.
+Expected: PASS, 22 tests.
 
 - [ ] **Step 5: Write the failing lifecycle tests**
 
@@ -927,42 +939,106 @@ public static class PortMapping
     }
 
     /// <summary>
-    /// Shouts on the local network and takes the first router that answers.
+    /// Shouts on every local network and takes the first router that answers.
+    ///
+    /// **Every** network, not the default one. A socket bound to IPAddress.Any
+    /// sends multicast out whichever interface the routing table prefers, and
+    /// a development machine has several: this one has the household's card
+    /// and a Hyper-V switch, and a laptop on a VPN has more. Picking one is
+    /// picking wrongly some of the time, and the failure is silent - it looks
+    /// exactly like a router that has UPnP turned off.
     /// </summary>
     static bool TryFindGateway(out Uri description)
     {
         description = null!;
 
-        using var socket = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
-        socket.Client.ReceiveTimeout = 1500;
+        foreach (var local in LocalAddresses())
+            if (TryFindGatewayFrom(local, out description))
+                return true;
 
-        var request = Encoding.ASCII.GetBytes(Upnp.SearchRequest(Upnp.Gateway, 2));
-        var to = new IPEndPoint(IPAddress.Parse(Upnp.MulticastAddress), Upnp.MulticastPort);
+        return false;
+    }
 
-        // Sent more than once because SSDP is UDP on a busy home network and
-        // one lost datagram would look exactly like a router that has UPnP
-        // turned off.
-        for (int attempt = 0; attempt < 3; attempt++)
+    /// <summary>Every IPv4 address this machine answers on, loopback aside.</summary>
+    static List<IPAddress> LocalAddresses()
+    {
+        var found = new List<IPAddress>();
+        try
         {
-            try { socket.Send(request, request.Length, to); }
-            catch (SocketException) { return false; }
-
-            var until = DateTime.UtcNow.AddSeconds(2);
-            while (DateTime.UtcNow < until)
+            foreach (var card in NetworkInterface.GetAllNetworkInterfaces())
             {
-                if (socket.Available == 0)
+                if (card.OperationalStatus != OperationalStatus.Up) continue;
+                if (card.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+
+                foreach (var address in card.GetIPProperties().UnicastAddresses)
                 {
-                    Thread.Sleep(50);
-                    continue;
+                    if (address.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    found.Add(address.Address);
                 }
+            }
+        }
+        catch (NetworkInformationException)
+        {
+            // Nothing to enumerate. The fallback below still gets a chance.
+        }
 
-                IPEndPoint? from = null;
-                byte[] data;
-                try { data = socket.Receive(ref from); }
-                catch (SocketException) { break; }
+        // Any is kept as a last resort rather than a first: on a machine with
+        // one card it is the same thing, and on one where enumeration failed
+        // it is all there is.
+        found.Add(IPAddress.Any);
+        return found;
+    }
 
-                if (Upnp.TryReadLocation(Encoding.ASCII.GetString(data), out description))
-                    return true;
+    static bool TryFindGatewayFrom(IPAddress local, out Uri description)
+    {
+        description = null!;
+
+        UdpClient socket;
+        try
+        {
+            socket = new UdpClient(new IPEndPoint(local, 0));
+            if (!local.Equals(IPAddress.Any))
+                socket.Client.SetSocketOption(SocketOptionLevel.IP,
+                    SocketOptionName.MulticastInterface, local.GetAddressBytes());
+        }
+        catch (SocketException)
+        {
+            // A card that went down between being listed and being bound.
+            return false;
+        }
+
+        using (socket)
+        {
+            socket.Client.ReceiveTimeout = 1500;
+
+            var request = Encoding.ASCII.GetBytes(Upnp.SearchRequest(Upnp.Gateway, 2));
+            var to = new IPEndPoint(IPAddress.Parse(Upnp.MulticastAddress), Upnp.MulticastPort);
+
+            // Sent more than once because SSDP is UDP on a busy home network
+            // and one lost datagram would look exactly like a router that has
+            // UPnP turned off.
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                try { socket.Send(request, request.Length, to); }
+                catch (SocketException) { return false; }
+
+                var until = DateTime.UtcNow.AddSeconds(1.5);
+                while (DateTime.UtcNow < until)
+                {
+                    if (socket.Available == 0)
+                    {
+                        Thread.Sleep(50);
+                        continue;
+                    }
+
+                    IPEndPoint? from = null;
+                    byte[] data;
+                    try { data = socket.Receive(ref from); }
+                    catch (SocketException) { break; }
+
+                    if (Upnp.TryReadLocation(Encoding.ASCII.GetString(data), out description))
+                        return true;
+                }
             }
         }
         return false;
@@ -1073,6 +1149,15 @@ Run: `dotnet test tests/GT2Port.Tests -c Debug`
 Expected: PASS — 25 more than before this task (20 from `UpnpTests`, 5 from `PortMappingTests`).
 
 - [ ] **Step 12: Try it against a real router**
+
+> **Changed while executing.** Discovery was written against `IPAddress.Any`,
+> which sends multicast out whichever interface the routing table prefers. The
+> machine this was first run on has two - the household's card and a Hyper-V
+> switch - and a laptop on a VPN has more, so one of them is silently never
+> asked. `TryFindGateway` above now walks every interface. It did not change
+> the outcome on that machine (its router answers nothing at all, on either
+> interface), which is why it is worth writing down: the bug would have hidden
+> behind a genuine refusal.
 
 This is the step no test replaces. On a machine behind a home router:
 

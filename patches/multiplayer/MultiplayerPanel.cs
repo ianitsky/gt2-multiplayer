@@ -570,7 +570,34 @@ public sealed class MultiplayerPanel : IPanel
         // the only one that cannot look its own up.
         if (_session.Phase == SessionPhase.Hosting)
         {
-            ImGui.TextDisabled($"Others join at your address, port {ModeHook.SessionPortNumber}");
+            // What to tell people, in the order of how much is known. A mapped
+            // port means a real address to read out; anything else means "your
+            // address", which is what this said before the router was ever
+            // asked - and a refusal is worth naming, because the player is the
+            // one who can act on it.
+            switch (PortMapping.State)
+            {
+                case PortMapping.How.Mapped when PortMapping.Outside is { } outside:
+                    ImGui.TextDisabled($"Others join at {outside}");
+                    break;
+                case PortMapping.How.Mapped:
+                    ImGui.TextDisabled(
+                        $"Your router forwarded port {ModeHook.SessionPortNumber} - "
+                        + "others join at your public address");
+                    break;
+                case PortMapping.How.Trying:
+                    ImGui.TextDisabled("Asking your router to open the port...");
+                    break;
+                case PortMapping.How.Refused:
+                    ImGui.TextDisabled(
+                        $"Others join at your address, port {ModeHook.SessionPortNumber}");
+                    DrawWarning($"The router would not open it: {PortMapping.Why}");
+                    break;
+                default:
+                    ImGui.TextDisabled(
+                        $"Others join at your address, port {ModeHook.SessionPortNumber}");
+                    break;
+            }
 
             // The other half of a knock nobody answered. A router that is not
             // forwarding and a firewall that is dropping are invisible to the
