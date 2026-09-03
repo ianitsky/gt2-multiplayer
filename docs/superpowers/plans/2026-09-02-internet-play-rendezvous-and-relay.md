@@ -1500,7 +1500,7 @@ public class RoomCodeTests
     [InlineData("ABCDEFG", false)]
     [InlineData("ABCDE0", false)]
     [InlineData("ABCDEF", true)]
-    [InlineData("23456789"[..6], true)]
+    [InlineData("234567", true)]
     public void Well_formed_is_length_and_alphabet(string code, bool ok)
     {
         Assert.Equal(ok, RoomCode.IsWellFormed(code));
@@ -1969,7 +1969,7 @@ public static class Envelope
 - [ ] **Step 7: Run the tests to verify they pass**
 
 Run: `dotnet test tests/GT2Relay.Tests -c Debug`
-Expected: PASS — all of `EnvelopeTests` and `RoomCodeTests`.
+Expected: PASS, 30 tests - all of `EnvelopeTests` and `RoomCodeTests`.
 
 - [ ] **Step 8: Check nothing else broke**
 

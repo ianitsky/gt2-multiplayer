@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <!--
+      This project must never gain a ProjectReference. The relay links it and
+      runs on a server; a reference to GT2Port would drag the whole recompiled
+      game onto a machine that has no business holding it.
+    -->
+
+</Project>
