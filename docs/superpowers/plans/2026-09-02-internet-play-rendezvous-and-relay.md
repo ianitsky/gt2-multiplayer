@@ -4650,6 +4650,24 @@ Expected: FAIL if any of Tasks 4-6 is incomplete. If Tasks 1-6 are done, it shou
 
 No new production code should be needed. If it does not pass, the failure is in Task 5 or Task 6 and belongs there — fix it in the file it belongs to rather than working around it here.
 
+> **It did not pass, and both failures were real.** Written down because a
+> reader of this plan will meet them again.
+>
+> **A link only advances when it is read.** `Code` and the room list arrive
+> inside `Pump`, which nothing calls unless somebody asks for `Available` - and
+> in the room list there is no `LanSession` to ask. The internet list would
+> have stayed empty forever. `RelaySession` gained a `Tick()` that pumps, and
+> `ModeHook.TickTheRelay` calls it first.
+>
+> **A client addressed its host at the well-known port.** `LanSession` built
+> `new IPEndPoint(hostAddress, _hostPort)` in four places - fine on a local
+> network, useless through a relay, where a host answers on whatever port its
+> NAT handed out and the relay forwards only to room members. Every intent a
+> client sent was dropped in silence. `IGameLink` gained `HostAt(address,
+> hostPort)`: `DirectLink` puts the two together as before, `RelaySession`
+> returns the peer the server introduced. The call sites now ask the link,
+> which is where an addressing question belongs.
+
 - [ ] **Step 4: Run everything**
 
 Run: `dotnet test tests/GT2Port.Tests -c Debug`
