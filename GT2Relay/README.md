@@ -19,6 +19,10 @@ dotnet publish GT2Relay -c Release -r linux-x64 --self-contained false -o out
 ./out/gt2relay --port 34720
 ```
 
+Google Cloud is written up separately in [DEPLOY-GCP.md](DEPLOY-GCP.md) - one
+firewall instead of two, but a much meaner free traffic allowance and a free
+tier that only exists in the United States, which matters for latency.
+
 ## On Oracle Cloud free tier
 
 Pick the **`VM.Standard.A1.Flex`** shape — up to 4 OCPU and 24 GB are Always
