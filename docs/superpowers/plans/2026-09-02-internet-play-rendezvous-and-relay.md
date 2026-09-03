@@ -2937,13 +2937,13 @@ public sealed class RelayServer : IDisposable
     public void Sweep() => _registry.Sweep();
 
     /// <summary>
-    /// Serves until asked to stop. Blocks on the socket rather than spinning,
-    /// with a timeout only so the sweep still happens on a quiet night.
+    /// Serves until asked to stop. Sleeps a millisecond when there is nothing
+    /// waiting rather than blocking on a receive, so the sweep still happens
+    /// on a quiet night and stopping does not wait out a timeout.
     /// </summary>
     public void Run(CancellationToken stopping)
     {
         var nextSweep = DateTime.UtcNow + SweepEvery;
-        _socket.Client.ReceiveTimeout = 500;
 
         while (!stopping.IsCancellationRequested)
         {
@@ -2970,7 +2970,7 @@ public sealed class RelayServer : IDisposable
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `dotnet test tests/GT2Relay.Tests -c Debug`
-Expected: PASS — all four suites.
+Expected: PASS, 53 tests - all four suites.
 
 - [ ] **Step 5: Write `Program`**
 
