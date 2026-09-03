@@ -55,7 +55,7 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const byte WatchingFlag = 1 << 2;
 
-    readonly UdpClient _socket;
+    readonly IGameLink _link;
     readonly int _boundPort;
     readonly int _hostPort;
 
@@ -76,9 +76,9 @@ public sealed class LanSession : IDisposable
     DateTime? _lastIntentSent;
     bool _disposed;
 
-    LanSession(UdpClient socket, int boundPort, int hostPort, Func<DateTime> clock, bool hosting)
+    LanSession(IGameLink link, int boundPort, int hostPort, Func<DateTime> clock, bool hosting)
     {
-        _socket = socket;
+        _link = link;
         _boundPort = boundPort;
         _hostPort = hostPort;
         _clock = clock;
@@ -95,32 +95,19 @@ public sealed class LanSession : IDisposable
     /// </summary>
     public static LanSession ForHost(int port, Func<DateTime> clock)
     {
-        var socket = new UdpClient
-        {
-            Client = { ReceiveTimeout = 1 },
-        };
-        try
-        {
-            socket.Client.Bind(new IPEndPoint(IPAddress.Any, port));
-        }
-        catch
-        {
-            // Finding 3: the bind failed, so this socket holds no port and
-            // cannot block the other instance - but leaving it undisposed
-            // still leaks a handle per failed attempt (e.g. a player
-            // clicking "Create a room" repeatedly while another instance is
-            // already hosting).
-            socket.Dispose();
-            throw;
-        }
-        // The port the socket actually got, not the one that was asked for.
-        // They are the same for a host on its well-known port, and they are
-        // not when the caller passes 0 to mean "any" - and BoundPort exists
-        // precisely so a caller need not know which case it is in. A test
-        // pairing two sessions on ephemeral ports sent everything to port
-        // zero before this.
-        var bound = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
-        return new LanSession(socket, bound, bound, clock, hosting: true);
+        // The bind, and the reason for not reusing the address, now live in
+        // DirectLink - see there. What is still decided here is the pair of
+        // ports: a host answers on the one it bound and is addressed on the
+        // same, which is what makes it well known.
+        //
+        // And it is the port the link actually got, not the one asked for.
+        // They are the same for a host on its well-known port and not when a
+        // caller passes 0 to mean "any"; BoundPort exists precisely so a
+        // caller need not know which case it is in. A test pairing two
+        // sessions on ephemeral ports sent everything to port zero before
+        // this.
+        var link = DirectLink.Bind(port);
+        return new LanSession(link, link.BoundPort, link.BoundPort, clock, hosting: true);
     }
 
     /// <summary>
@@ -132,23 +119,19 @@ public sealed class LanSession : IDisposable
     /// </summary>
     public static LanSession ForClient(int hostPort, Func<DateTime> clock)
     {
-        var socket = new UdpClient
-        {
-            Client = { ReceiveTimeout = 1 },
-        };
-        try
-        {
-            socket.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
-        }
-        catch
-        {
-            // Finding 3: same shape as ForHost's - see there.
-            socket.Dispose();
-            throw;
-        }
-        var boundPort = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
-        return new LanSession(socket, boundPort, hostPort, clock, hosting: false);
+        var link = DirectLink.Ephemeral();
+        return new LanSession(link, link.BoundPort, hostPort, clock, hosting: false);
     }
+
+    /// <summary>
+    /// A session over a link somebody else built - which in practice means a
+    /// relayed one. The two factories above are the local-network cases and
+    /// build their own socket; this is the seam for everything that reaches a
+    /// host some other way.
+    /// </summary>
+    public static LanSession Over(IGameLink link, int hostPort, Func<DateTime> clock,
+                                  bool hosting) =>
+        new(link, link.BoundPort, hostPort, clock, hosting);
 
     /// <summary>
     /// The port actually bound, so callers (and tests) never have to
@@ -165,7 +148,7 @@ public sealed class LanSession : IDisposable
     /// "the message was rejected" from "the message had not arrived yet" -
     /// without which a test that expects rejection passes on an empty socket.
     /// </summary>
-    internal int Available => _disposed ? 0 : _socket.Available;
+    internal int Available => _disposed ? 0 : _link.Available;
 
     /// <summary>
     /// Tells the socket about a player it should pass places on to. The lobby
@@ -288,12 +271,12 @@ public sealed class LanSession : IDisposable
         _atTheLine.Clear();
         StartsAt = null;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             try
             {
-                _socket.Receive(ref from);
+                _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -318,13 +301,13 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
             try
             {
-                data = _socket.Receive(ref from);
+                data = _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -412,13 +395,13 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
             try
             {
-                data = _socket.Receive(ref from);
+                data = _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -442,13 +425,13 @@ public sealed class LanSession : IDisposable
         if (session.Phase != SessionPhase.Hosting) return;
         if (session.Current is not { } room) return;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
             try
             {
-                data = _socket.Receive(ref from);
+                data = _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -502,13 +485,13 @@ public sealed class LanSession : IDisposable
         // repeats the knock itself.
         if (session.Phase is not (SessionPhase.Joined or SessionPhase.Knocking)) return;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
             try
             {
-                data = _socket.Receive(ref from);
+                data = _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -683,13 +666,13 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
             try
             {
-                data = _socket.Receive(ref from);
+                data = _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -760,13 +743,13 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
 
-        for (int i = 0; i < MaxDatagramsPerTick && _socket.Available > 0; i++)
+        for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
         {
             IPEndPoint? from = null;
             byte[] data;
             try
             {
-                data = _socket.Receive(ref from);
+                data = _link.Receive(ref from);
             }
             catch (SocketException)
             {
@@ -830,7 +813,7 @@ public sealed class LanSession : IDisposable
     {
         try
         {
-            _socket.Send(data, data.Length, to);
+            _link.Send(data, data.Length, to);
             LastSendFailure = null;
         }
         catch (SocketException ex)
@@ -843,7 +826,7 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _socket.Dispose();
+        _link.Dispose();
     }
 
     // ---- wire format ----

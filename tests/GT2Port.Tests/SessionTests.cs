@@ -808,7 +808,12 @@ public class SessionTests
 
         using var hostDiscovery = new LanDiscovery(discoveryPort, () => _now); // stands in for the real host, announcing the room
         using var discovery = new LanDiscovery(discoveryPort, () => _now);
-        using var lanSession = LanSession.ForHost(lanSessionPort, () => _now);
+        // Built over a link this test holds, rather than one the session
+        // hides. It used to reach in for the private socket by reflection;
+        // IGameLink is that socket with a name, so the observation is now an
+        // ordinary read of an object the test owns.
+        using var link = DirectLink.Bind(lanSessionPort);
+        using var lanSession = LanSession.Over(link, link.BoundPort, () => _now, hosting: true);
 
         var session = NewSession("guest");
         var hostRoom = new Room(Guid.NewGuid(), "room", "track", "special", 6, [new Player("ian", "", false)]);
@@ -832,14 +837,11 @@ public class SessionTests
         // loopback, so it lands right back in its own receive queue - same
         // self-receipt technique LanSessionTests uses to observe an
         // outbound send with only one live socket involved.
-        var socketField = typeof(LanSession).GetField("_socket", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?? throw new InvalidOperationException("LanSession no longer has a _socket field.");
-        var socket = (UdpClient)socketField.GetValue(lanSession)!;
         IPEndPoint? from = null;
         byte[]? data = null;
         for (int i = 0; i < 50 && data is null; i++)
         {
-            if (socket.Available > 0) data = socket.Receive(ref from);
+            if (link.Available > 0) data = link.Receive(ref from);
             else Thread.Sleep(10);
         }
 

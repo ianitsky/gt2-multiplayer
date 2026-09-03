@@ -3410,6 +3410,20 @@ grep -n "_socket" patches/multiplayer/LanSession.cs
 
 Expected: no output.
 
+**One test reaches for that field by reflection** and will fail with "LanSession
+no longer has a _socket field" - `SessionTests.LeaveRoom_on_a_joined_session_sends_the_departure_before_clearing_current`,
+which observed an outbound send by digging out the private socket. Do not
+re-point the reflection at `_link`: the seam is what makes the reflection
+unnecessary. Have the test hold the link itself instead -
+
+```csharp
+        using var link = DirectLink.Bind(lanSessionPort);
+        using var lanSession = LanSession.Over(link, link.BoundPort, () => _now, hosting: true);
+```
+
+- and read `link.Available` / `link.Receive(ref from)` where it read the
+socket's. Disposing both is safe; `DirectLink.Dispose` is guarded.
+
 Replace the bodies of the two factories so they build a link. `ForHost` becomes:
 
 ```csharp
