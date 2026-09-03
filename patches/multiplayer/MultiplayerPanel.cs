@@ -59,11 +59,12 @@ public sealed class MultiplayerPanel : IPanel
     // at any real frame rate.
     readonly Dictionary<string, bool> _cellHovered = new(StringComparer.Ordinal);
 
-    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession, CourseMaps courseMaps, CarCatalogue carCatalogue)
+    public MultiplayerPanel(Session session, LanDiscovery discovery, Func<LanSession?> lanSession, Func<RelaySession?> relay, CourseMaps courseMaps, CarCatalogue carCatalogue)
     {
         _session = session;
         _discovery = discovery;
         _lanSession = lanSession;
+        _relay = relay;
         _courseMaps = courseMaps;
         _carCatalogue = carCatalogue;
         _playerName = session.PlayerName;
@@ -105,6 +106,18 @@ public sealed class MultiplayerPanel : IPanel
     /// message to. The host doesn't need this: it isn't leaving a room it
     /// owns, it's tearing one down, and there is nobody to notify.
     /// </summary>
+    /// <summary>
+    /// Joins a room the relay knows about. The relay is told first, because
+    /// until it has admitted this machine to the room it will not carry a
+    /// single datagram for it - the session that follows would be knocking
+    /// into a server that drops what it sends.
+    /// </summary>
+    void JoinOverTheRelay(Guid roomId, Room room)
+    {
+        _relay()?.Join(roomId);
+        _session.Join(room);
+    }
+
     public void LeaveRoom()
     {
         if (_session.Phase == SessionPhase.Joined && _session.Current is { } room &&
@@ -216,6 +229,16 @@ public sealed class MultiplayerPanel : IPanel
         return lo == 0 ? ellipsis : text[..lo] + ellipsis;
     }
 
+    /// <summary>What a player is typing into the code box.</summary>
+    string _roomCodeTyped = "";
+
+    /// <summary>
+    /// The relay, if one is configured. A function rather than an instance:
+    /// it is built and dropped as the address setting changes, and the panel
+    /// outlives any one of them.
+    /// </summary>
+    readonly Func<RelaySession?> _relay;
+
     void DrawRoomList()
     {
         if (ImGui.InputText("Your name", ref _playerName, 32))
@@ -266,6 +289,56 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.PopID();
         }
 
+        // Rooms that were never on this network. Same row, same button - where
+        // a room was found is not something a player should have to think
+        // about, only whether they can get into it.
+        if (_relay() is { } relay)
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted("Rooms on the internet");
+
+            var adverts = relay.Rooms;
+            if (adverts.Count == 0) ImGui.TextDisabled("None right now");
+
+            foreach (var advert in adverts)
+            {
+                // A card that will not deserialise is a room published by a
+                // newer build than this one. Skipping it is right: the panel
+                // cannot draw a room it cannot read, and refusing to draw the
+                // rest because of it would be worse.
+                if (!RoomState.TryDeserialise(advert.Card, out var internetRoom)) continue;
+
+                ImGui.PushID(advert.Id.ToString());
+                var itsHost = internetRoom.Players.Count > 0 ? internetRoom.Players[0].Name : "";
+                var itsClass = _carCatalogue.TryFind(internetRoom.CarGroup, out var itsGroup)
+                    ? itsGroup.Name
+                    : internetRoom.CarGroup;
+                var itsLabel =
+                    $"{internetRoom.Name}   {itsHost}"
+                    + $"   {internetRoom.Players.Count}/{internetRoom.MaxPlayers}"
+                    + $"   {CourseTable.DisplayName(internetRoom.Track)}   {itsClass}"
+                    + $"   {HowLong(internetRoom)}   code {advert.Code}";
+
+                bool itIsFull = internetRoom.Players.Count >= internetRoom.MaxPlayers;
+                string itsButton = itIsFull ? "Full" : "Join";
+
+                // Same truncation the local rows use, and for the same reason:
+                // a room name at 150% display scale has no bound on this row's
+                // width and the window has no horizontal scrollbar.
+                float itsButtonWidth = ImGui.CalcTextSize(itsButton).X
+                    + ImGui.GetStyle().FramePadding.X * 2f;
+                float itsRoom = ImGui.GetContentRegionAvail().X - itsButtonWidth
+                    - ImGui.GetStyle().ItemSpacing.X;
+                ImGui.TextUnformatted(Truncate(itsLabel, itsRoom));
+                ImGui.SameLine();
+
+                ImGui.BeginDisabled(itIsFull);
+                if (ImGui.Button(itsButton)) JoinOverTheRelay(advert.Id, internetRoom);
+                ImGui.EndDisabled();
+                ImGui.PopID();
+            }
+        }
+
         // A room nobody announced can only be reached by being told where it
         // is - which is every room that is not on this network.
         ImGui.Separator();
@@ -283,6 +356,18 @@ public sealed class MultiplayerPanel : IPanel
             ImGui.SameLine();
             if (ImGui.Button("Stop")) _session.Leave();
             DrawKnocking();
+        }
+
+        if (_relay() is { } byCode)
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted("Or join by code");
+            ImGui.InputText("Code", ref _roomCodeTyped, 16);
+            ImGui.SameLine();
+            if (ImGui.Button("Join by code")) byCode.JoinByCode(_roomCodeTyped);
+
+            if (byCode.Refused)
+                DrawWarning("No room with that code - it may have closed, or been mistyped.");
         }
 
         ImGui.Separator();
@@ -607,6 +692,11 @@ public sealed class MultiplayerPanel : IPanel
             // zero while somebody is knocking says the datagrams are not
             // reaching this machine at all, which is a different problem in a
             // different place from anything the client can see.
+            // And the code, for a room somebody has to be told about rather
+            // than find.
+            if (_relay() is { Code.Length: > 0 } mine)
+                ImGui.TextDisabled($"Or by code {mine.Code} through the relay");
+
             if (_lanSession() is { } wire)
             {
                 ImGui.TextDisabled($"{wire.DatagramsHeard} datagram(s) heard on it"

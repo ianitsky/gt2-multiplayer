@@ -49,6 +49,14 @@ public static class ModeHook
     static LanDiscovery? _discovery;
     static LanSession? _lanSession;
 
+    /// <summary>
+    /// The socket to the rendezvous server, when one is configured. It is both
+    /// how internet rooms are found and how their traffic travels, so it
+    /// outlives any one session: dropping it between the room list and the
+    /// lobby would drop the NAT mapping the whole thing depends on.
+    /// </summary>
+    static RelaySession? _relay;
+
     // The archive is opened lazily - only when the picker actually asks for a
     // texture - not eagerly here, since building the panel shouldn't require
     // touching the disc at all (e.g. a session with no disc configured still
@@ -401,7 +409,7 @@ public static class ModeHook
         // as RunLobby rebuilds or drops it underneath it.
         if (_panel == null)
         {
-            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession, _courseMaps, _carCatalogue);
+            _panel = new MultiplayerPanel(_session, _discovery, () => _lanSession, () => _relay, _courseMaps, _carCatalogue);
             PanelManager.Register(_panel);
         }
         _panel.IsOpen = true;
@@ -505,6 +513,8 @@ public static class ModeHook
                 if (_session.Phase == SessionPhase.Hosting) PortMapping.Want(SessionPort);
                 else PortMapping.Release();
 
+                TickTheRelay();
+
                 // The race just run is still being settled while the next one
                 // is being arranged - see KeepSayingHowItWent for why the two
                 // overlap.
@@ -518,7 +528,13 @@ public static class ModeHook
                         _lanSessionRole = null;
                         try
                         {
-                            _lanSession = LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
+                            // A room announced through the relay is reached
+                            // through it too. The link is borrowed rather than
+                            // owned - see LanSession.Over.
+                            _lanSession = _relay is not null
+                                ? LanSession.Over(_relay, SessionPort, () => DateTime.UtcNow,
+                                    hosting: true, ownsTheLink: false)
+                                : LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
                             _lanSessionRole = SessionPhase.Hosting;
                         }
                         catch (SocketException)
@@ -541,7 +557,14 @@ public static class ModeHook
                         _lanSessionRole = null;
                         try
                         {
-                            _lanSession = LanSession.ForClient(SessionPort, () => DateTime.UtcNow);
+                            // Only a relay that has actually admitted this
+                            // machine carries anything for it: until then the
+                            // server drops what it is handed, and a session
+                            // built over it would knock into silence.
+                            _lanSession = _relay is { Admitted: true }
+                                ? LanSession.Over(_relay, SessionPort, () => DateTime.UtcNow,
+                                    hosting: false, ownsTheLink: false)
+                                : LanSession.ForClient(SessionPort, () => DateTime.UtcNow);
                             _lanSessionRole = SessionPhase.Joined;
                         }
                         catch (SocketException)
@@ -923,6 +946,37 @@ public static class ModeHook
 
         var drivers = Seats.Drivers(room.Players);
         return drivers.FirstOrDefault(p => p.Name != mine.Name) ?? mine;
+    }
+
+    /// <summary>
+    /// Keeps the relay in step with what this machine is doing: a host says its
+    /// room is still there, and anybody else asks what rooms exist. Both are
+    /// rate-limited inside RelaySession, so calling this every pass is what it
+    /// expects.
+    /// </summary>
+    static void TickTheRelay()
+    {
+        if (!RelaySettings.Configured)
+        {
+            _relay?.Dispose();
+            _relay = null;
+            return;
+        }
+
+        if (_relay is null)
+        {
+            if (!RelaySettings.TryReadAddress(RelaySettings.Address, out var where)) return;
+            _relay = new RelaySession(where, () => DateTime.UtcNow);
+            Console.Error.WriteLine($"[relay] talking to {where}");
+        }
+
+        // A room with a secret is not listed. The secret is what makes a room
+        // private, and listing a private room defeats it while still turning
+        // everybody away at the door.
+        if (_session!.Phase == SessionPhase.Hosting && _session.Current is { } room)
+            _relay.Publish(room.Id, listed: room.Secret.Length == 0, RoomState.Serialise(room));
+        else
+            _relay.AskForRooms();
     }
 
     /// <summary>Frees the session socket, so another instance here can host or join.</summary>

@@ -56,6 +56,7 @@ public sealed class LanSession : IDisposable
     const byte WatchingFlag = 1 << 2;
 
     readonly IGameLink _link;
+    bool _ownsTheLink = true;
     readonly int _boundPort;
     readonly int _hostPort;
 
@@ -129,9 +130,15 @@ public sealed class LanSession : IDisposable
     /// build their own socket; this is the seam for everything that reaches a
     /// host some other way.
     /// </summary>
+    /// <param name="ownsTheLink">
+    /// Whether disposing the session should dispose the link. False for a
+    /// relayed one: that link is also the room list and the keepalive, it
+    /// outlives any single session, and closing it here would drop the NAT
+    /// mapping the whole arrangement rests on.
+    /// </param>
     public static LanSession Over(IGameLink link, int hostPort, Func<DateTime> clock,
-                                  bool hosting) =>
-        new(link, link.BoundPort, hostPort, clock, hosting);
+                                  bool hosting, bool ownsTheLink = true) =>
+        new(link, link.BoundPort, hostPort, clock, hosting) { _ownsTheLink = ownsTheLink };
 
     /// <summary>
     /// The port actually bound, so callers (and tests) never have to
@@ -826,7 +833,7 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        _link.Dispose();
+        if (_ownsTheLink) _link.Dispose();
     }
 
     // ---- wire format ----

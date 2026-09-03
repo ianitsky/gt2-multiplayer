@@ -717,7 +717,7 @@ public class SessionTests
         using var discovery = new LanDiscovery(34740, () => _now);
         using var lanSession = LanSession.ForHost(34750, () => _now);
         using var courseMaps = new CourseMaps(() => null);
-        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession, courseMaps, CarCatalogue.FromJson(null, null));
+        var panel = new MultiplayerPanel(NewSession(), discovery, () => lanSession, () => null, courseMaps, CarCatalogue.FromJson(null, null));
 
         Assert.False(panel.TryConsumeStartRequest());
 
@@ -779,7 +779,7 @@ public class SessionTests
         using var courseMaps = new CourseMaps(() => null);
         var session = NewSession();
         session.Host("room", "track", "special");
-        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps, CarCatalogue.FromJson(null, null));
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, () => null, courseMaps, CarCatalogue.FromJson(null, null));
 
         typeof(MultiplayerPanel).GetProperty(nameof(MultiplayerPanel.StartRequested))!
             .SetValue(panel, true);
@@ -829,7 +829,7 @@ public class SessionTests
         Assert.True(discovery.TryGetHostAddress(roomId, out _)); // positive precondition (Finding 1 applies here too)
 
         using var courseMaps = new CourseMaps(() => null);
-        var panel = new MultiplayerPanel(session, discovery, () => lanSession, courseMaps, CarCatalogue.FromJson(null, null));
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, () => null, courseMaps, CarCatalogue.FromJson(null, null));
 
         panel.LeaveRoom();
 

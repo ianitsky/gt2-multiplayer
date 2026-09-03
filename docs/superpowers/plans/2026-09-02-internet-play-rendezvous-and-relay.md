@@ -4455,7 +4455,17 @@ to:
         _relay = relay;
 ```
 
-and update the one place `ModeHook` constructs it to pass `() => _relay` as the fourth argument.
+and update the one place `ModeHook` constructs it to pass `() => _relay` as the
+fourth argument.
+
+**Three tests construct the panel too** and will stop compiling -
+`SessionTests` builds one in each of its three panel tests. They are the
+local-network cases, so pass `() => null`, which is exactly what a machine with
+no server configured has:
+
+```csharp
+        var panel = new MultiplayerPanel(session, discovery, () => lanSession, () => null, courseMaps, CarCatalogue.FromJson(null, null));
+```
 
 `JoinOverTheRelay` sits beside `LeaveRoom`:
 
