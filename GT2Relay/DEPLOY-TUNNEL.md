@@ -151,6 +151,44 @@ to receive on its local port, even through a tunnel: the agent delivers to
 `127.0.0.1`, but the socket has to be allowed to exist. Allow the app when
 Windows asks, or add the rule by hand.
 
+**Rooms are published but never listed.** Traffic goes in and nothing comes
+back, which is the agent's receive loop being dead rather than anything about
+the game. On Windows a UDP socket that sends to a port with nothing listening
+is handed the resulting ICMP refusal as a `ConnectionReset` on its *next*
+receive, and the playit agent does not turn that off the way this port's own
+sockets do. The agent's log says so once per forwarded datagram:
+
+```
+WARN udp_receiver: failed to receive UDP packet error=Os { code: 10054, kind: ConnectionReset }
+```
+
+It does not recover on its own. **Start what listens before you start the
+agent** - the relay on 34720, or the game if you are tunnelling the game -
+and restart the agent if the order ever slipped. A tunnel left pointed at a
+port nothing is bound to poisons the agent every few seconds.
+
+The relay's own status line tells this apart from a dead tunnel without a
+packet capture:
+
+```
+in 68  out 70  failed 0  rooms 2  last 192.168.15.7:58996
+```
+
+`in` climbing means the tunnel delivers. `in` climbing with `out` climbing,
+while players still see no rooms, means the path back - the agent, not this.
+`in` flat means nothing is arriving at all: the tunnel, or the firewall.
+
+**The agent warns about the clock.** A machine whose time is off by more than
+ten seconds has its agent rejected by the edge, and the tunnel goes quiet with
+no other explanation:
+
+```
+WARN established_control: local timestamp if over 10 seconds off offset=111888
+```
+
+`offset` is milliseconds. Check with `w32tm /query /status`: a machine that has
+never synchronised says *Local CMOS Clock* and drifts minutes a week.
+
 **Check what the panel says.** While knocking it reports knocks sent against
 datagrams heard, and the sending socket's own failures. Knocks rising with
 nothing heard back means the tunnel, not the game.
