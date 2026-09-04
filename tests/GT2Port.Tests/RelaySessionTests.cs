@@ -40,6 +40,55 @@ public class RelaySessionTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// The relay names the host when it admits a player, and that is the only
+    /// address a room found on the internet ever has: the client is not on the
+    /// host's network, so it hears no announcement, and it typed nothing.
+    /// Without reading this the client had nobody to speak to and was dropped
+    /// for going quiet three seconds later.
+    /// </summary>
+    [Fact]
+    public void A_client_learns_who_is_hosting_from_the_relay()
+    {
+        using var host = New();
+        using var guest = New();
+        var roomId = Guid.NewGuid();
+
+        host.Publish(roomId, listed: true, [1, 2, 3]);
+        Settle(host, guest);
+
+        Assert.Null(guest.Host);
+
+        guest.Join(roomId);
+        Settle(host, guest);
+
+        Assert.True(guest.Admitted);
+        Assert.NotNull(guest.Host);
+        Assert.Equal(host.BoundPort, guest.Host!.Port);
+    }
+
+    /// <summary>
+    /// And a host learns nothing of the sort. It is sent a Peer for every
+    /// player who joins, and none of them is its host - reading those the same
+    /// way would have a host addressing its first guest as though it were the
+    /// room's owner.
+    /// </summary>
+    [Fact]
+    public void A_host_is_told_about_players_and_not_about_a_host()
+    {
+        using var host = New();
+        using var guest = New();
+        var roomId = Guid.NewGuid();
+
+        host.Publish(roomId, listed: true, [1]);
+        Settle(host, guest);
+        guest.Join(roomId);
+        Settle(host, guest);
+
+        Assert.NotEmpty(host.Peers);
+        Assert.Null(host.Host);
+    }
+
     [Fact]
     public void Publishing_gets_a_code_back()
     {

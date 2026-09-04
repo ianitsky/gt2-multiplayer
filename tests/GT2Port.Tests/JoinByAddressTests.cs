@@ -130,7 +130,7 @@ public class JoinByAddressTests
             System.Net.IPAddress.Parse("147.185.221.213"), 9120);
         var announced = System.Net.IPAddress.Parse("192.168.15.7");
 
-        Assert.Equal(typed.Address, ModeHook.HostToSpeakTo(typed, announced, null));
+        Assert.Equal(typed.Address, ModeHook.HostToSpeakTo(typed, null, announced, null));
     }
 
     [Fact]
@@ -138,7 +138,40 @@ public class JoinByAddressTests
     {
         var announced = System.Net.IPAddress.Parse("192.168.15.7");
 
-        Assert.Equal(announced, ModeHook.HostToSpeakTo(null, announced, null));
+        Assert.Equal(announced, ModeHook.HostToSpeakTo(null, null, announced, null));
+    }
+
+    /// <summary>
+    /// A room found on the internet has no other address at all. The client
+    /// heard no announcement - it is not on that network - and typed nothing,
+    /// so before the relay's introduction was consulted every candidate was
+    /// null, the client never spoke to the host, and the host dropped it three
+    /// seconds later. Which is exactly what "the client is kicked when it is
+    /// on a different network" was.
+    /// </summary>
+    [Fact]
+    public void The_relays_introduction_is_used_when_there_is_nothing_else()
+    {
+        var introduced = System.Net.IPAddress.Parse("147.185.221.213");
+
+        Assert.Equal(introduced, ModeHook.HostToSpeakTo(null, introduced, null, null));
+    }
+
+    /// <summary>
+    /// And it outranks an announcement, because a room joined through the
+    /// relay is reached through the relay - but not a typed address, which is
+    /// somebody saying where the host is in so many words.
+    /// </summary>
+    [Fact]
+    public void The_relays_introduction_sits_between_a_typed_address_and_an_announcement()
+    {
+        var typed = new System.Net.IPEndPoint(
+            System.Net.IPAddress.Parse("203.0.113.9"), 34719);
+        var introduced = System.Net.IPAddress.Parse("147.185.221.213");
+        var announced = System.Net.IPAddress.Parse("192.168.15.7");
+
+        Assert.Equal(introduced, ModeHook.HostToSpeakTo(null, introduced, announced, null));
+        Assert.Equal(typed.Address, ModeHook.HostToSpeakTo(typed, introduced, announced, null));
     }
 
     /// <summary>
@@ -151,8 +184,8 @@ public class JoinByAddressTests
     {
         var kept = System.Net.IPAddress.Parse("192.168.15.7");
 
-        Assert.Equal(kept, ModeHook.HostToSpeakTo(null, null, kept));
-        Assert.Null(ModeHook.HostToSpeakTo(null, null, null));
+        Assert.Equal(kept, ModeHook.HostToSpeakTo(null, null, null, kept));
+        Assert.Null(ModeHook.HostToSpeakTo(null, null, null, null));
     }
 
     [Theory]

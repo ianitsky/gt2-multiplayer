@@ -150,14 +150,21 @@ public static class ModeHook
     /// message after it went nowhere, and the host dropped the player three
     /// seconds later for having gone quiet.
     ///
+    /// A room joined through the relay comes next, because the relay names the
+    /// host when it admits a player and that is the only address such a room
+    /// ever has. A client on another network hears no announcement and typed
+    /// nothing, so before this every one of these was null: it never spoke to
+    /// the host at all and was dropped three seconds later for going quiet.
+    ///
     /// Discovery still wins over nothing, because a room found on this network
     /// has no typed address to prefer.
     /// </summary>
     internal static System.Net.IPAddress? HostToSpeakTo(
         System.Net.IPEndPoint? knockedAt,
+        System.Net.IPAddress? introducedByTheRelay,
         System.Net.IPAddress? announced,
         System.Net.IPAddress? kept) =>
-        knockedAt?.Address ?? announced ?? kept;
+        knockedAt?.Address ?? introducedByTheRelay ?? announced ?? kept;
 
     /// <summary>
     /// Whether the session's socket still suits what the session is doing.
@@ -792,6 +799,10 @@ public static class ModeHook
                     // was allowed to replace it.
                     _raceHost = HostToSpeakTo(
                         _knockedAt,
+                        _relay is { Admitted: true, Host: { } introduced }
+                            && _relay.RoomId == _session.Current!.Id
+                                ? introduced.Address
+                                : null,
                         _discovery.TryGetHostAddress(_session.Current!.Id, out var announced)
                             ? announced
                             : null,

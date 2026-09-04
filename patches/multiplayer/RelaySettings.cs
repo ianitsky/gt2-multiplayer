@@ -99,8 +99,23 @@ public static class RelaySettings
         }
     }
 
-    /// <summary>Whether anything is configured at all.</summary>
-    public static bool Configured => TryReadAddress(Address, out _);
+    /// <summary>
+    /// Whether anything is configured at all - whether a player has named a
+    /// server, not whether that name resolves this second.
+    ///
+    /// It used to ask <see cref="TryReadAddress"/>, which for a name is a DNS
+    /// lookup, and it is asked once per pass of the lobby loop. So the loop
+    /// resolved a name every frame, and one lookup failing - a moment of a
+    /// flaky resolver, a laptop changing networks - reported the relay as
+    /// unconfigured. The link was then disposed, which tells the relay this
+    /// player has left the room, and rebuilt on a new socket the relay had
+    /// never heard of. Nothing rejoins after that, so the host stopped hearing
+    /// the player and dropped them.
+    ///
+    /// Resolution belongs where the link is built, once, where failing means
+    /// "not yet" rather than "never configured".
+    /// </summary>
+    public static bool Configured => Address.Trim().Length > 0;
 
     /// <summary>
     /// Whether GT2_RELAY is deciding this, in which case the settings screen

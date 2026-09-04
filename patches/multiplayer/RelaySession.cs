@@ -106,6 +106,24 @@ public sealed class RelaySession : IGameLink
     public IReadOnlyList<IPEndPoint> Peers => _peers;
 
     /// <summary>
+    /// The host of the room this machine joined, as the relay introduced it.
+    ///
+    /// The relay answers a join with exactly one Peer and it names the room's
+    /// host, so the first one to arrive after asking is the host and nothing
+    /// else has to be inferred. Only meaningful for a client: a host is sent a
+    /// Peer for every player who joins, and none of them is its host.
+    ///
+    /// Without this a client that found a room on the internet had no address
+    /// for the host at all - no announcement to hear on a network it is not
+    /// on, and nothing typed - so it never spoke, and the host dropped it
+    /// three seconds later for having gone quiet.
+    /// </summary>
+    public IPEndPoint? Host { get; private set; }
+
+    /// <summary>Whether this machine asked to join, rather than published.</summary>
+    bool _asked;
+
+    /// <summary>
     /// The rooms the server has mentioned lately. Kept with the time each was
     /// heard, so one that stops being mentioned falls off rather than sitting
     /// there being unjoinable.
@@ -146,12 +164,16 @@ public sealed class RelaySession : IGameLink
     public void Join(Guid roomId)
     {
         Refused = false;
+        _asked = true;
+        Host = null;
         Tell(Envelope.WriteJoin(roomId));
     }
 
     public void JoinByCode(string code)
     {
         Refused = false;
+        _asked = true;
+        Host = null;
         string tidy = RoomCode.Tidy(code);
         if (!RoomCode.IsWellFormed(tidy))
         {
@@ -168,6 +190,8 @@ public sealed class RelaySession : IGameLink
         if (RoomId == Guid.Empty) return;
         Tell(Envelope.WriteLeave(RoomId));
         Admitted = false;
+        _asked = false;
+        Host = null;
     }
 
     void Tell(byte[] data)
@@ -287,8 +311,14 @@ public sealed class RelaySession : IGameLink
                     break;
 
                 case Envelope.Kind.Peer:
-                    if (Envelope.TryReadPeer(data, out _, out var peer) && !_peers.Contains(peer))
-                        _peers.Add(peer);
+                    if (Envelope.TryReadPeer(data, out _, out var peer))
+                    {
+                        if (!_peers.Contains(peer)) _peers.Add(peer);
+
+                        // The first one answers "who is hosting". A later one
+                        // is another player being introduced, which is not.
+                        if (_asked) Host ??= peer;
+                    }
                     break;
 
                 case Envelope.Kind.Relayed:
