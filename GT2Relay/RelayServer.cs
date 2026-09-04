@@ -22,6 +22,25 @@ public sealed class RelayServer : IDisposable
     readonly RoomRegistry _registry;
     bool _disposed;
 
+    /// <summary>
+    /// Datagrams in, datagrams out, and who was last heard from.
+    ///
+    /// Here because the two ways this fails from the outside look identical
+    /// from the outside: nothing arriving, and everything arriving with
+    /// nothing getting back. A tunnel whose return path is broken publishes
+    /// rooms perfectly and lists none of them, and without these counters the
+    /// only way to tell that from a dead firewall is a packet capture, which
+    /// is not a thing to ask of somebody who wanted to race.
+    /// </summary>
+    public long Received { get; private set; }
+
+    public long Sent { get; private set; }
+
+    /// <summary>Replies the socket itself refused. Not the same as lost.</summary>
+    public long SendFailures { get; private set; }
+
+    public IPEndPoint? LastHeardFrom { get; private set; }
+
     /// <summary>How often to forget what has gone quiet.</summary>
     public static readonly TimeSpan SweepEvery = TimeSpan.FromSeconds(5);
 
@@ -79,18 +98,22 @@ public sealed class RelayServer : IDisposable
             }
 
             handled++;
+            Received++;
             if (from is null) continue;
+            LastHeardFrom = from;
 
             foreach (var reply in _registry.Heard(from, data))
             {
                 try
                 {
                     _socket.Send(reply.Data, reply.Data.Length, reply.To);
+                    Sent++;
                 }
                 catch (SocketException)
                 {
                     // The peer went away between asking and being answered.
                     // It will expire on its own.
+                    SendFailures++;
                 }
             }
         }
@@ -104,7 +127,7 @@ public sealed class RelayServer : IDisposable
     /// waiting rather than blocking on a receive, so the sweep still happens
     /// on a quiet night and stopping does not wait out a timeout.
     /// </summary>
-    public void Run(CancellationToken stopping)
+    public void Run(CancellationToken stopping, Action<RelayServer>? onSweep = null)
     {
         var nextSweep = DateTime.UtcNow + SweepEvery;
 
@@ -116,6 +139,7 @@ public sealed class RelayServer : IDisposable
             if (DateTime.UtcNow >= nextSweep)
             {
                 Sweep();
+                onSweep?.Invoke(this);
                 nextSweep = DateTime.UtcNow + SweepEvery;
             }
         }

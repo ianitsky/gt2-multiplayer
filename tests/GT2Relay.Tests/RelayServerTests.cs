@@ -154,4 +154,39 @@ public class RelayServerTests
 
         Assert.True(server.BoundPort > 0);
     }
+
+    /// <summary>
+    /// What was heard and what was answered, kept apart.
+    ///
+    /// The two ways a tunnelled relay fails look the same from a player's
+    /// screen - an empty room list either way - and only these tell them
+    /// apart: nothing arriving is one fault, everything arriving and being
+    /// answered is a different one, outside this process entirely.
+    /// </summary>
+    [Fact]
+    public void It_counts_what_it_heard_and_what_it_answered()
+    {
+        using var server = new RelayServer(0);
+        using var host = Player();
+
+        Assert.Equal(0, server.Received);
+        Assert.Equal(0, server.Sent);
+        Assert.Null(server.LastHeardFrom);
+
+        Send(host, server, Envelope.WritePublish(Guid.NewGuid(), true, [1]));
+        server.Pump();
+        WaitFor(host, d => Kind(d, Envelope.Kind.Published));
+
+        Assert.Equal(1, server.Received);
+        Assert.Equal(1, server.Sent);
+        Assert.Equal(((IPEndPoint)host.Client.LocalEndPoint!).Port, server.LastHeardFrom!.Port);
+
+        // Heard and not worth answering, which is the case that has to move
+        // one counter and not the other.
+        Send(host, server, [0, 1, 2, 3]);
+        server.Pump();
+
+        Assert.Equal(2, server.Received);
+        Assert.Equal(1, server.Sent);
+    }
 }

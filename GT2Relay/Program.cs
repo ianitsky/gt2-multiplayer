@@ -33,7 +33,22 @@ Console.WriteLine($"gt2relay listening on udp/{server.BoundPort}");
 Console.WriteLine("rooms are forgotten after "
     + $"{RoomRegistry.Forgotten.TotalSeconds:F0}s without a publish");
 
-server.Run(stopping.Token);
+// A line only when something moved, so a quiet night stays quiet and a
+// scrolling log means traffic. "in" rising while "out" stays flat is the
+// registry refusing to answer; both rising while players still see no rooms
+// is the path back, not this.
+long lastIn = 0, lastOut = 0;
+
+server.Run(stopping.Token, it =>
+{
+    if (it.Received == lastIn && it.Sent == lastOut) return;
+    lastIn = it.Received;
+    lastOut = it.Sent;
+
+    Console.WriteLine(
+        $"in {it.Received}  out {it.Sent}  failed {it.SendFailures}"
+        + $"  rooms {it.RoomCount}  last {it.LastHeardFrom}");
+});
 
 Console.WriteLine("stopped");
 return 0;
