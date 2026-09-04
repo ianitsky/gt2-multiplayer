@@ -408,18 +408,23 @@ public static class ModeHook
     static void HoldUntilTheAgreedInstant(DateTime began)
     {
         var startAt = DateTime.UtcNow + StartsIn;
+        var nextTell = DateTime.UtcNow;
 
         while (DateTime.UtcNow < startAt)
         {
             RecompOne.Runtime.Runtime.PumpHost();
 
-            // Recomputed every time rather than repeated: a machine that hears
-            // only the last of these still arrives at the same instant, and a
-            // lost one costs nothing at all.
-            _lanSession!.SendStartTheRace(
-                (int)(startAt - DateTime.UtcNow).TotalMilliseconds);
+            var now = DateTime.UtcNow;
+            if (now >= nextTell)
+            {
+                // Recomputed every time rather than repeated: a machine that
+                // hears only the last of these still arrives at the same
+                // instant, and a lost one costs nothing at all.
+                _lanSession!.SendStartTheRace((int)(startAt - now).TotalMilliseconds);
+                nextTell = now + TellEvery;
+            }
 
-            Thread.Sleep(8);
+            Rest(startAt - DateTime.UtcNow);
         }
 
         Console.Error.WriteLine(
@@ -443,8 +448,38 @@ public static class ModeHook
             _lanSession!.CollectTheStart();
 
             if (_lanSession.StartsAt is { } fresher) startsAt = fresher;
-            Thread.Sleep(4);
+            Rest(startsAt - DateTime.UtcNow);
         }
+    }
+
+    /// <summary>How often the host repeats how long is left.</summary>
+    static readonly TimeSpan TellEvery = TimeSpan.FromMilliseconds(8);
+
+    /// <summary>
+    /// A tick of the system timer, which is what a sleep actually costs.
+    ///
+    /// Thread.Sleep(1) on Windows does not sleep a millisecond: it sleeps
+    /// until the next timer tick, 15.6ms away by default. Both machines were
+    /// waiting out the agreed instant that way, so each overshot it by up to a
+    /// tick and by a different amount - as much error as the flight time the
+    /// echoed token was added to remove.
+    /// </summary>
+    static readonly TimeSpan ATimerTick = TimeSpan.FromMilliseconds(16);
+
+    /// <summary>
+    /// Whether there is enough time left to be worth sleeping through.
+    ///
+    /// Below a tick a sleep would overshoot the instant it is waiting for, so
+    /// the last stretch is yielded through instead. It costs a fraction of one
+    /// core for a fraction of a second, once per race, and it is the
+    /// difference between landing on the instant and landing near it.
+    /// </summary>
+    internal static bool WorthSleeping(TimeSpan left) => left > ATimerTick;
+
+    static void Rest(TimeSpan left)
+    {
+        if (WorthSleeping(left)) Thread.Sleep(1);
+        else Thread.Yield();
     }
 
     public static bool TryEnterLobby(RecompOne.Runtime.Context.CpuContext c,

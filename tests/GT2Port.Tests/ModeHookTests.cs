@@ -99,6 +99,23 @@ public class ModeHookTests
                 linkIsOverTheRelay: true, itShouldBe: false));
     }
 
+    // Waiting out the agreed instant. A sleep on Windows runs to the next
+    // timer tick rather than to the duration asked for, so the last stretch
+    // before the instant has to be yielded through or both machines land near
+    // it instead of on it - by different amounts, which is the whole problem.
+
+    [Theory]
+    [InlineData(500, true)]
+    [InlineData(17, true)]
+    [InlineData(16, false)]
+    [InlineData(4, false)]
+    [InlineData(0, false)]
+    [InlineData(-20, false)]
+    public void A_sleep_is_only_worth_it_while_a_whole_tick_is_left(int msLeft, bool sleeps)
+    {
+        Assert.Equal(sleeps, ModeHook.WorthSleeping(TimeSpan.FromMilliseconds(msLeft)));
+    }
+
     /// <summary>
     /// And a knocking client is still a client mid-handshake: the socket it is
     /// knocking with must survive being answered.

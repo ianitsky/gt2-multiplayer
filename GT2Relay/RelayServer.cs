@@ -44,6 +44,13 @@ public sealed class RelayServer : IDisposable
     /// <summary>How often to forget what has gone quiet.</summary>
     public static readonly TimeSpan SweepEvery = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// How long a look at the socket waits before giving the loop back, in
+    /// microseconds. Long enough that an idle relay is not a spin, short
+    /// enough that stopping is prompt.
+    /// </summary>
+    const int PollFor = 2000;
+
     public RelayServer(int port, Func<DateTime>? clock = null, Random? random = null)
     {
         _socket = new UdpClient(new IPEndPoint(IPAddress.Any, port));
@@ -123,9 +130,16 @@ public sealed class RelayServer : IDisposable
     public void Sweep() => _registry.Sweep();
 
     /// <summary>
-    /// Serves until asked to stop. Sleeps a millisecond when there is nothing
-    /// waiting rather than blocking on a receive, so the sweep still happens
-    /// on a quiet night and stopping does not wait out a timeout.
+    /// Serves until asked to stop.
+    ///
+    /// Waits on the socket rather than sleeping between looks. Thread.Sleep(1)
+    /// on Windows sleeps to the next timer tick - 15.6ms away by default, not
+    /// one - and everything this carries pays that twice, once on the way in
+    /// and once on the way back. A relay between two players in the same city
+    /// was measurably slower than the city.
+    ///
+    /// A short timeout rather than none, so the sweep still happens on a quiet
+    /// night and stopping does not wait out a receive.
     /// </summary>
     public void Run(CancellationToken stopping, Action<RelayServer>? onSweep = null)
     {
@@ -133,8 +147,7 @@ public sealed class RelayServer : IDisposable
 
         while (!stopping.IsCancellationRequested)
         {
-            if (_socket.Available > 0) Pump();
-            else Thread.Sleep(1);
+            if (_socket.Client.Poll(PollFor, SelectMode.SelectRead)) Pump();
 
             if (DateTime.UtcNow >= nextSweep)
             {
