@@ -50,6 +50,14 @@ public static class ModeHook
     static LanSession? _lanSession;
 
     /// <summary>
+    /// Whether <see cref="_lanSession"/> travels over the relay. Kept beside
+    /// the role because the role alone cannot tell a link that works from one
+    /// built a round trip too early - see
+    /// <see cref="DecideSocketAction(SessionPhase?, SessionPhase, bool, bool)"/>.
+    /// </summary>
+    static bool _lanSessionOverRelay;
+
+    /// <summary>
     /// The socket to the rendezvous server, when one is configured. It is both
     /// how internet rooms are found and how their traffic travels, so it
     /// outlives any one session: dropping it between the room list and the
@@ -151,7 +159,25 @@ public static class ModeHook
         System.Net.IPAddress? kept) =>
         knockedAt?.Address ?? announced ?? kept;
 
-    internal static SocketAction DecideSocketAction(SessionPhase? currentRole, SessionPhase phase)
+    /// <summary>
+    /// Whether the session's socket still suits what the session is doing.
+    ///
+    /// The role alone is not enough for a client. Joining a room over the
+    /// relay flips the phase to Joined in the same frame the button is
+    /// pressed, while the relay only admits us a round trip later - so the
+    /// first pass through here builds a direct link that has no address worth
+    /// speaking to, and the role recorded then said Keep forever. The host
+    /// heard nothing and dropped the player three seconds later, and joining a
+    /// second time worked only because the relay had admitted us by then.
+    ///
+    /// So the decision also asks what the link is and what it ought to be, and
+    /// rebuilds when those disagree.
+    /// </summary>
+    internal static SocketAction DecideSocketAction(
+        SessionPhase? currentRole,
+        SessionPhase phase,
+        bool linkIsOverTheRelay = false,
+        bool itShouldBe = false)
     {
         if (phase == SessionPhase.Hosting)
             return currentRole == SessionPhase.Hosting ? SocketAction.Keep : SocketAction.RebuildAsHost;
@@ -161,7 +187,9 @@ public static class ModeHook
         // recorded for both is Joined, so being answered does not rebuild the
         // socket underneath a client mid-handshake.
         if (phase is SessionPhase.Joined or SessionPhase.Knocking)
-            return currentRole == SessionPhase.Joined ? SocketAction.Keep : SocketAction.RebuildAsClient;
+            return currentRole == SessionPhase.Joined && linkIsOverTheRelay == itShouldBe
+                ? SocketAction.Keep
+                : SocketAction.RebuildAsClient;
         // Browsing and Disconnected hold no socket: drop one if there still
         // is one, otherwise there is nothing to do.
         return currentRole is null ? SocketAction.Keep : SocketAction.Drop;
@@ -568,12 +596,24 @@ public static class ModeHook
                 // overlap.
                 KeepSayingHowItWent();
 
-                switch (DecideSocketAction(_lanSessionRole, _session.Phase))
+                // A room the relay has actually admitted us to, and the same
+                // room the session thinks it is in. The second half matters:
+                // relay membership outlives a session, so a player who joined
+                // by address while still admitted to some earlier room would
+                // otherwise have their traffic sent through a room the host is
+                // not in.
+                bool overTheRelay = _relay is { Admitted: true }
+                    && _session.Current is { } wanted
+                    && _relay.RoomId == wanted.Id;
+
+                switch (DecideSocketAction(
+                    _lanSessionRole, _session.Phase, _lanSessionOverRelay, overTheRelay))
                 {
                     case SocketAction.RebuildAsHost:
                         _lanSession?.Dispose();
                         _lanSession = null;
                         _lanSessionRole = null;
+                        _lanSessionOverRelay = false;
                         try
                         {
                             // A room announced through the relay is reached
@@ -583,6 +623,7 @@ public static class ModeHook
                                 ? LanSession.Over(_relay, SessionPort, () => DateTime.UtcNow,
                                     hosting: true, ownsTheLink: false)
                                 : LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
+                            _lanSessionOverRelay = _relay is not null;
                             _lanSessionRole = SessionPhase.Hosting;
                         }
                         catch (SocketException)
@@ -603,6 +644,7 @@ public static class ModeHook
                         _lanSession?.Dispose();
                         _lanSession = null;
                         _lanSessionRole = null;
+                        _lanSessionOverRelay = false;
                         try
                         {
                             // Only a relay that has actually admitted this
@@ -612,10 +654,11 @@ public static class ModeHook
                             int hostPort = HostPortFor(
                                 _session.Phase, _session.KnockingAt, SessionPort);
 
-                            _lanSession = _relay is { Admitted: true }
-                                ? LanSession.Over(_relay, hostPort, () => DateTime.UtcNow,
+                            _lanSession = overTheRelay
+                                ? LanSession.Over(_relay!, hostPort, () => DateTime.UtcNow,
                                     hosting: false, ownsTheLink: false)
                                 : LanSession.ForClient(hostPort, () => DateTime.UtcNow);
+                            _lanSessionOverRelay = overTheRelay;
                             _lanSessionRole = SessionPhase.Joined;
                         }
                         catch (SocketException)
@@ -638,6 +681,7 @@ public static class ModeHook
                         _lanSession?.Dispose();
                         _lanSession = null;
                         _lanSessionRole = null;
+                        _lanSessionOverRelay = false;
 
                         // Browsing again means the next room is a fresh
                         // question: a typed address kept from the last one
@@ -1048,6 +1092,7 @@ public static class ModeHook
         _lanSession?.Dispose();
         _lanSession = null;
         _lanSessionRole = null;
+        _lanSessionOverRelay = false;
 
         // And the port with it. A router that insisted on a permanent mapping
         // keeps one until something removes it, so a mapping left behind
