@@ -656,6 +656,33 @@ public class LanSessionTests
         Assert.Equal(22, EchoedTokenOn(two));
     }
 
+    /// <summary>
+    /// A report that arrives during the countdown replaces the one before it.
+    ///
+    /// The token is what the client measures its round trip against, so it has
+    /// to name a report the host has just read. A host that read one report
+    /// and then spent four hundred milliseconds counting down would hand back
+    /// a token four hundred milliseconds old, and the client would read the
+    /// countdown itself as flight time.
+    /// </summary>
+    [Fact]
+    public void The_token_handed_back_is_the_latest_one_heard()
+    {
+        const int hostPort = BasePort + 64;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var player = new UdpClient(0);
+
+        Deliver(player, host, AtTheLineStamped(11));
+        host.CollectAtTheLine();
+        host.SendStartTheRace(400);
+        Assert.Equal(11, EchoedTokenOn(player));
+
+        Deliver(player, host, AtTheLineStamped(12));
+        host.CollectAtTheLine();
+        host.SendStartTheRace(200);
+        Assert.Equal(12, EchoedTokenOn(player));
+    }
+
     /// <summary>Reads the token off a start the host sent to this player.</summary>
     static ushort EchoedTokenOn(UdpClient socket)
     {

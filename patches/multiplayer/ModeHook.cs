@@ -414,13 +414,23 @@ public static class ModeHook
         {
             RecompOne.Runtime.Runtime.PumpHost();
 
+            // Still listening, and it matters. The token handed back is the
+            // last report the host read, so a host that stopped reading when
+            // the countdown began would echo a token stamped before it - and
+            // the client, measuring from its own stamp, would read the whole
+            // countdown as flight time. One race reported a 498ms round trip
+            // over a path that measures ten, and took 249ms off a 400ms
+            // deadline: the client left a quarter of a second early instead of
+            // a hundredth of a second late.
+            _lanSession!.CollectAtTheLine();
+
             var now = DateTime.UtcNow;
             if (now >= nextTell)
             {
                 // Recomputed every time rather than repeated: a machine that
                 // hears only the last of these still arrives at the same
                 // instant, and a lost one costs nothing at all.
-                _lanSession!.SendStartTheRace((int)(startAt - now).TotalMilliseconds);
+                _lanSession.SendStartTheRace((int)(startAt - now).TotalMilliseconds);
                 nextTell = now + TellEvery;
             }
 
