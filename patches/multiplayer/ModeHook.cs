@@ -376,7 +376,7 @@ public static class ModeHook
 
                 if (_lanSession.StartsAt is { } startsAt)
                 {
-                    WaitOutTheRest(startsAt);
+                    WaitOutTheRest(startsAt, host);
                     Console.Error.WriteLine(
                         $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host set the start"
                         + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s,"
@@ -450,11 +450,31 @@ public static class ModeHook
     /// starting on arrival, which is what made the start as early or as late as
     /// the connection happened to be.
     /// </summary>
-    static void WaitOutTheRest(DateTime startsAt)
+    static void WaitOutTheRest(DateTime startsAt, System.Net.IPAddress host)
     {
+        var nextReport = DateTime.UtcNow;
+
         while (DateTime.UtcNow < startsAt)
         {
             RecompOne.Runtime.Runtime.PumpHost();
+
+            // Still reporting, and it matters for the same reason the host is
+            // still listening: the host echoes the last report it read, so a
+            // client that stopped reporting here would be handed its own last
+            // token back for the whole countdown and would measure the
+            // countdown instead of the path. One race read 260ms over a path
+            // that measures ten.
+            //
+            // On a schedule rather than every pass: the last stretch of this
+            // wait is yielded through rather than slept through, and a report
+            // per yield would be thousands of datagrams a second.
+            var now = DateTime.UtcNow;
+            if (now >= nextReport)
+            {
+                _lanSession!.ReportAtTheLine(host);
+                nextReport = now + TellEvery;
+            }
+
             _lanSession!.CollectTheStart();
 
             if (_lanSession.StartsAt is { } fresher) startsAt = fresher;

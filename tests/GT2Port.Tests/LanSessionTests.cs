@@ -589,6 +589,37 @@ public class LanSessionTests
     }
 
     /// <summary>
+    /// The smallest round trip seen wins, because the host echoes the last
+    /// report it read and goes on echoing it - so the same token comes back
+    /// again and again, measuring how long ago it was sent rather than how
+    /// long the path takes. Waiting can only inflate a round trip.
+    /// </summary>
+    [Fact]
+    public void A_later_and_staler_measurement_does_not_replace_a_smaller_one()
+    {
+        const int hostPort = BasePort + 65;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(hostPort);
+
+        client.ReportAtTheLine(IPAddress.Loopback);
+        ushort token = TokenOf(host);
+
+        _now = _now.AddMilliseconds(20);
+        Deliver(host, client, StartInMillisecondsEchoing(400, token));
+        client.CollectTheStart();
+        Assert.Equal(TimeSpan.FromMilliseconds(20), client.MeasuredRoundTrip);
+
+        // The same token again, two hundred milliseconds into the countdown.
+        // It measures the countdown, not the path.
+        _now = _now.AddMilliseconds(200);
+        Deliver(host, client, StartInMillisecondsEchoing(180, token));
+        client.CollectTheStart();
+
+        Assert.Equal(TimeSpan.FromMilliseconds(20), client.MeasuredRoundTrip);
+        Assert.Equal(_now.AddMilliseconds(180 - 10), client.StartsAt);
+    }
+
+    /// <summary>
     /// A token this machine never sent measures nothing. It is what an older
     /// host echoes, and what a stray datagram carries.
     /// </summary>

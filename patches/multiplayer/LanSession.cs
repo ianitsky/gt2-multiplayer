@@ -521,29 +521,37 @@ public sealed class LanSession : IDisposable
             int left = data[2] | (data[3] << 8);
             var now = _clock();
 
-            // Half the round trip, when the token that came back is one this
-            // machine actually sent. Half, because what is wanted is how long
-            // the host's word took to arrive, and the two directions are
-            // assumed alike - which is the same assumption every clock
-            // synchronisation makes, and wrong by far less than not correcting
-            // at all.
-            var flight = TimeSpan.Zero;
             if (data.Length >= EchoBytes)
             {
                 ushort token = (ushort)(data[4] | (data[5] << 8));
                 if (token != 0 && _reported.TryGetValue(token, out var sent))
                 {
                     var roundTrip = now - sent;
-                    if (roundTrip > TimeSpan.Zero && roundTrip <= LongestWorthTrusting)
-                    {
+
+                    // The smallest seen, not the latest. The host echoes the
+                    // last report it read, and keeps echoing it until a newer
+                    // one arrives - so most of these measure how long ago that
+                    // report was sent rather than how long the path takes, and
+                    // they get worse the longer the countdown runs. A round
+                    // trip can only be inflated by waiting, never shortened by
+                    // it, so the smallest is the closest to the truth. It is
+                    // what ping and every clock synchronisation take, for this
+                    // reason.
+                    if (roundTrip > TimeSpan.Zero
+                        && roundTrip <= LongestWorthTrusting
+                        && roundTrip < (MeasuredRoundTrip ?? TimeSpan.MaxValue))
                         MeasuredRoundTrip = roundTrip;
-                        flight = roundTrip / 2;
-                    }
                 }
             }
 
-            // The latest is the freshest: each carries what was left when it
-            // was sent, so a later one has crossed less of the wait.
+            // Half the best measurement so far, because what is wanted is how
+            // long the host's word took to arrive and the two directions are
+            // assumed alike - the same assumption every clock synchronisation
+            // makes, and wrong by far less than not correcting at all.
+            var flight = MeasuredRoundTrip is { } best ? best / 2 : TimeSpan.Zero;
+
+            // The latest left is the freshest: each carries what remained when
+            // it was sent, so a later one has crossed less of the wait.
             StartsAt = now + TimeSpan.FromMilliseconds(left) - flight;
         }
     }
