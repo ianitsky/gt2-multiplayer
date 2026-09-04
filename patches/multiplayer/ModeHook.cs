@@ -379,7 +379,11 @@ public static class ModeHook
                     WaitOutTheRest(startsAt);
                     Console.Error.WriteLine(
                         $"[start] {DateTime.UtcNow:HH:mm:ss.fff} the host set the start"
-                        + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s)");
+                        + $" (waited {(DateTime.UtcNow - began).TotalSeconds:F2}s,"
+                        + (_lanSession.MeasuredRoundTrip is { } trip
+                            ? $" round trip {trip.TotalMilliseconds:F0}ms, so the deadline"
+                              + $" came forward {trip.TotalMilliseconds / 2:F0}ms)"
+                            : " nothing measured the round trip - not corrected)"));
                     return;
                 }
             }

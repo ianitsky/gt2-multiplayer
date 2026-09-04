@@ -10,7 +10,13 @@ public class LanSessionTests
     // Well clear of LanDiscoveryTests' BasePort+0..13 (34800-34813) and of the
     // extra LanDiscovery/LanSession ports SessionTests binds (34740, 34741,
     // 34742, 34750, 34751, 34752) - see those files for why each test needs
-    // its own port. Offsets below run through BasePort+24.
+    // its own port.
+    //
+    // Offsets used here run through BasePort+34 and then BasePort+60..63.
+    // The gap is not decoration: +40..+43 lands on 34800-34803, which is
+    // inside LanDiscoveryTests' range, and the classes run in parallel - so
+    // the test that took them passed alone and failed in the suite. The next
+    // ceiling is GameLinkTests at 34830.
     internal const int BasePort = 34760;
 
     DateTime _now = new(2026, 8, 22, 12, 0, 0, DateTimeKind.Utc);
@@ -537,6 +543,137 @@ public class LanSessionTests
 
         Assert.True(client.HostSaidStartTheRace);
         Assert.Equal(_now, client.StartsAt);
+    }
+
+    /// <summary>A report carrying the token the client stamped on it.</summary>
+    static byte[] AtTheLineStamped(ushort token) =>
+        [0xA5, 1, (byte)(token & 0xFF), (byte)(token >> 8)];
+
+    /// <summary>A start with the player's own token handed back after it.</summary>
+    static byte[] StartInMillisecondsEchoing(int left, ushort token) =>
+        [0xA5, 4, (byte)(left & 0xFF), (byte)(left >> 8),
+         (byte)(token & 0xFF), (byte)(token >> 8)];
+
+    /// <summary>Reads the token off a report the host received.</summary>
+    static ushort TokenOf(UdpClient socket)
+    {
+        IPEndPoint? from = null;
+        var data = socket.Receive(ref from);
+        Assert.True(data.Length >= 4, "a report should carry a token");
+        return (ushort)(data[2] | (data[3] << 8));
+    }
+
+    /// <summary>
+    /// The deadline is computed when the host sends and applied when the
+    /// client receives, so without this every client starts one flight late -
+    /// the same amount every time, which is why no later message corrects it.
+    /// </summary>
+    [Fact]
+    public void A_client_takes_the_flight_off_the_deadline_it_is_given()
+    {
+        const int hostPort = BasePort + 60;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(hostPort);
+
+        client.ReportAtTheLine(IPAddress.Loopback);
+        ushort token = TokenOf(host);
+
+        // Forty milliseconds later the host's answer arrives, which says the
+        // round trip was forty and the word itself took twenty of it.
+        _now = _now.AddMilliseconds(40);
+        Deliver(host, client, StartInMillisecondsEchoing(400, token));
+        client.CollectTheStart();
+
+        Assert.Equal(TimeSpan.FromMilliseconds(40), client.MeasuredRoundTrip);
+        Assert.Equal(_now.AddMilliseconds(400 - 20), client.StartsAt);
+    }
+
+    /// <summary>
+    /// A token this machine never sent measures nothing. It is what an older
+    /// host echoes, and what a stray datagram carries.
+    /// </summary>
+    [Fact]
+    public void A_token_it_never_sent_corrects_nothing()
+    {
+        const int hostPort = BasePort + 61;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(hostPort);
+
+        client.ReportAtTheLine(IPAddress.Loopback);
+        ushort token = TokenOf(host);
+
+        _now = _now.AddMilliseconds(40);
+        Deliver(host, client, StartInMillisecondsEchoing(400, (ushort)(token + 7)));
+        client.CollectTheStart();
+
+        Assert.Null(client.MeasuredRoundTrip);
+        Assert.Equal(_now.AddMilliseconds(400), client.StartsAt);
+    }
+
+    /// <summary>
+    /// And a token that came back after half a second waited in a buffer
+    /// rather than measured a path. Correcting by that would be worse than not
+    /// correcting at all.
+    /// </summary>
+    [Fact]
+    public void A_round_trip_too_long_to_believe_is_not_used()
+    {
+        const int hostPort = BasePort + 62;
+        using var client = LanSession.ForClient(hostPort, () => _now);
+        using var host = new UdpClient(hostPort);
+
+        client.ReportAtTheLine(IPAddress.Loopback);
+        ushort token = TokenOf(host);
+
+        _now = _now.AddMilliseconds(900);
+        Deliver(host, client, StartInMillisecondsEchoing(400, token));
+        client.CollectTheStart();
+
+        Assert.Null(client.MeasuredRoundTrip);
+        Assert.Equal(_now.AddMilliseconds(400), client.StartsAt);
+    }
+
+    /// <summary>
+    /// Each player is handed its own token back. A shared datagram could carry
+    /// only one of them, and somebody else's token measures somebody else's
+    /// connection.
+    /// </summary>
+    [Fact]
+    public void The_host_hands_each_player_its_own_token_back()
+    {
+        const int hostPort = BasePort + 63;
+        using var host = LanSession.ForHost(hostPort, () => _now);
+        using var one = new UdpClient(0);
+        using var two = new UdpClient(0);
+
+        Deliver(one, host, AtTheLineStamped(11));
+        Deliver(two, host, AtTheLineStamped(22));
+        host.CollectAtTheLine();
+
+        host.SendStartTheRace(400);
+
+        Assert.Equal(11, EchoedTokenOn(one));
+        Assert.Equal(22, EchoedTokenOn(two));
+    }
+
+    /// <summary>Reads the token off a start the host sent to this player.</summary>
+    static ushort EchoedTokenOn(UdpClient socket)
+    {
+        var until = DateTime.UtcNow.AddSeconds(2);
+        while (DateTime.UtcNow < until)
+        {
+            if (socket.Available > 0)
+            {
+                IPEndPoint? from = null;
+                var data = socket.Receive(ref from);
+                if (data.Length >= 6 && data[0] == 0xA5 && data[1] == 4)
+                    return (ushort)(data[4] | (data[5] << 8));
+                continue;
+            }
+            Thread.Sleep(5);
+        }
+        Assert.Fail("no start arrived within two seconds");
+        return 0;
     }
 
     [Fact]

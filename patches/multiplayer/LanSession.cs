@@ -230,14 +230,71 @@ public sealed class LanSession : IDisposable
     /// A deadline rather than a starting pistol. "Begin now" means begin when
     /// this arrives, which is a different moment on every machine - one flight
     /// time apart on a local network and a tenth of a second apart across a bad
-    /// one. Saying "begin in N milliseconds" instead takes the flight out of
-    /// it: the number is computed fresh at every send, so a machine that hears
-    /// only the last of them still works out the same instant.
+    /// one. Saying "begin in N milliseconds" instead makes it not matter which
+    /// of them arrives: the number is computed fresh at every send, so a
+    /// machine that hears only the last of them works out the same instant as
+    /// one that heard them all.
+    ///
+    /// What it does not do on its own is take the flight out. Every one of
+    /// these is stamped when the host sends and applied when the client
+    /// receives, so all of them are late by the same amount and no later one
+    /// corrects it. The echoed token does that - see <see cref="EchoBytes"/>.
     /// </summary>
     const byte StartTheRace = 4;
 
     /// <summary>The magic, the kind, and the milliseconds left as a halfword.</summary>
     const int StartBytes = 4;
+
+    /// <summary>
+    /// And the token the host echoes after it, which is what makes the
+    /// deadline mean the same instant on both machines.
+    ///
+    /// "Begin in N milliseconds" is computed when the host sends and applied
+    /// when the client receives, so the client's instant is later than the
+    /// host's by however long the datagram took - every time, and by the same
+    /// amount, so no later message corrects it. On a local network that is
+    /// half a millisecond and nobody could see it. Through a relay and a
+    /// tunnel it is tens of milliseconds, which at racing speed is a car
+    /// length of head start for whoever is hosting.
+    ///
+    /// The client stamps each report with a token; the host hands that
+    /// player's own token back; the client sees its own report return and
+    /// knows the round trip. Half of it is what to take off the deadline.
+    /// </summary>
+    const int EchoBytes = StartBytes + 2;
+
+    /// <summary>The magic, the kind, and the token, for a report at the line.</summary>
+    const int AtTheLineBytes = 4;
+
+    /// <summary>
+    /// A ceiling on the correction, because a token that came back absurdly
+    /// late is a token that waited in a buffer rather than one that measured a
+    /// path. Half a second of round trip is already a connection nobody can
+    /// race over; beyond it the measurement is likelier to be wrong than the
+    /// latency is to be real.
+    /// </summary>
+    static readonly TimeSpan LongestWorthTrusting = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>What this machine stamped on each report, and when (client).</summary>
+    readonly Dictionary<ushort, DateTime> _reported = [];
+
+    /// <summary>
+    /// Tokens count from one, because zero is what the host sends when it has
+    /// no token for a player - a client that had stamped a report zero would
+    /// read that as its own report coming back and measure a round trip that
+    /// began whenever it happened to start reporting.
+    /// </summary>
+    ushort _nextToken = 1;
+
+    /// <summary>The last token each player at the line sent (host).</summary>
+    readonly Dictionary<IPEndPoint, ushort> _tokenOf = [];
+
+    /// <summary>
+    /// The round trip the start was corrected by, or null if nothing measured
+    /// one. Reported rather than assumed: a start that is still out wants to
+    /// say whether it knew the latency and by how much.
+    /// </summary>
+    public TimeSpan? MeasuredRoundTrip { get; private set; }
 
     /// <summary>Where each player holding at the line came from, so the start can reach them.</summary>
     readonly HashSet<IPEndPoint> _atTheLine = [];
@@ -276,6 +333,9 @@ public sealed class LanSession : IDisposable
         if (_disposed) return;
 
         _atTheLine.Clear();
+        _tokenOf.Clear();
+        _reported.Clear();
+        MeasuredRoundTrip = null;
         StartsAt = null;
 
         for (int i = 0; i < MaxDatagramsPerTick && _link.Available > 0; i++)
@@ -292,11 +352,33 @@ public sealed class LanSession : IDisposable
         }
     }
 
-    /// <summary>Tells the host this machine has the race loaded and is holding.</summary>
+    /// <summary>
+    /// Tells the host this machine has the race loaded and is holding, and
+    /// stamps it so the answer can be timed.
+    ///
+    /// The stamp is remembered rather than sent as a time: the two clocks are
+    /// minutes apart - see <see cref="StartsAt"/> - so only a duration this
+    /// machine measures against itself means anything.
+    /// </summary>
     public void ReportAtTheLine(IPAddress hostAddress)
     {
         if (_disposed) return;
-        Send([StartMagic, AtTheLine], _link.HostAt(hostAddress, _hostPort));
+
+        ushort token = _nextToken++;
+        if (_nextToken == 0) _nextToken = 1;
+        _reported[token] = _clock();
+
+        // Bounded, because a client can report for the whole of StartPatience
+        // and a map that only grows is a map that outlives the race. The
+        // oldest are the ones whose answer is never coming.
+        if (_reported.Count > 256)
+        {
+            var oldest = _reported.OrderBy(e => e.Value).First().Key;
+            _reported.Remove(oldest);
+        }
+
+        Send([StartMagic, AtTheLine, (byte)(token & 0xFF), (byte)(token >> 8)],
+            _link.HostAt(hostAddress, _hostPort));
     }
 
     /// <summary>
@@ -322,7 +404,15 @@ public sealed class LanSession : IDisposable
             }
 
             if (data.Length >= 2 && data[0] == StartMagic && data[1] == AtTheLine && from != null)
+            {
                 _atTheLine.Add(from);
+
+                // An older client sends two bytes and no token. It is still at
+                // the line and still counted; it simply cannot be told what
+                // its own latency was, and starts the way it always did.
+                if (data.Length >= AtTheLineBytes)
+                    _tokenOf[from] = (ushort)(data[2] | (data[3] << 8));
+            }
         }
     }
 
@@ -347,9 +437,19 @@ public sealed class LanSession : IDisposable
     {
         if (_disposed) return;
         ushort left = (ushort)Math.Clamp(millisecondsFromNow, 0, ushort.MaxValue);
-        byte[] go = [StartMagic, StartTheRace, (byte)(left & 0xFF), (byte)(left >> 8)];
 
-        foreach (var player in _known.Union(_atTheLine)) Send(go, player);
+        // One datagram per player rather than one for everybody, because what
+        // is appended is that player's own token - a shared message could
+        // carry only one of them, and a token belonging to somebody else
+        // measures nothing.
+        foreach (var player in _known.Union(_atTheLine))
+        {
+            ushort token = _tokenOf.TryGetValue(player, out var mine) ? mine : (ushort)0;
+            Send(
+                [StartMagic, StartTheRace, (byte)(left & 0xFF), (byte)(left >> 8),
+                 (byte)(token & 0xFF), (byte)(token >> 8)],
+                player);
+        }
     }
 
     /// <summary>
@@ -418,11 +518,33 @@ public sealed class LanSession : IDisposable
             if (data.Length < StartBytes || data[0] != StartMagic || data[1] != StartTheRace)
                 continue;
 
-            // The latest is the freshest: each carries what was left when it
-            // was sent, so a later one has crossed less of the wait. Taking the
-            // earliest would keep whatever the first flight cost.
             int left = data[2] | (data[3] << 8);
-            StartsAt = _clock() + TimeSpan.FromMilliseconds(left);
+            var now = _clock();
+
+            // Half the round trip, when the token that came back is one this
+            // machine actually sent. Half, because what is wanted is how long
+            // the host's word took to arrive, and the two directions are
+            // assumed alike - which is the same assumption every clock
+            // synchronisation makes, and wrong by far less than not correcting
+            // at all.
+            var flight = TimeSpan.Zero;
+            if (data.Length >= EchoBytes)
+            {
+                ushort token = (ushort)(data[4] | (data[5] << 8));
+                if (token != 0 && _reported.TryGetValue(token, out var sent))
+                {
+                    var roundTrip = now - sent;
+                    if (roundTrip > TimeSpan.Zero && roundTrip <= LongestWorthTrusting)
+                    {
+                        MeasuredRoundTrip = roundTrip;
+                        flight = roundTrip / 2;
+                    }
+                }
+            }
+
+            // The latest is the freshest: each carries what was left when it
+            // was sent, so a later one has crossed less of the wait.
+            StartsAt = now + TimeSpan.FromMilliseconds(left) - flight;
         }
     }
 
