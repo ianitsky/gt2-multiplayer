@@ -318,7 +318,11 @@ public sealed class MultiplayerPanel : IPanel
                 // rest because of it would be worse.
                 if (!RoomState.TryDeserialise(advert.Card, out var internetRoom)) continue;
 
-                ImGui.PushID(advert.Id.ToString());
+                // Prefixed, because the same room can be in both lists at
+                // once - announced on this network and published to the relay -
+                // and two widgets sharing an ImGui id is a button that does
+                // nothing when it is clicked.
+                ImGui.PushID("relay-" + advert.Id.ToString());
                 var itsHost = internetRoom.Players.Count > 0 ? internetRoom.Players[0].Name : "";
                 var itsClass = _carCatalogue.TryFind(internetRoom.CarGroup, out var itsGroup)
                     ? itsGroup.Name
