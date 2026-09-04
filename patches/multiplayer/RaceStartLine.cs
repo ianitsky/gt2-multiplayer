@@ -4,7 +4,8 @@ using RecompOne.Runtime.Memory;
 namespace GT2Port.Multiplayer;
 
 /// <summary>
-/// Holds every machine at the race screen's first frame.
+/// Holds every machine at a frame of the race screen - the first by default,
+/// GT2_START_AT_FRAME for any other.
 ///
 /// The barrier used to sit where the race overlay loads, and a measured run
 /// showed why that is wrong: released at 20:19:35.266, the race's first phase
@@ -19,11 +20,18 @@ namespace GT2Port.Multiplayer;
 /// 0x10 is the first frame of the race, and everything the overlay had to set
 /// up is behind it.
 ///
-/// Whether it is late enough is a separate question and this answers it too:
-/// the file-read count is printed each frame while it is still moving, so a run
-/// says how much loading still happens after the line. If the answer is "a lot"
-/// the barrier moves again, and the number it moves to will have been measured
-/// rather than guessed.
+/// Whether it is late enough is a separate question, and two machines racing
+/// have now answered it: no. The barrier released both together and the frame
+/// straight after it cost 304ms on one and 487ms on the other - 183ms of head
+/// start, twenty times the flight time the start line goes to such trouble to
+/// remove. Loading is not what does it either; both frames read no files and
+/// collected no garbage.
+///
+/// So the frame to hold at is GT2_START_AT_FRAME, and the number it settles on
+/// will have been measured rather than guessed. Holding later means holding
+/// partway into the countdown, where the machine that arrives first waits for
+/// the other - which is the right place for a stutter, since the cars are
+/// standing still through all of it.
 /// </summary>
 public static class RaceStartLine
 {
@@ -42,6 +50,34 @@ public static class RaceStartLine
     public static bool HoldsHere =>
         Environment.GetEnvironmentVariable("GT2_HOLD_AT_OVERLAY") is (null or "")
         && !RacePhases.HoldsLater;
+
+    /// <summary>
+    /// Which frame of the race to hold at. The first by default, which is
+    /// where the barrier has always been.
+    ///
+    /// The first frame turns out not to be late enough. Measured across two
+    /// machines on one race: the barrier released both together and the frame
+    /// straight after it cost 304ms on one and 487ms on the other. That 183ms
+    /// lands entirely in the start, and it is twenty times the flight time the
+    /// echoed token was added to remove.
+    ///
+    /// Nothing in the phase machine helps - a run with GT2_RACE_PHASES shows
+    /// only two changes, both before the first frame, and then phase 9 for the
+    /// whole race, so the countdown has no phase change of its own to hold at.
+    /// Frames are the only ruler left.
+    ///
+    /// An environment variable rather than a constant because the right answer
+    /// is a measurement: hold at 1, 3, 10 and see which one makes the two
+    /// machines agree. Whatever it settles at will have been measured rather
+    /// than guessed, which is what the first frame never was.
+    ///
+    /// Holding later means holding partway into the countdown, where a machine
+    /// that arrives first freezes until the other catches up. That is the
+    /// right place for a stutter - the cars are still standing still.
+    /// </summary>
+    static readonly int HoldAtFrame =
+        int.TryParse(Environment.GetEnvironmentVariable("GT2_START_AT_FRAME"), out int f)
+        && f >= 0 ? f : 0;
 
     /// <summary>
     /// How long a frame may take before it is worth a line of its own.
@@ -226,14 +262,18 @@ public static class RaceStartLine
             // game answering instead of the port guessing.
             RecompOne.Runtime.Memory.MemoryWatch.Arm();
             RecompOne.Runtime.Memory.MemoryWatch.ArmReads();
+        }
 
-            if (HoldsHere)
-            {
-                _held = true;
-                Console.Error.WriteLine(
-                    $"[line] {now:HH:mm:ss.fff} the race's first frame - holding the room here");
-                ModeHook.HoldAtTheLine();
-            }
+        // After the frame-zero block, not inside it: the barrier may be later
+        // than frame zero now, and everything above has to happen on the first
+        // frame whatever the barrier does.
+        if (HoldsHere && !_held && _frame - 1 == HoldAtFrame)
+        {
+            _held = true;
+            Console.Error.WriteLine(
+                $"[line] {now:HH:mm:ss.fff} frame {HoldAtFrame} of the race"
+                + $" - holding the room here");
+            ModeHook.HoldAtTheLine();
         }
 
         if (!Watching) return;
