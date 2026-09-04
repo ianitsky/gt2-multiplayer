@@ -60,6 +60,22 @@ public class JoinByAddressTests
         Assert.Null(session.Current);
     }
 
+    /// <summary>
+    /// A name rather than an address, which is what dynamic DNS hands out to
+    /// somebody hosting from home. It has to resolve to an IPv4 address:
+    /// every socket here is bound to IPAddress.Any, and sending from one of
+    /// those to an IPv6 endpoint throws rather than failing politely.
+    /// </summary>
+    [Fact]
+    public void A_host_name_resolves_to_something_a_v4_socket_can_send_to()
+    {
+        Assert.True(Session.TryReadAddress("localhost:34719", out var where));
+
+        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork,
+            where.Address.AddressFamily);
+        Assert.Equal(34719, where.Port);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

@@ -214,9 +214,17 @@ public sealed class Session
 
         try
         {
-            var found = System.Net.Dns.GetHostAddresses(parts[0]);
-            if (found.Length == 0) return false;
-            where = new System.Net.IPEndPoint(found[0], port);
+            // The first IPv4 answer, not simply the first. Every socket this
+            // game opens is bound to IPAddress.Any - IPv4 - and sending from
+            // one of those to an IPv6 endpoint throws rather than failing
+            // politely. A typed address never reached here as a name, so it
+            // never mattered; a dynamic-DNS host name is a name, and some of
+            // them answer with AAAA first.
+            var found = System.Net.Dns.GetHostAddresses(parts[0])
+                .FirstOrDefault(a =>
+                    a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+            if (found is null) return false;
+            where = new System.Net.IPEndPoint(found, port);
             return true;
         }
         catch (Exception e) when (e is System.Net.Sockets.SocketException or ArgumentException)
