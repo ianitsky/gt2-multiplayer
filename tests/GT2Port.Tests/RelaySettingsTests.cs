@@ -49,6 +49,42 @@ public class RelaySettingsTests
         Assert.Equal(34720, where.Port);
     }
 
+    /// <summary>
+    /// The shipped default is a file meant to be edited by hand, so it has to
+    /// survive somebody explaining themselves in it.
+    /// </summary>
+    [Theory]
+    [InlineData(new[] { "relay.example:9120" }, "relay.example:9120")]
+    [InlineData(new[] { "# a comment", "relay.example:9120" }, "relay.example:9120")]
+    [InlineData(new[] { "", "   ", "# why", "  relay.example  " }, "relay.example")]
+    [InlineData(new[] { "first.example", "second.example" }, "first.example")]
+    [InlineData(new string[0], "")]
+    [InlineData(new[] { "# only comments" }, "")]
+    public void The_shipped_default_is_the_first_line_that_says_something(
+        string[] lines, string want)
+    {
+        Assert.Equal(want, RelaySettings.FirstUsefulLine(lines));
+    }
+
+    /// <summary>
+    /// And the file the port actually ships has to be one of those, or every
+    /// player starts with a box that quietly says nothing.
+    /// </summary>
+    [Fact]
+    public void The_file_that_ships_names_a_relay_that_can_be_reached()
+    {
+        string path = GameFiles.Find("config", "relay.txt");
+        Assert.True(File.Exists(path), $"{path} should ship with the port");
+
+        string shipped = RelaySettings.FirstUsefulLine(File.ReadAllLines(path));
+
+        Assert.NotEqual("", shipped);
+        Assert.True(RelaySettings.TryReadAddress(shipped, out var where),
+            $"\"{shipped}\" is not an address the game could reach");
+        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork,
+            where.Address.AddressFamily);
+    }
+
     [Fact]
     public void No_address_configured_means_the_relay_is_simply_off()
     {

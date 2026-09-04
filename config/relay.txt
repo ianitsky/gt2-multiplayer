@@ -1,0 +1,8 @@
+# The rendezvous and relay this copy of the game points at.
+#
+# One address, "host" or "host:port". Without a port it means 34720.
+# Blank lines and lines starting with # are ignored.
+#
+# This is only a default. A player who types something into the Server box
+# keeps their own choice, and GT2_RELAY overrides both.
+cynthia-snugness.tun.ply.gg:9120

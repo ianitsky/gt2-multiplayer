@@ -35,14 +35,61 @@ public static class RelaySettings
 
     static string? _override;
 
+    /// <summary>
+    /// The relay this copy of the port ships pointed at, so that nobody has to
+    /// be told an address before they can see a room.
+    ///
+    /// A file rather than a constant, and read beside the executable, because
+    /// the address it holds is not permanent: a free tunnel hands out a new one
+    /// whenever it is recreated, and a constant would mean rebuilding and
+    /// redistributing the game to follow it. This way it is a line of text
+    /// anybody can edit.
+    ///
+    /// Read once. Somebody who edits it wants the next run, not this one.
+    /// </summary>
+    static readonly string Shipped = ReadShipped();
+
+    static string ReadShipped()
+    {
+        try
+        {
+            string path = GameFiles.Find("config", "relay.txt");
+            return File.Exists(path) ? FirstUsefulLine(File.ReadAllLines(path)) : "";
+        }
+        catch (IOException)
+        {
+            return "";
+        }
+    }
+
+    /// <summary>
+    /// The first line that is neither blank nor a comment. The file is meant to
+    /// be edited by hand, so it has to survive somebody explaining themselves
+    /// in it.
+    /// </summary>
+    internal static string FirstUsefulLine(IEnumerable<string> lines)
+    {
+        foreach (var line in lines)
+        {
+            string text = line.Trim();
+            if (text.Length == 0 || text.StartsWith('#')) continue;
+            return text;
+        }
+        return "";
+    }
+
     public static string Address
     {
         get
         {
             if (_override is { } forced) return forced;
             if (FromTheEnvironment.Length > 0) return FromTheEnvironment;
-            try { return ConfigManager.View.GetString(Key, ""); }
-            catch { return ""; }
+
+            // A stored empty string is a decision - somebody cleared the box -
+            // and outranks the shipped default, which is why this is a fallback
+            // rather than an "if it is empty" check.
+            try { return ConfigManager.View.GetString(Key, Shipped); }
+            catch { return Shipped; }
         }
         set
         {
