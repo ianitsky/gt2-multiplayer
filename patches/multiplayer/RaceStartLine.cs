@@ -13,6 +13,12 @@ namespace GT2Port.Multiplayer;
 /// sounds load after everyone has been told to go, and no two machines take the
 /// same fourteen seconds.
 ///
+/// The frame it holds at is counted in FrameEnds, not in FrameBegins. That is
+/// not a detail: FrameBegins is hooked on slot 0x10, which runs once, so a
+/// counter there cannot reach three - and a barrier asking it to silently held
+/// at nothing at all. Two machines raced that way before anybody noticed the
+/// logs had no hold line in them.
+///
 /// Reading gt2_01 gives a later place with a name. 0x800162A0 is the phase that
 /// runs the race, and it calls slot 0x44 of the object at +0x04 - the class the
 /// game calls "12RaceMenuLoop", vtable 0x8002EF98. That runs a ScreenViewLoop,
@@ -154,6 +160,29 @@ public static class RaceStartLine
         var now = DateTime.UtcNow;
         int reads = LoadTrace.Reads;
 
+        // The barrier lives here and not in FrameBegins, which is hooked on
+        // RaceMenuLoop's slot 0x10 - the method that method's own note says
+        // runs exactly once. A frame counter in a method that runs once never
+        // counts past one, so a barrier asking for any frame but the first
+        // silently held at nothing: two machines raced with no barrier at all
+        // and the logs showed neither a hold nor a start line. This is slot
+        // 0x24, the one the stall report counts hundreds of.
+        if (WouldHold(HoldsHere, _held, _frames, HoldAtFrame))
+        {
+            _held = true;
+            Console.Error.WriteLine(
+                $"[line] {now:HH:mm:ss.fff} frame {HoldAtFrame} of the race"
+                + $" - holding the room here"
+                + (HoldAtFrame == HoldsAt ? "" : " (GT2_START_AT_FRAME)"));
+            ModeHook.HoldAtTheLine();
+
+            // Waiting for the other machine is not this frame's cost. Left
+            // alone it would be reported as a stall of however long the room
+            // took to gather, every race.
+            now = DateTime.UtcNow;
+            _frameBegan = now;
+        }
+
         // Every frame, because whatever sets it does so while the race is
         // starting - a value written before that is one about to be lost.
         ReplayView.HoldTheRaceContext(m);
@@ -263,19 +292,6 @@ public static class RaceStartLine
             RecompOne.Runtime.Memory.MemoryWatch.ArmReads();
         }
 
-        // After the frame-zero block, not inside it: the barrier may be later
-        // than frame zero now, and everything above has to happen on the first
-        // frame whatever the barrier does.
-        if (HoldsHere && !_held && _frame - 1 == HoldAtFrame)
-        {
-            _held = true;
-            Console.Error.WriteLine(
-                $"[line] {now:HH:mm:ss.fff} frame {HoldAtFrame} of the race"
-                + $" - holding the room here"
-                + (HoldAtFrame == HoldsAt ? "" : " (GT2_START_AT_FRAME)"));
-            ModeHook.HoldAtTheLine();
-        }
-
         if (!Watching) return;
 
         if (reads != _readsWhenQuiet)
@@ -310,6 +326,21 @@ public static class RaceStartLine
     /// <summary>Whether this held the room, which is what the log line reports.</summary>
     public static bool Held => _held;
 
+    /// <summary>How many frames of the race have run, which the barrier keys on.</summary>
+    internal static int FramesSoFar => _frames;
+
+    /// <summary>
+    /// Whether this frame is the one to hold at. Pulled out so the frame the
+    /// barrier waits for can be stated once and checked without a race: the
+    /// count is of frames already run, so holding at three means three frames
+    /// have gone by, and holding at zero is the first frame of all.
+    /// </summary>
+    internal static bool WouldHold(bool holdsHere, bool alreadyHeld, int framesSoFar, int holdAt) =>
+        holdsHere && !alreadyHeld && framesSoFar == holdAt;
+
+    /// <summary>The frame the barrier holds at unless the environment moves it.</summary>
+    internal static int HoldsAtFrame => HoldAtFrame;
+
     /// <summary>
     /// Forgets the race just run, so the next one has a first frame again.
     ///
@@ -321,6 +352,13 @@ public static class RaceStartLine
     public static void Forget()
     {
         _frame = 0;
+
+        // The per-frame counter too, and this is what the barrier is keyed on
+        // now: a second race that kept the first one's hundreds would never
+        // see the frame it is meant to hold at.
+        _frames = 0;
+        _stalls = 0;
+
         _held = false;
         _saidQuiet = false;
         CarDriving.Forget();
