@@ -135,6 +135,7 @@ public static class RaceStartLine
     static long _pumpTicksAtFrameStart;
     static long _pumpsAtFrameStart;
     static long _sweepsAtFrameStart;
+    static long _rendersAtFrameStart;
 
     /// <summary>How long pumping has cost since this frame began.</summary>
     static double PumpedMs() =>
@@ -235,7 +236,8 @@ public static class RaceStartLine
                     + $" commands answered {RecompOne.Runtime.Cdrom.CdController.Answers - _cdAnswersAtFrameStart}"
                     + $" times, last 0x{RecompOne.Runtime.Cdrom.CdController.LastCommand:X2},"
                     + $" pumped {RecompOne.Runtime.Runtime.Pumps - _pumpsAtFrameStart} times"
-                    + $" ({RecompOne.Runtime.Runtime.WindowSweeps - _sweepsAtFrameStart} sweeps)"
+                    + $" ({RecompOne.Runtime.Runtime.WindowSweeps - _sweepsAtFrameStart} sweeps,"
+                    + $" {RecompOne.Runtime.Host.HostWindow.Renders - _rendersAtFrameStart} redraws)"
                     + $" costing {PumpedMs():F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)"
@@ -253,6 +255,7 @@ public static class RaceStartLine
         _pumpTicksAtFrameStart = RecompOne.Runtime.Runtime.PumpedTicks;
         _pumpsAtFrameStart = RecompOne.Runtime.Runtime.Pumps;
         _sweepsAtFrameStart = RecompOne.Runtime.Runtime.WindowSweeps;
+        _rendersAtFrameStart = RecompOne.Runtime.Host.HostWindow.Renders;
     }
 
     static int _frame;
