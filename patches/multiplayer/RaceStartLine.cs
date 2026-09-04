@@ -4,7 +4,7 @@ using RecompOne.Runtime.Memory;
 namespace GT2Port.Multiplayer;
 
 /// <summary>
-/// Holds every machine at a frame of the race screen - the first by default,
+/// Holds every machine at the same frame of the race screen - the fourth,
 /// GT2_START_AT_FRAME for any other.
 ///
 /// The barrier used to sit where the race overlay loads, and a measured run
@@ -20,18 +20,15 @@ namespace GT2Port.Multiplayer;
 /// 0x10 is the first frame of the race, and everything the overlay had to set
 /// up is behind it.
 ///
-/// Whether it is late enough is a separate question, and two machines racing
-/// have now answered it: no. The barrier released both together and the frame
-/// straight after it cost 304ms on one and 487ms on the other - 183ms of head
-/// start, twenty times the flight time the start line goes to such trouble to
-/// remove. Loading is not what does it either; both frames read no files and
-/// collected no garbage.
+/// Whether the first frame was late enough is a separate question, and two
+/// machines racing answered it: no. The barrier released both together and the
+/// frame straight after it cost 304ms on one and 487ms on the other - 183ms of
+/// head start, twenty times the flight time the start line goes to such
+/// trouble to remove. Loading is not what does it either; both frames read no
+/// files and collected no garbage.
 ///
-/// So the frame to hold at is GT2_START_AT_FRAME, and the number it settles on
-/// will have been measured rather than guessed. Holding later means holding
-/// partway into the countdown, where the machine that arrives first waits for
-/// the other - which is the right place for a stutter, since the cars are
-/// standing still through all of it.
+/// So the barrier moved off frame zero, and where it moved to was measured
+/// rather than argued about - see HoldsAt.
 /// </summary>
 public static class RaceStartLine
 {
@@ -52,32 +49,34 @@ public static class RaceStartLine
         && !RacePhases.HoldsLater;
 
     /// <summary>
-    /// Which frame of the race to hold at. The first by default, which is
-    /// where the barrier has always been.
+    /// Which frame of the race the barrier holds at.
     ///
-    /// The first frame turns out not to be late enough. Measured across two
-    /// machines on one race: the barrier released both together and the frame
-    /// straight after it cost 304ms on one and 487ms on the other. That 183ms
-    /// lands entirely in the start, and it is twenty times the flight time the
-    /// echoed token was added to remove.
+    /// Three, and the three is measured. The barrier was at frame zero, and
+    /// two machines racing showed why that is too early: released together,
+    /// the frame straight after cost 304ms on one and 487ms on the other, and
+    /// that 183ms landed entirely in the start - twenty times the flight time
+    /// the echoed token goes to such trouble to remove. Neither frame read a
+    /// file or collected any garbage, so it was never loading.
     ///
-    /// Nothing in the phase machine helps - a run with GT2_RACE_PHASES shows
-    /// only two changes, both before the first frame, and then phase 9 for the
-    /// whole race, so the countdown has no phase change of its own to hold at.
-    /// Frames are the only ruler left.
+    /// Nothing in the phase machine offered a later place. A run with
+    /// GT2_RACE_PHASES on both machines shows two changes, both before the
+    /// first frame, and then phase 9 for the whole race: the countdown has no
+    /// phase change of its own. Frames were the only ruler left, and three is
+    /// what a race run at three actually agreed on.
     ///
-    /// An environment variable rather than a constant because the right answer
-    /// is a measurement: hold at 1, 3, 10 and see which one makes the two
-    /// machines agree. Whatever it settles at will have been measured rather
-    /// than guessed, which is what the first frame never was.
-    ///
-    /// Holding later means holding partway into the countdown, where a machine
-    /// that arrives first freezes until the other catches up. That is the
-    /// right place for a stutter - the cars are still standing still.
+    /// Holding here means holding a little way into the countdown, where the
+    /// machine that arrives first waits for the other. That is the right place
+    /// for a stutter - the cars are standing still through all of it.
+    /// </summary>
+    const int HoldsAt = 3;
+
+    /// <summary>
+    /// GT2_START_AT_FRAME moves it, which is how the three was found and how
+    /// the next one would be.
     /// </summary>
     static readonly int HoldAtFrame =
         int.TryParse(Environment.GetEnvironmentVariable("GT2_START_AT_FRAME"), out int f)
-        && f >= 0 ? f : 0;
+        && f >= 0 ? f : HoldsAt;
 
     /// <summary>
     /// How long a frame may take before it is worth a line of its own.
@@ -272,7 +271,8 @@ public static class RaceStartLine
             _held = true;
             Console.Error.WriteLine(
                 $"[line] {now:HH:mm:ss.fff} frame {HoldAtFrame} of the race"
-                + $" - holding the room here");
+                + $" - holding the room here"
+                + (HoldAtFrame == HoldsAt ? "" : " (GT2_START_AT_FRAME)"));
             ModeHook.HoldAtTheLine();
         }
 
