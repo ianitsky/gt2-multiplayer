@@ -130,6 +130,27 @@ public static class ModeHook
             ? typed.Port
             : wellKnown;
 
+    /// <summary>
+    /// Which address a client should be speaking to, in order of authority.
+    ///
+    /// A room reached by a typed address is reached there and nowhere else.
+    /// The code used to let discovery overwrite it, on the reasoning that a
+    /// room joined by address was never announced and so discovery could not
+    /// know it - which is true right up until the host is on the same network,
+    /// which is exactly how somebody tests a tunnel for the first time. Then
+    /// the announcement's local address quietly replaced the tunnel's, every
+    /// message after it went nowhere, and the host dropped the player three
+    /// seconds later for having gone quiet.
+    ///
+    /// Discovery still wins over nothing, because a room found on this network
+    /// has no typed address to prefer.
+    /// </summary>
+    internal static System.Net.IPAddress? HostToSpeakTo(
+        System.Net.IPEndPoint? knockedAt,
+        System.Net.IPAddress? announced,
+        System.Net.IPAddress? kept) =>
+        knockedAt?.Address ?? announced ?? kept;
+
     internal static SocketAction DecideSocketAction(SessionPhase? currentRole, SessionPhase phase)
     {
         if (phase == SessionPhase.Hosting)
@@ -224,6 +245,13 @@ public static class ModeHook
     /// is the only time anything answers for it.
     /// </summary>
     static System.Net.IPAddress? _raceHost;
+
+    /// <summary>
+    /// The endpoint a room was knocked at, when it was reached by being told
+    /// where it is rather than by hearing it announced. Null for a room found
+    /// on this network.
+    /// </summary>
+    static System.Net.IPEndPoint? _knockedAt;
 
     /// <summary>
     /// What the race needs to talk to the other machines: the session, the
@@ -610,6 +638,11 @@ public static class ModeHook
                         _lanSession?.Dispose();
                         _lanSession = null;
                         _lanSessionRole = null;
+
+                        // Browsing again means the next room is a fresh
+                        // question: a typed address kept from the last one
+                        // would answer it wrongly.
+                        _knockedAt = null;
                         break;
 
                     case SocketAction.Keep:
@@ -627,6 +660,7 @@ public static class ModeHook
                     // machine that has never heard of us, over a network that
                     // loses them, and nothing retries it if it goes missing.
                     // Being answered is what ends this.
+                    _knockedAt = knockingAt;
                     _raceHost = knockingAt.Address;
                     _lanSession?.SendKnock(knockingAt, _session.PlayerName, _session.KnockingSecret);
                     _lanSession?.ClientTick(_session, knockingAt.Address);
@@ -640,13 +674,15 @@ public static class ModeHook
                     // address is already gone and a client that looked it up
                     // there would find nothing and say nothing.
                     //
-                    // And a room joined by address was never announced at all,
-                    // so discovery will never have it. The address it was
-                    // reached at is the one already kept, and asking discovery
-                    // first would have such a client fall through this every
-                    // tick and never speak to its host again.
-                    if (_discovery.TryGetHostAddress(_session.Current!.Id, out var hostAddress))
-                        _raceHost = hostAddress;
+                    // A room reached by a typed address keeps that address -
+                    // see HostToSpeakTo for what happened when an announcement
+                    // was allowed to replace it.
+                    _raceHost = HostToSpeakTo(
+                        _knockedAt,
+                        _discovery.TryGetHostAddress(_session.Current!.Id, out var announced)
+                            ? announced
+                            : null,
+                        _raceHost);
 
                     if (_raceHost is { } host) _lanSession?.ClientTick(_session, host);
                 }

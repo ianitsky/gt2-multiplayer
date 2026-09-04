@@ -113,6 +113,48 @@ public class JoinByAddressTests
         Assert.Equal(34719, ModeHook.HostPortFor(phase, knockingAt, 34719));
     }
 
+    /// <summary>
+    /// A room reached by a typed address is reached there and nowhere else.
+    ///
+    /// Letting an announcement overwrite it looked safe - a room joined by
+    /// address was never announced, so discovery could not know it - and stops
+    /// being safe the moment the host is on the same network, which is how
+    /// anybody tests a tunnel for the first time. The announcement's local
+    /// address replaced the tunnel's, everything after went nowhere, and the
+    /// host dropped the player for having gone quiet.
+    /// </summary>
+    [Fact]
+    public void A_typed_address_outranks_an_announcement()
+    {
+        var typed = new System.Net.IPEndPoint(
+            System.Net.IPAddress.Parse("147.185.221.213"), 9120);
+        var announced = System.Net.IPAddress.Parse("192.168.15.7");
+
+        Assert.Equal(typed.Address, ModeHook.HostToSpeakTo(typed, announced, null));
+    }
+
+    [Fact]
+    public void An_announcement_is_used_when_nothing_was_typed()
+    {
+        var announced = System.Net.IPAddress.Parse("192.168.15.7");
+
+        Assert.Equal(announced, ModeHook.HostToSpeakTo(null, announced, null));
+    }
+
+    /// <summary>
+    /// Discovery forgets a host three seconds after its last announcement, and
+    /// the host stops announcing once the race is loading - so what was learnt
+    /// has to outlive being forgotten.
+    /// </summary>
+    [Fact]
+    public void And_what_was_already_known_survives_discovery_forgetting_it()
+    {
+        var kept = System.Net.IPAddress.Parse("192.168.15.7");
+
+        Assert.Equal(kept, ModeHook.HostToSpeakTo(null, null, kept));
+        Assert.Null(ModeHook.HostToSpeakTo(null, null, null));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
