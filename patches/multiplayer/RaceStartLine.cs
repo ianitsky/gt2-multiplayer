@@ -136,6 +136,12 @@ public static class RaceStartLine
     static long _pumpsAtFrameStart;
     static long _sweepsAtFrameStart;
     static long _rendersAtFrameStart;
+    static long _renderTicksAtFrameStart;
+
+    /// <summary>How long redrawing has cost since this frame began.</summary>
+    static double RedrawMs() =>
+        (RecompOne.Runtime.Host.HostWindow.RenderTicks - _renderTicksAtFrameStart)
+        * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 
     /// <summary>How long pumping has cost since this frame began.</summary>
     static double PumpedMs() =>
@@ -237,7 +243,8 @@ public static class RaceStartLine
                     + $" times, last 0x{RecompOne.Runtime.Cdrom.CdController.LastCommand:X2},"
                     + $" pumped {RecompOne.Runtime.Runtime.Pumps - _pumpsAtFrameStart} times"
                     + $" ({RecompOne.Runtime.Runtime.WindowSweeps - _sweepsAtFrameStart} sweeps,"
-                    + $" {RecompOne.Runtime.Host.HostWindow.Renders - _rendersAtFrameStart} redraws)"
+                    + $" {RecompOne.Runtime.Host.HostWindow.Renders - _rendersAtFrameStart} redraws"
+                    + $" costing {RedrawMs():F0}ms)"
                     + $" costing {PumpedMs():F0}ms,"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)"
@@ -256,6 +263,7 @@ public static class RaceStartLine
         _pumpsAtFrameStart = RecompOne.Runtime.Runtime.Pumps;
         _sweepsAtFrameStart = RecompOne.Runtime.Runtime.WindowSweeps;
         _rendersAtFrameStart = RecompOne.Runtime.Host.HostWindow.Renders;
+        _renderTicksAtFrameStart = RecompOne.Runtime.Host.HostWindow.RenderTicks;
     }
 
     static int _frame;
