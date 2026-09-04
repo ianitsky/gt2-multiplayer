@@ -110,6 +110,26 @@ public static class ModeHook
     /// Staying in the same phase two ticks running must come back Keep, not
     /// a rebuild - rebuilding every frame would exhaust ephemeral ports.
     /// </summary>
+    /// <summary>
+    /// The port a client should address its host on.
+    ///
+    /// Normally the well-known one, which is what a host binds and what LAN
+    /// discovery implies. Not normally enough: a host reached through a tunnel
+    /// answers on whatever port the tunnel handed out, and that port is part of
+    /// what the player typed.
+    ///
+    /// The knock itself always used the whole typed endpoint, so joining
+    /// appeared to work and then the lobby went silent - every intent after the
+    /// knock was addressed to the well-known port, where nobody was listening.
+    /// The socket is built once, on the way into Knocking, and keeps this port
+    /// through Joined, which is why reading it here is enough.
+    /// </summary>
+    internal static int HostPortFor(SessionPhase phase, string? knockingAt, int wellKnown) =>
+        phase == SessionPhase.Knocking
+        && Session.TryReadAddress(knockingAt ?? "", out var typed)
+            ? typed.Port
+            : wellKnown;
+
     internal static SocketAction DecideSocketAction(SessionPhase? currentRole, SessionPhase phase)
     {
         if (phase == SessionPhase.Hosting)
@@ -561,10 +581,13 @@ public static class ModeHook
                             // machine carries anything for it: until then the
                             // server drops what it is handed, and a session
                             // built over it would knock into silence.
+                            int hostPort = HostPortFor(
+                                _session.Phase, _session.KnockingAt, SessionPort);
+
                             _lanSession = _relay is { Admitted: true }
-                                ? LanSession.Over(_relay, SessionPort, () => DateTime.UtcNow,
+                                ? LanSession.Over(_relay, hostPort, () => DateTime.UtcNow,
                                     hosting: false, ownsTheLink: false)
-                                : LanSession.ForClient(SessionPort, () => DateTime.UtcNow);
+                                : LanSession.ForClient(hostPort, () => DateTime.UtcNow);
                             _lanSessionRole = SessionPhase.Joined;
                         }
                         catch (SocketException)

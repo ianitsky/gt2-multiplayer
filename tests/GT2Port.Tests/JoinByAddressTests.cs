@@ -76,6 +76,43 @@ public class JoinByAddressTests
         Assert.Equal(34719, where.Port);
     }
 
+    /// <summary>
+    /// A host behind a tunnel answers on the port the tunnel handed out, not on
+    /// the game's well-known one - and that port is half of what the player
+    /// typed. Dropping it made a knock succeed and every message after it go to
+    /// a port nobody was listening on.
+    /// </summary>
+    [Fact]
+    public void A_host_typed_with_a_port_is_addressed_on_that_port_afterwards()
+    {
+        Assert.Equal(52341, ModeHook.HostPortFor(
+            SessionPhase.Knocking, "1.2.3.4:52341", 34719));
+
+        // A name too, because a tunnel hands out one of those. localhost
+        // rather than a made-up host: an address that does not resolve cannot
+        // be reached at all, so it falls back and this would pass for the
+        // wrong reason.
+        Assert.Equal(52341, ModeHook.HostPortFor(
+            SessionPhase.Knocking, "localhost:52341", 34719));
+
+        Assert.Equal(34719, ModeHook.HostPortFor(
+            SessionPhase.Knocking, "1.2.3.4:34719", 34719));
+    }
+
+    /// <summary>
+    /// And a room found by announcement was never typed at all, so it keeps
+    /// the well-known port whatever a stale knock might still say.
+    /// </summary>
+    [Theory]
+    [InlineData(SessionPhase.Joined, "1.2.3.4:52341")]
+    [InlineData(SessionPhase.Browsing, "1.2.3.4:52341")]
+    [InlineData(SessionPhase.Knocking, "")]
+    [InlineData(SessionPhase.Knocking, "not an address")]
+    public void Anything_else_uses_the_well_known_port(SessionPhase phase, string knockingAt)
+    {
+        Assert.Equal(34719, ModeHook.HostPortFor(phase, knockingAt, 34719));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
