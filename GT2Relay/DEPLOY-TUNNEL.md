@@ -16,8 +16,11 @@ aimed at exactly this. The shape is the same for any other UDP tunnel.
 address it is given. Nothing else runs anywhere. Only that person can host.
 
 **Tunnel the relay.** The host runs `gt2relay` on 34720 and tunnels *that*.
-Everybody points their **Server** box at it, and then anybody can host — the
-relay is what has to be reachable, not the player.
+The address goes in `config/relay.txt` so nobody types anything, and then
+anybody can host — the relay is what has to be reachable, not the player.
+
+Whichever machine runs the relay has to be on for anybody to see a room. That
+is the real cost of keeping it at home rather than on a server.
 
 Start with the first. It is one moving part instead of two, and it is enough
 for two friends racing. Move to the second when somebody else wants to host.
@@ -96,15 +99,23 @@ gives back another `name:port`.
 
 ### 3. Point every player at it
 
-In the panel, under *Rooms on the internet*, paste it into **Server** and press
-**Use**:
+Put the address in `config/relay.txt`, which ships beside the executable:
 
 ```
+# The rendezvous and relay this copy of the game points at.
 something.playit.gg:41007
 ```
 
-Here the port *is* optional in the sense that leaving it off means 34720 — but
-the tunnel's port is not 34720, so include it.
+Then nobody types anything — the **Server** box comes up already filled in and
+the rooms are simply there. A player who wants a different relay types over it
+and their choice is kept, including clearing it; `GT2_RELAY` overrides both.
+
+A file rather than something compiled in, because the address is not
+permanent: a free tunnel hands out a new one whenever it is recreated, and a
+constant would mean rebuilding and redistributing the game to follow it.
+
+Include the port. Leaving it off means 34720, and the tunnel's port is not
+34720.
 
 Then everybody sees everybody's rooms, and any of them can host without
 touching a router.
