@@ -326,6 +326,80 @@ public class RoomRegistryTests
     }
 
     /// <summary>
+    /// A race is the one time a host never publishes: publishing happens in
+    /// the lobby loop, and that loop ends when the race begins. So a room
+    /// expired thirty seconds into every race and this stopped forwarding for
+    /// it - the cars stopped where they were and never moved again, on both
+    /// screens, with every counter still climbing because sending is not
+    /// arriving.
+    /// </summary>
+    [Fact]
+    public void A_host_that_only_relays_keeps_its_room()
+    {
+        var registry = New();
+        Publish(registry, Room);
+        registry.Heard(Guest, Envelope.WriteJoin(Room));
+
+        // Two minutes of racing and not one publish. Both ends send, which
+        // is what a race is.
+        for (int i = 0; i < 24; i++)
+        {
+            Advance(5);
+            registry.Heard(Host, Envelope.WriteRelay(Room, Guest, [1]));
+            registry.Heard(Guest, Envelope.WriteRelay(Room, Host, [1]));
+            registry.Sweep();
+        }
+
+        Assert.Equal(1, registry.RoomCount);
+        Assert.Single(Of(registry.Heard(Host, Envelope.WriteRelay(Room, Guest, [1])),
+            Envelope.Kind.Relayed));
+    }
+
+    /// <summary>
+    /// And a guest who has gone quiet cannot take the host down with it. The
+    /// check on the destination used to come first, so once a departed guest
+    /// had been swept out of the room, the host's own traffic stopped counting
+    /// as a sign of life and the room died with the host still talking.
+    /// </summary>
+    [Fact]
+    public void A_departed_guest_does_not_stop_the_host_counting_as_present()
+    {
+        var registry = New();
+        Publish(registry, Room);
+        registry.Heard(Guest, Envelope.WriteJoin(Room));
+
+        for (int i = 0; i < 24; i++)
+        {
+            Advance(5);
+            registry.Heard(Host, Envelope.WriteRelay(Room, Guest, [1]));
+            registry.Sweep();
+        }
+
+        Assert.Equal(1, registry.RoomCount);
+    }
+
+    /// <summary>
+    /// A guest relaying does not, though. A room outliving its host would be a
+    /// room clients go on relaying into after there is nobody to receive.
+    /// </summary>
+    [Fact]
+    public void A_guest_relaying_into_a_room_does_not_keep_it_alive()
+    {
+        var registry = New();
+        Publish(registry, Room);
+        registry.Heard(Guest, Envelope.WriteJoin(Room));
+
+        for (int i = 0; i < 24; i++)
+        {
+            Advance(5);
+            registry.Heard(Guest, Envelope.WriteRelay(Room, Host, [1]));
+            registry.Sweep();
+        }
+
+        Assert.Equal(0, registry.RoomCount);
+    }
+
+    /// <summary>
     /// A host that reconnects comes from a new port, because its NAT gave it a
     /// new mapping. The room is the same room and its members should still be
     /// able to reach it.

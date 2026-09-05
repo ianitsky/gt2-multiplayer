@@ -31,7 +31,9 @@ public sealed class RoomRegistry(Func<DateTime> clock, Random random)
 
     /// <summary>
     /// How long silence lasts before it means gone. A host publishes every two
-    /// seconds and a racing client sends constantly, so thirty seconds is many
+    /// seconds in the lobby and relays constantly during a race - it stops
+    /// publishing when the race starts, which is why relaying has to count as
+    /// a sign of life - so thirty seconds is many
     /// missed messages rather than one unlucky one.
     /// </summary>
     public static readonly TimeSpan Forgotten = TimeSpan.FromSeconds(30);
@@ -171,14 +173,34 @@ public sealed class RoomRegistry(Func<DateTime> clock, Random random)
         if (!Envelope.TryReadRelay(data, out var roomId, out var to, out var payload)) return [];
         if (!_rooms.TryGetValue(roomId, out var room)) return [];
 
-        // Both ends have to be in the room. Without the first check this would
-        // forward for anybody; without the second it would forward to anybody,
-        // and either one is a machine on the internet that sends traffic
-        // wherever a stranger points it.
+        // The sender has to be in the room. Without this check this would
+        // forward for anybody, which is a machine on the internet that sends
+        // traffic wherever a stranger points it.
         if (!room.Members.ContainsKey(from)) return [];
-        if (!room.Members.ContainsKey(to)) return [];
 
-        room.Members[from] = clock();
+        // Being heard from is recorded before the destination is looked at,
+        // because whether somebody else is still here says nothing about
+        // whether this sender is. Checking first meant a departed guest could
+        // stop the host's own traffic from counting, and the room then died
+        // with a host talking into it.
+        var now = clock();
+        room.Members[from] = now;
+
+        // A host relaying is a host that is still there, and during a race it
+        // is the only sign of one. Publishing happens in the lobby loop, which
+        // ends when the race begins - so a room expired thirty seconds into
+        // every race, and from that moment this returned nothing for it. The
+        // cars simply stopped where they were and never moved again, on both
+        // screens, with every counter still climbing because sending is not
+        // arriving.
+        //
+        // Only the host's traffic counts. A room outliving its host would be a
+        // room clients go on relaying into after there is nobody to receive.
+        if (from.Equals(room.Host)) room.HeardFromHost = now;
+
+        // And the destination has to be in the room too, or this would forward
+        // to anybody a stranger names.
+        if (!room.Members.ContainsKey(to)) return [];
 
         return [new Reply(to, Envelope.WriteRelayed(roomId, from, payload))];
     }
