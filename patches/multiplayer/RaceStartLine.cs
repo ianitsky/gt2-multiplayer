@@ -137,6 +137,21 @@ public static class RaceStartLine
     static long _sweepsAtFrameStart;
     static long _rendersAtFrameStart;
     static long _renderTicksAtFrameStart;
+    static long _sweptTicks, _driveTicks, _padTicks, _cardTicks, _patchTicks;
+
+    /// <summary>Shorthand, because the breakdown names the runtime five times.</summary>
+    static class R
+    {
+        public static long SweptTicks => RecompOne.Runtime.Runtime.SweptTicks;
+        public static long DriveTicks => RecompOne.Runtime.Runtime.DriveTicks;
+        public static long PadTicks => RecompOne.Runtime.Runtime.PadTicks;
+        public static long CardTicks => RecompOne.Runtime.Runtime.CardTicks;
+        public static long PatchTicks => RecompOne.Runtime.Runtime.PatchTicks;
+    }
+
+    /// <summary>One part of the pump, in milliseconds since this frame began.</summary>
+    static double Part(long now, long atFrameStart) =>
+        (now - atFrameStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 
     /// <summary>How long redrawing has cost since this frame began.</summary>
     static double RedrawMs() =>
@@ -245,7 +260,12 @@ public static class RaceStartLine
                     + $" ({RecompOne.Runtime.Runtime.WindowSweeps - _sweepsAtFrameStart} sweeps,"
                     + $" {RecompOne.Runtime.Host.HostWindow.Renders - _rendersAtFrameStart} redraws"
                     + $" costing {RedrawMs():F0}ms)"
-                    + $" costing {PumpedMs():F0}ms,"
+                    + $" costing {PumpedMs():F0}ms"
+                    + $" [window {Part(R.SweptTicks, _sweptTicks):F0}"
+                    + $" drive {Part(R.DriveTicks, _driveTicks):F0}"
+                    + $" pads {Part(R.PadTicks, _padTicks):F0}"
+                    + $" card {Part(R.CardTicks, _cardTicks):F0}"
+                    + $" patch {Part(R.PatchTicks, _patchTicks):F0}],"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
                     + $" {++_stalls} so far)"
                     + (whereItWas is null ? "" : Environment.NewLine + $"[stall]     {whereItWas}"));
@@ -264,6 +284,11 @@ public static class RaceStartLine
         _sweepsAtFrameStart = RecompOne.Runtime.Runtime.WindowSweeps;
         _rendersAtFrameStart = RecompOne.Runtime.Host.HostWindow.Renders;
         _renderTicksAtFrameStart = RecompOne.Runtime.Host.HostWindow.RenderTicks;
+        _sweptTicks = R.SweptTicks;
+        _driveTicks = R.DriveTicks;
+        _padTicks = R.PadTicks;
+        _cardTicks = R.CardTicks;
+        _patchTicks = R.PatchTicks;
     }
 
     static int _frame;
