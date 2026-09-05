@@ -268,6 +268,13 @@ public static class ModeHook
     /// length of time on every machine. Holding at the earlier moment is what
     /// let two machines report a short wait and still start apart.
     /// </summary>
+    /// <summary>
+    /// Whether there is a room to hold a start for. A demo and a
+    /// single-player race reach the barrier as well, and holding for nobody
+    /// writes a line saying the room is being held when there is no room.
+    /// </summary>
+    public static bool InARoom => _session?.Current is not null;
+
     public static void HoldAtTheLine()
     {
         var room = _session?.Current;

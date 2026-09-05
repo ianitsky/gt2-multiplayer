@@ -189,7 +189,10 @@ public static class RaceStartLine
         // silently held at nothing: two machines raced with no barrier at all
         // and the logs showed neither a hold nor a start line. This is slot
         // 0x24, the one the stall report counts hundreds of.
-        if (WouldHold(HoldsHere, _held, _frames, HoldAtFrame))
+        // A room to hold for, because a demo or a single-player race reaches
+        // this line too and holding for nobody is a hold that only writes a
+        // misleading line into the log.
+        if (WouldHold(HoldsHere, _held, _frames, HoldAtFrame) && ModeHook.InARoom)
         {
             _held = true;
             Console.Error.WriteLine(
@@ -304,6 +307,20 @@ public static class RaceStartLine
         int reads = LoadTrace.Reads;
         var now = DateTime.UtcNow;
 
+        // A race begins here, and this is the one hook that can say so: it is
+        // on the method that runs exactly once per race. Everything below
+        // counts frames or remembers that the barrier has been used, and all
+        // of it belongs to one race.
+        //
+        // Forget() does this too and is not enough on its own, because only a
+        // race that ends by going back to the lobby reaches it. The attract
+        // demo does not. A demo ran to frame three, marked the barrier used,
+        // and the real race after it started with no barrier at all - the host
+        // simply went, and the client sat at the line until its twenty seconds
+        // of patience ran out. The same staleness had already been skipping
+        // this method's own first-frame work for every race after the first.
+        ForgetTheRaceBefore();
+
         if (_frame++ == 0)
         {
             _began = now;
@@ -378,6 +395,20 @@ public static class RaceStartLine
     internal static int HoldsAtFrame => HoldAtFrame;
 
     /// <summary>
+    /// Everything that belongs to one race, cleared. Separate from
+    /// <see cref="Forget"/> only because that one also tells CarDriving, which
+    /// has its own reasons and its own moment.
+    /// </summary>
+    static void ForgetTheRaceBefore()
+    {
+        _frame = 0;
+        _frames = 0;
+        _stalls = 0;
+        _held = false;
+        _saidQuiet = false;
+    }
+
+    /// <summary>
     /// Forgets the race just run, so the next one has a first frame again.
     ///
     /// Everything here happens on frame zero - the barrier among it. A second
@@ -387,16 +418,7 @@ public static class RaceStartLine
     /// </summary>
     public static void Forget()
     {
-        _frame = 0;
-
-        // The per-frame counter too, and this is what the barrier is keyed on
-        // now: a second race that kept the first one's hundreds would never
-        // see the frame it is meant to hold at.
-        _frames = 0;
-        _stalls = 0;
-
-        _held = false;
-        _saidQuiet = false;
+        ForgetTheRaceBefore();
         CarDriving.Forget();
     }
 }
