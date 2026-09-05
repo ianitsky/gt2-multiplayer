@@ -94,6 +94,7 @@ public static class CarSync
             _wheels[slot] = pose.Wheels;
             _applied++;
             _lastApplied = pose.Place;
+            WatchForAStop(theirSeat, race.Players[theirSeat].Name, pose.Place);
         }
 
         Say(wire, race);
@@ -203,8 +204,10 @@ public static class CarSync
         _applied = 0;
         _said = false;
         _stood = false;
-        _lastSent = default;
-        _lastApplied = default;
+        _lastSent = null;
+        _lastApplied = null;
+        _movement.Clear();
+        _stopped.Clear();
         Array.Clear(_wheels);
     }
 
@@ -221,9 +224,67 @@ public static class CarSync
     /// the sender is reading a car that is not the one being driven; if both
     /// move, the write is landing somewhere the screen is not drawn from.
     /// </summary>
-    static RemoteCars.Place _lastSent;
+    static RemoteCars.Place? _lastSent;
 
-    static RemoteCars.Place _lastApplied;
+    static RemoteCars.Place? _lastApplied;
+
+    /// <summary>Where each seat last was, and when it last actually moved.</summary>
+    static readonly Dictionary<int, (RemoteCars.Place Where, DateTime Moved)> _movement = [];
+
+    /// <summary>Seats already reported as stopped, so it is said once.</summary>
+    static readonly HashSet<int> _stopped = [];
+
+    /// <summary>
+    /// How long a car has to sit at one position before it is worth saying so.
+    ///
+    /// A car being driven never repeats a position for this long, and one
+    /// whose places have stopped arriving repeats it forever - the last one
+    /// that got through. Two seconds tells them apart without saying anything
+    /// about a car that is merely stationary at a corner, which is a car
+    /// standing still with new places still arriving and so still moving as
+    /// far as this is concerned.
+    /// </summary>
+    static readonly TimeSpan LongEnoughToBeStuck = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Says when a car stopped, and when it started again.
+    ///
+    /// The counts could not answer this: places arriving and being applied is
+    /// what the log said while both cars sat frozen on the other's screen,
+    /// because "applied" counts the write and not whether what was written had
+    /// changed. This watches the value.
+    /// </summary>
+    static void WatchForAStop(int seat, string who, RemoteCars.Place where)
+    {
+        var now = DateTime.UtcNow;
+
+        if (!_movement.TryGetValue(seat, out var was))
+        {
+            _movement[seat] = (where, now);
+            return;
+        }
+
+        if (was.Where != where)
+        {
+            _movement[seat] = (where, now);
+            if (_stopped.Remove(seat))
+                Console.Error.WriteLine(
+                    $"[sync] {now:HH:mm:ss.fff} seat {seat} ({who}) is moving again"
+                    + $" at ({where.X}, {where.Z})");
+            return;
+        }
+
+        if (now - was.Moved < LongEnoughToBeStuck) return;
+        if (!_stopped.Add(seat)) return;
+
+        Console.Error.WriteLine(
+            $"[sync] {now:HH:mm:ss.fff} seat {seat} ({who}) has not moved for"
+            + $" {(now - was.Moved).TotalSeconds:F1}s - stuck at ({where.X}, {where.Z}),"
+            + $" {_sent} sent and {_applied} applied so far");
+    }
+
+    static string Where(RemoteCars.Place? place) =>
+        place is null ? "nowhere yet" : $"({place.X}, {place.Z})";
 
     static void Say(LanSession wire, DirectRace.Pending race)
     {
@@ -234,7 +295,26 @@ public static class CarSync
             $"[sync] {_sent} place(s) sent, {_applied} applied,"
             + $" {wire.Places.Count} seat(s) heard from, {race.Players.Count} driving"
             + (race.Watching ? $", watching {race.Me}" : "")
-            + $" - sending ({_lastSent.X}, {_lastSent.Z}),"
-            + $" applying ({_lastApplied.X}, {_lastApplied.Z})");
+            + $" - this car at {Where(_lastSent)},"
+            + $" last one applied {Where(_lastApplied)}");
+
+        // One line per car, named, because "the opponents stopped" is a
+        // question about a particular car and the totals are about all of
+        // them.
+        var now = DateTime.UtcNow;
+        foreach (var (theirSeat, pose) in wire.Places)
+        {
+            string who = theirSeat < race.Players.Count
+                ? race.Players[theirSeat].Name
+                : "somebody not in the room";
+
+            string moved = _movement.TryGetValue(theirSeat, out var seen)
+                ? $"{(now - seen.Moved).TotalSeconds:F1}s ago"
+                : "never";
+
+            Console.Error.WriteLine(
+                $"[sync]   seat {theirSeat} ({who}) at ({pose.Place.X}, {pose.Place.Z})"
+                + $" - last moved {moved}");
+        }
     }
 }
