@@ -6,16 +6,18 @@ settings.json
 carda.sav
 cardb.sav
 interface.ini
-run.log
 packs/
 ovl_bin/
-trace.log
 __pycache__/
 *.pyc
 ovl_patched/
 test_output*.txt
 ram-*.bin
-crash.log
-run.log
-trace.log
 idx.txt
+
+# Run output. Every one of these is written by a run and read by nobody
+# else - ten of them had been committed before this rule existed, which is
+# how a diff comes to be mostly last night's race.
+*.log
+captures/
+out/
