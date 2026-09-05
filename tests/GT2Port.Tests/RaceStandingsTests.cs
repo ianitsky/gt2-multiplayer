@@ -16,6 +16,39 @@ public class RaceStandingsTests
     static Dictionary<byte, RaceResult.Finish> Reported(params (byte Seat, int Laps, int Ms)[] said) =>
         said.ToDictionary(x => x.Seat, x => new RaceResult.Finish(x.Laps, x.Ms));
 
+    /// <summary>
+    /// A seat only means anything against the order that produced it.
+    ///
+    /// Two machines showed the same race with the names on each other's times:
+    /// one said inmor's best lap was 0:46.400 and the other said it was
+    /// 0:46.733, which was the other player's. The times were right on both
+    /// and in the same order - only the names had moved, because the room's
+    /// player order can be changed by hand while the results are still
+    /// arriving, and each machine redraws the table when a report reaches it
+    /// rather than at some shared moment.
+    ///
+    /// This is the shape of that: the same reports read against a reordered
+    /// list give every driver somebody else's race. Nothing here can prevent
+    /// it - the caller has to hand over the seating the race ran under - so
+    /// this pins down what goes wrong when it does not.
+    /// </summary>
+    [Fact]
+    public void Reading_seats_against_a_reordered_list_gives_everybody_the_wrong_race()
+    {
+        var reported = Reported((0, 2, 108208), (1, 2, 198577));
+
+        List<Player> asRaced = [Driving("host"), Driving("guest")];
+        List<Player> reordered = [Driving("guest"), Driving("host")];
+
+        var right = RaceStandings.From(asRaced, reported);
+        var wrong = RaceStandings.From(reordered, reported);
+
+        // The same two times, in the same order, on the other two names.
+        Assert.Equal(["host", "guest"], right.Select(x => x.Name));
+        Assert.Equal(["guest", "host"], wrong.Select(x => x.Name));
+        Assert.Equal(right.Select(x => x.Milliseconds), wrong.Select(x => x.Milliseconds));
+    }
+
     [Fact]
     public void The_quickest_over_the_same_laps_wins()
     {

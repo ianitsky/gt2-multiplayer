@@ -904,6 +904,21 @@ public static class ModeHook
     static int _mySeat = -1;
 
     /// <summary>
+    /// The drivers as they were seated for the race just run, kept because a
+    /// result is keyed by seat and a seat only means anything against the
+    /// order that produced it.
+    ///
+    /// The room's order can be changed by hand - there are arrows in the lobby
+    /// for it - and results arrive over seconds, each one redrawing the table.
+    /// Pairing the names live meant a reorder between two reports moved every
+    /// name onto somebody else's time. One machine showed a driver's own lap
+    /// under the other player's name and the other machine did not, because
+    /// they redrew at different instants: each redraws when a report arrives,
+    /// and reports do not arrive together.
+    /// </summary>
+    static IReadOnlyList<Player> _racedIn = [];
+
+    /// <summary>
     /// Whether the session just run was a qualifying one.
     ///
     /// Kept here rather than asked of DirectRace when the scoring happens. The
@@ -936,6 +951,11 @@ public static class ModeHook
 
         var drivers = Seats.Drivers(room.Players);
         _mySeat = Seats.Of(room.Players, _session.PlayerName);
+
+        // Taken together with the seat, on purpose. The two are one fact - who
+        // was sitting where - and reading them at different moments is what
+        // let them disagree.
+        _racedIn = drivers;
 
         // Slot 0 is the car this machine drove - every machine rotates its own
         // player there - so that is the car whose race it can report. A viewer
@@ -994,7 +1014,9 @@ public static class ModeHook
             return;
         }
 
-        var drivers = Seats.Drivers(room.Players);
+        // The seating the race ran under, not the room's order now - see
+        // _racedIn.
+        var drivers = _racedIn;
 
         if (_mySeat >= 0 && DateTime.UtcNow - _lastSaid > ResultEvery)
         {
@@ -1047,6 +1069,7 @@ public static class ModeHook
     static void StopSayingHowItWent()
     {
         _mySeat = -1;
+        _racedIn = [];
         _myResult = default;
         _stopSaying = DateTime.MinValue;
         _reportsShown = 0;
