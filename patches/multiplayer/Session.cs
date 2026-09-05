@@ -269,8 +269,38 @@ public sealed class Session
         _lastHeard.Clear();
     }
 
-    public void SetReady(string playerName, bool ready) =>
+    /// <summary>
+    /// Says a player is ready, or is not.
+    ///
+    /// Two things it will not do. Nobody is ready without a car, because
+    /// "ready" is an answer to "have you chosen" and an empty car is a driver
+    /// the grid has nothing to put on it. And nobody takes it back once the
+    /// room has qualified: the grid is the qualifying's, and a player standing
+    /// down after it would either hold up a race that is already settled or
+    /// leave a gap in an order everybody earned.
+    ///
+    /// Refused here rather than only in the lobby, because the lobby is one
+    /// machine's drawing of the room and this is the room.
+    /// </summary>
+    public void SetReady(string playerName, bool ready)
+    {
+        if (Current is not { } room) return;
+        if (!ready && room.HasQualified) return;
+
+        if (ready && !ChosenACar(room, playerName)) return;
+
         UpdatePlayer(playerName, p => p with { Ready = ready });
+    }
+
+    /// <summary>
+    /// Whether that player has something to drive. A viewer has not and does
+    /// not need one - they are ready to watch, which is a thing they can be.
+    /// </summary>
+    static bool ChosenACar(Room room, string playerName)
+    {
+        var player = room.Players.FirstOrDefault(p => p.Name == playerName);
+        return player is not null && (player.Watching || player.Car.Length > 0);
+    }
 
     /// <summary>
     /// Chooses a car, and takes the paint back to the first one.
@@ -281,8 +311,15 @@ public sealed class Session
     /// player's car quietly repainting itself, or naming a paint the new car
     /// does not have.
     /// </summary>
-    public void SetCar(string playerName, string car) =>
+    public void SetCar(string playerName, string car)
+    {
+        // Not after qualifying. The grid came out of what these cars did on
+        // it, and a car swapped in afterwards would start from a place it
+        // never earned.
+        if (Current is { HasQualified: true }) return;
+
         UpdatePlayer(playerName, p => p.Car == car ? p : p with { Car = car, Colour = 0 });
+    }
 
     /// <summary>Chooses one of the paints the player's car comes in, by index.</summary>
     /// <summary>
@@ -312,7 +349,7 @@ public sealed class Session
         if (Phase != SessionPhase.Hosting) return;
         if (Current is not { Stage: RoomStage.Qualifying } room) return;
 
-        Current = room with { Stage = RoomStage.Racing };
+        Current = room with { Stage = RoomStage.Qualified };
     }
 
     /// <summary>
@@ -364,8 +401,15 @@ public sealed class Session
         };
     }
 
-    public void SetColour(string playerName, byte colour) =>
+    public void SetColour(string playerName, byte colour)
+    {
+        // Locked after qualifying for the same reason the car is: the paint is
+        // part of the car that ran, and repainting it afterwards would make
+        // the grid show something nobody qualified in.
+        if (Current is { HasQualified: true }) return;
+
         UpdatePlayer(playerName, p => p with { Colour = colour });
+    }
 
     /// <summary>Takes a seat in the race, or gives it up to watch instead.</summary>
     public void SetWatching(string playerName, bool watching) =>
@@ -425,10 +469,21 @@ public sealed class Session
 
         if (room.Players.Any(p => p.Name == name))
         {
-            UpdatePlayer(name, p => p with
-            {
-                Car = car, Ready = ready, Colour = colour, Watching = watching,
-            });
+            // Once the room has qualified there is nothing in an intent the
+            // host will take: car, paint, seat and readiness are all what the
+            // grid was built from, and the host is the only machine that can
+            // actually hold that line. A client refusing them locally is a
+            // client being polite - an older build, or one somebody changed,
+            // would simply keep sending.
+            //
+            // Still heard from, though. The intent is also the keep-alive, and
+            // ignoring it entirely would drop the player for going quiet.
+            if (!room.HasQualified)
+                UpdatePlayer(name, p => p with
+                {
+                    Car = car, Ready = ready, Colour = colour, Watching = watching,
+                });
+
             OnHeard(name);
         }
         else if (room.Players.Count < room.MaxPlayers)

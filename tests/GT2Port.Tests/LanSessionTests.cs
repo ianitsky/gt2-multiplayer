@@ -454,7 +454,9 @@ public class LanSessionTests
         // readies itself locally - it owns its own row and there's no wire
         // involved in that - while the client's readiness has to travel
         // over the channel under test, which is the point of this test.
+        hostSession.SetCar("ian", "buc9n");
         hostSession.SetReady("ian", true);
+        clientSession.SetCar("guest", "buc9n");
         clientSession.SetReady("guest", true);
 
         Assert.True(DriveUntil(() => hostSession.CanStart));

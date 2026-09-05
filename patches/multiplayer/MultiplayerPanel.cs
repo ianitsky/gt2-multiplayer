@@ -807,23 +807,49 @@ public sealed class MultiplayerPanel : IPanel
         float colourRow = ImGui.GetTextLineHeightWithSpacing() + SwatchSize + ImGui.GetStyle().ItemSpacing.Y;
         float reservedBelowList = colourRow + frameRow + separatorHeight + frameRow + hintRow;
 
+        // Settled once qualifying has been run: the grid came out of these
+        // cars driving on it, so a car or a paint changed afterwards would
+        // start from a place it never earned. Shown greyed rather than hidden,
+        // because a picker that vanishes reads as a bug and a picker that
+        // refuses reads as a rule.
+        bool settled = room.HasQualified;
+
         if (Watching(room))
         {
             DrawDriverToFollow(room, reservedBelowList);
         }
         else
         {
+            ImGui.BeginDisabled(settled);
             DrawCarList(room, reservedBelowList);
             DrawColours(room);
+            ImGui.EndDisabled();
         }
 
-        if (ImGui.Button(Watching(room) ? "Race instead" : "Watch instead"))
-            _session.SetWatching(_session.PlayerName, !Watching(room));
-        ImGui.SameLine();
+        // "Watch instead" is gone for now, at the port's request. The seat it
+        // gives up and the viewer it makes are still here and still work - a
+        // room can still hold viewers, and one already watching keeps their
+        // driver picker above - so this is a button that is not drawn rather
+        // than a feature that was removed.
 
+        // A driver with no car has nothing for the grid to put on it, so being
+        // ready is not a thing they can be yet.
+        bool nothingToDriveYet = !Watching(room) && CarOf(room, _session.PlayerName).Length == 0;
+
+        ImGui.BeginDisabled(nothingToDriveYet);
         if (ImGui.Button("Ready")) _session.SetReady(_session.PlayerName, true);
-        ImGui.SameLine();
-        if (ImGui.Button("Not ready")) _session.SetReady(_session.PlayerName, false);
+        ImGui.EndDisabled();
+
+        // Standing down after qualifying would leave a hole in an order
+        // everybody just earned, so the way out of a settled room is Leave.
+        if (!settled)
+        {
+            ImGui.SameLine();
+            if (ImGui.Button("Not ready")) _session.SetReady(_session.PlayerName, false);
+        }
+
+        if (nothingToDriveYet)
+            ImGui.TextDisabled("Choose a car first");
 
         ImGui.Separator();
         ImGui.BeginDisabled(!_session.CanStart);
@@ -932,6 +958,14 @@ public sealed class MultiplayerPanel : IPanel
     /// <summary>Whether this machine's player is in the room to watch.</summary>
     bool Watching(Room room) =>
         room.Players.FirstOrDefault(p => p.Name == _session.PlayerName)?.Watching == true;
+
+    /// <summary>
+    /// What that player has chosen to drive, or "" for nobody and for anybody
+    /// who has not chosen yet - which are the same answer to the only question
+    /// asked of it.
+    /// </summary>
+    static string CarOf(Room room, string playerName) =>
+        room.Players.FirstOrDefault(p => p.Name == playerName)?.Car ?? "";
 
     /// <summary>
     /// The drivers a viewer may follow, in place of the car list they have no

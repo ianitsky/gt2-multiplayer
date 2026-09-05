@@ -270,4 +270,52 @@ public class RoomStateTests
 
         Assert.Equal([false, true], back.Players.Select(p => p.Watching));
     }
+
+    /// <summary>
+    /// Every stage has to survive the wire, and the one that has qualified
+    /// most of all: it is what tells every other machine's lobby to stop
+    /// offering a car. A room that arrived as merely "racing" would let a
+    /// client change car after the grid was settled, and the host would then
+    /// be the only machine refusing it.
+    /// </summary>
+    [Theory]
+    [InlineData(RoomStage.Racing)]
+    [InlineData(RoomStage.Qualifying)]
+    [InlineData(RoomStage.Qualified)]
+    public void A_rooms_stage_survives_the_wire(RoomStage stage)
+    {
+        var room = Sample() with { Stage = stage };
+
+        Assert.True(RoomState.TryDeserialise(RoomState.Serialise(room), out var back));
+
+        Assert.Equal(stage, back.Stage);
+    }
+
+    /// <summary>
+    /// And a stage this build has no meaning for reads as a race. The byte
+    /// comes off a socket and may have been written by something newer;
+    /// "some kind of race" is the honest reading, and the host enforces
+    /// whatever the stage actually meant.
+    /// </summary>
+    [Fact]
+    public void A_stage_from_the_future_reads_as_a_race()
+    {
+        // Found by difference rather than by searching for the value: a room
+        // is full of small numbers and the first byte that happens to equal
+        // one is not necessarily the stage. The one byte two otherwise
+        // identical rooms disagree on is.
+        var racing = RoomState.Serialise(Sample() with { Stage = RoomStage.Racing });
+        var bytes = RoomState.Serialise(Sample() with { Stage = RoomStage.Qualifying });
+
+        int at = -1;
+        for (int i = 0; i < bytes.Length; i++)
+            if (bytes[i] != racing[i]) { Assert.Equal(-1, at); at = i; }
+
+        Assert.NotEqual(-1, at);
+        bytes[at] = 200;
+
+        Assert.True(RoomState.TryDeserialise(bytes, out var back));
+
+        Assert.Equal(RoomStage.Racing, back.Stage);
+    }
 }

@@ -65,7 +65,17 @@ public static class Seats
 /// qualifying - and every machine has to agree on what the Start button is
 /// about to do.
 /// </summary>
-public enum RoomStage : byte { Racing = 0, Qualifying = 1 }
+/// <summary>
+/// <see cref="Qualified"/> is a race like <see cref="Racing"/> and not the
+/// same thing: it is a room that has run its qualifying and is arranging the
+/// race off the grid that produced. The lobby stops letting anybody change car
+/// or take their readiness back there, because both would make the grid
+/// everybody just earned a lie about what is on it.
+///
+/// A room that never had qualifying is <see cref="Racing"/> throughout and
+/// keeps every choice open, which is why one value cannot do for both.
+/// </summary>
+public enum RoomStage : byte { Racing = 0, Qualifying = 1, Qualified = 2 }
 
 /// <summary>
 /// A room, and the race it is arranging.
@@ -97,6 +107,12 @@ public record Room(Guid Id, string Name, string Track, string CarGroup, int MaxP
 
     /// <summary>Whether the next session out of this lobby is a qualifying one.</summary>
     public bool QualifyingNext => Stage == RoomStage.Qualifying;
+
+    /// <summary>
+    /// Whether this room has run its qualifying. The grid is settled from
+    /// here, so the choices that made it are settled too.
+    /// </summary>
+    public bool HasQualified => Stage == RoomStage.Qualified;
 
     /// <summary>
     /// How long the next session is, which is not the room's own length while
@@ -207,8 +223,16 @@ public static class RoomState
         room = new Room(id, name, track, carGroup, maxPlayers, players,
                         (byte)RaceLaps.Sensible(laps),
                         minutes == 0 ? TimedRace.ByLaps : (ushort)TimedRace.Sensible(minutes),
-                        stage == (byte)RoomStage.Qualifying
-                            ? RoomStage.Qualifying : RoomStage.Racing);
+                        // Named values only. This is a byte off a socket, and
+                        // a room from a newer build may carry a stage this one
+                        // has no meaning for - Racing is the honest reading of
+                        // "some kind of race", and the host enforces the rest.
+                        stage switch
+                        {
+                            (byte)RoomStage.Qualifying => RoomStage.Qualifying,
+                            (byte)RoomStage.Qualified => RoomStage.Qualified,
+                            _ => RoomStage.Racing,
+                        });
         return true;
     }
 

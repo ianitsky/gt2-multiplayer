@@ -81,6 +81,7 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track", "special");
+        session.SetCar("ian", "buc9n");
         session.SetReady("ian", true);
 
         Assert.True(session.CanStart);
@@ -101,6 +102,7 @@ public class SessionTests
         var session = NewSession();
         session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", false);
+        session.SetCar("ian", "buc9n");
         session.SetReady("ian", true);
 
         Assert.False(session.CanStart);
@@ -112,6 +114,7 @@ public class SessionTests
         var session = NewSession();
         session.Host("room", "track", "special");
         session.ApplyClientIntent("guest", "", true);
+        session.SetCar("ian", "buc9n");
         session.SetReady("ian", true);
 
         Assert.True(session.CanStart);
@@ -178,6 +181,7 @@ public class SessionTests
     {
         var session = NewSession();
         session.Host("room", "track", "special");
+        session.SetCar("ian", "buc9n");
         session.SetReady("ian", true);
 
         Assert.True(session.Current!.Players[0].Ready);
@@ -189,6 +193,7 @@ public class SessionTests
         // Join appends, so the local player is not row zero for a client.
         var session = NewSession("guest");
         session.Join(RoomWith(new Player("ian", "", false)));
+        session.SetCar(session.PlayerName, "buc9n");
         session.SetReady(session.PlayerName, true);
 
         Assert.False(session.Current!.Players.Single(p => p.Name == "ian").Ready);
@@ -261,6 +266,7 @@ public class SessionTests
         var session = NewSession("guest");
         var initial = RoomWith(new Player("ian", "", false));
         Assert.True(session.Join(initial));
+        session.SetCar("guest", "buc9n");
         session.SetReady("guest", true);           // local player is ready
 
         session.OnRemoteState(initial with
@@ -290,6 +296,7 @@ public class SessionTests
         var session = NewSession("guest");
         var initial = RoomWith(new Player("ian", "", false));
         Assert.True(session.Join(initial));
+        session.SetCar("guest", "buc9n");
         session.SetReady("guest", true);
         session.SetCar("guest", "local_car");
 
@@ -374,6 +381,7 @@ public class SessionTests
             ],
         });
 
+        session.SetCar("ian", "buc9n");
         session.SetReady("ian", true);
 
         Assert.True(session.Current!.Players.Single(p => p.Name == "ian").Ready);
@@ -1089,5 +1097,157 @@ public class SessionTests
 
         Assert.True(session.IsWatching);
         Assert.Equal("les", session.WatchedDriver()!.Name);
+    }
+
+    // What a lobby will and will not let a player do - before the room has
+    // qualified, and after it has.
+
+    /// <summary>
+    /// "Ready" is an answer to "have you chosen", so there is nothing to
+    /// answer with until a car has been picked. A driver with no car is one
+    /// the grid has nothing to put on it.
+    /// </summary>
+    [Fact]
+    public void Nobody_is_ready_without_a_car()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special");
+
+        session.SetReady("ian", true);
+        Assert.False(session.Current!.Players[0].Ready);
+
+        session.SetCar("ian", "buc9n");
+        session.SetReady("ian", true);
+        Assert.True(session.Current!.Players[0].Ready);
+    }
+
+    /// <summary>
+    /// A viewer is the exception and not a special case: they have no car
+    /// because they are not driving, and being ready to watch is a thing they
+    /// can be.
+    /// </summary>
+    [Fact]
+    public void A_viewer_is_ready_without_one()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special");
+        session.SetWatching("ian", true);
+
+        session.SetReady("ian", true);
+
+        Assert.True(session.Current!.Players[0].Ready);
+    }
+
+    [Fact]
+    public void Qualifying_leaves_the_room_knowing_it_has_qualified()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special", qualifying: true);
+        Assert.True(session.Current!.QualifyingNext);
+
+        session.QualifyingIsOver();
+
+        Assert.False(session.Current!.QualifyingNext);
+        Assert.True(session.Current!.HasQualified);
+    }
+
+    /// <summary>
+    /// A room that never had qualifying is arranging a race from the first
+    /// moment and keeps every choice open. It must not be mistaken for one
+    /// that has qualified, which is why the two are different stages rather
+    /// than the same one.
+    /// </summary>
+    [Fact]
+    public void A_room_that_never_qualified_is_not_a_room_that_has()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special");
+
+        Assert.False(session.Current!.HasQualified);
+
+        session.SetCar("ian", "buc9n");
+        Assert.Equal("buc9n", session.Current!.Players[0].Car);
+    }
+
+    /// <summary>
+    /// The grid came out of these cars driving on it, so a car swapped in
+    /// afterwards would start from a place it never earned.
+    /// </summary>
+    [Fact]
+    public void After_qualifying_the_car_and_its_paint_are_settled()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special", qualifying: true);
+        session.SetCar("ian", "buc9n");
+        session.SetColour("ian", 3);
+        session.QualifyingIsOver();
+
+        session.SetCar("ian", "uv12n");
+        session.SetColour("ian", 7);
+
+        Assert.Equal("buc9n", session.Current!.Players[0].Car);
+        Assert.Equal(3, session.Current!.Players[0].Colour);
+    }
+
+    /// <summary>
+    /// And nobody stands down from a grid everybody just earned - that would
+    /// either hold up a race that is already settled or leave a gap in it.
+    /// Leaving the room is still allowed; it is taking the seat back that is
+    /// not.
+    /// </summary>
+    [Fact]
+    public void After_qualifying_readiness_cannot_be_taken_back()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special", qualifying: true);
+        session.SetCar("ian", "buc9n");
+        session.SetReady("ian", true);
+        session.QualifyingIsOver();
+
+        session.SetReady("ian", false);
+
+        Assert.True(session.Current!.Players[0].Ready);
+    }
+
+    /// <summary>
+    /// And the host holds that line for everybody, because it is the only
+    /// machine that can. A client refusing its own car picker is a client
+    /// being polite; an older build, or one somebody changed, would go on
+    /// sending whatever it liked.
+    /// </summary>
+    [Fact]
+    public void After_qualifying_a_clients_intent_changes_nothing_about_it()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special", qualifying: true);
+        session.ApplyClientIntent("guest", "buc9n", ready: true, colour: 2);
+        session.QualifyingIsOver();
+
+        session.ApplyClientIntent("guest", "uv12n", ready: false, colour: 9);
+
+        var guest = session.Current!.Players.Single(p => p.Name == "guest");
+        Assert.Equal("buc9n", guest.Car);
+        Assert.Equal(2, guest.Colour);
+        Assert.True(guest.Ready);
+    }
+
+    /// <summary>
+    /// The intent is also the keep-alive, so an ignored one still counts as
+    /// having been heard - otherwise a settled room would drop every client
+    /// three seconds after qualifying ended.
+    /// </summary>
+    [Fact]
+    public void An_ignored_intent_still_counts_as_hearing_from_them()
+    {
+        var session = NewSession();
+        session.Host("room", "track", "special", qualifying: true);
+        session.ApplyClientIntent("guest", "buc9n", ready: true);
+        session.QualifyingIsOver();
+
+        _now = _now.AddSeconds(10);
+        session.ApplyClientIntent("guest", "buc9n", ready: true);
+        session.Tick();
+
+        Assert.Contains(session.Current!.Players, p => p.Name == "guest");
     }
 }
