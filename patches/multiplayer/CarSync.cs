@@ -66,8 +66,10 @@ public static class CarSync
 
         if (seat >= 0)
         {
-            wire.SendPlace((byte)seat, RemoteCars.ReadPose(m, mine), ModeHook.HostToAnswer);
+            var sending = RemoteCars.ReadPose(m, mine);
+            wire.SendPlace((byte)seat, sending, ModeHook.HostToAnswer);
             _sent++;
+            _lastSent = sending.Place;
         }
 
         wire.CollectPlaces();
@@ -91,6 +93,7 @@ public static class CarSync
             // see WheelsAreBeingDrawn.
             _wheels[slot] = pose.Wheels;
             _applied++;
+            _lastApplied = pose.Place;
         }
 
         Say(wire, race);
@@ -200,8 +203,27 @@ public static class CarSync
         _applied = 0;
         _said = false;
         _stood = false;
+        _lastSent = default;
+        _lastApplied = default;
         Array.Clear(_wheels);
     }
+
+    /// <summary>
+    /// The last position put on the wire and the last one taken off it.
+    ///
+    /// The counts alone cannot answer the question a frozen car asks. Places
+    /// arriving and being applied is exactly what the log said while neither
+    /// machine's car moved on the other's screen, because "applied" counts the
+    /// write and not what was written: a sender stuck on one position and a
+    /// receiver whose writes are being overwritten look identical from here.
+    /// Two coordinates tell them apart at a glance - if the sent pair moves
+    /// and the applied pair does not, the wire is at fault; if neither moves,
+    /// the sender is reading a car that is not the one being driven; if both
+    /// move, the write is landing somewhere the screen is not drawn from.
+    /// </summary>
+    static RemoteCars.Place _lastSent;
+
+    static RemoteCars.Place _lastApplied;
 
     static void Say(LanSession wire, DirectRace.Pending race)
     {
@@ -211,6 +233,8 @@ public static class CarSync
         Console.Error.WriteLine(
             $"[sync] {_sent} place(s) sent, {_applied} applied,"
             + $" {wire.Places.Count} seat(s) heard from, {race.Players.Count} driving"
-            + (race.Watching ? $", watching {race.Me}" : ""));
+            + (race.Watching ? $", watching {race.Me}" : "")
+            + $" - sending ({_lastSent.X}, {_lastSent.Z}),"
+            + $" applying ({_lastApplied.X}, {_lastApplied.Z})");
     }
 }
