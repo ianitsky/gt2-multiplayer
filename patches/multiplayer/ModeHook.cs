@@ -692,12 +692,15 @@ public static class ModeHook
                         _lanSessionOverRelay = false;
                         try
                         {
-                            // A room announced through the relay is reached
-                            // through it too. The link is borrowed rather than
-                            // owned - see LanSession.Over.
-                            _lanSession = _relay is not null
-                                ? LanSession.Over(_relay, SessionPort, () => DateTime.UtcNow,
-                                    hosting: true, ownsTheLink: false)
+                            // Both ways at once when there is a relay: the
+                            // well-known port for the players who found this
+                            // room on this network, and the relay for the ones
+                            // who found it on the internet. It used to be one
+                            // or the other, so whichever list a player had not
+                            // used was a list of rooms that dropped them three
+                            // seconds after they joined - see EitherLink.
+                            _lanSession = _relay is { } relay
+                                ? HostBothWays(relay)
                                 : LanSession.ForHost(SessionPort, () => DateTime.UtcNow);
                             _lanSessionOverRelay = _relay is not null;
                             _lanSessionRole = SessionPhase.Hosting;
@@ -1164,6 +1167,35 @@ public static class ModeHook
             _relay.Publish(room.Id, listed: room.Secret.Length == 0, RoomState.Serialise(room));
         else
             _relay.AskForRooms();
+    }
+
+    /// <summary>
+    /// A host that answers on the well-known port and through the relay.
+    ///
+    /// The port can be taken - another instance on this machine is already
+    /// hosting - and that is not a reason to refuse to host at all when there
+    /// is a relay standing by. It costs the players on this network, who then
+    /// have to reach the room the long way round, and it says so rather than
+    /// leaving somebody to wonder why the local list is a list of rooms that
+    /// drop them.
+    /// </summary>
+    static LanSession HostBothWays(RelaySession relay)
+    {
+        try
+        {
+            return LanSession.Over(
+                new EitherLink(DirectLink.Bind(SessionPort), relay),
+                SessionPort, () => DateTime.UtcNow, hosting: true, ownsTheLink: true);
+        }
+        catch (SocketException)
+        {
+            Console.Error.WriteLine(
+                $"[host] port {SessionPort} is taken on this machine - hosting through the"
+                + " relay only, so players on this network reach the room the long way round");
+
+            return LanSession.Over(relay, SessionPort, () => DateTime.UtcNow,
+                hosting: true, ownsTheLink: false);
+        }
     }
 
     /// <summary>Frees the session socket, so another instance here can host or join.</summary>
