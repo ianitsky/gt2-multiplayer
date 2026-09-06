@@ -725,7 +725,23 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const int PlaceWheels = RemoteCars.WheelsOnACar;
 
-    const int PlaceBytes = 3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2;
+    /// <summary>
+    /// And a counter, so a place that arrives late can be told from one that
+    /// is new.
+    ///
+    /// UDP reorders, and a relay and a tunnel in the path make it likelier
+    /// still. Without this the newest place was whichever arrived last, so an
+    /// overtaken datagram put the car back where it had been and the next one
+    /// snapped it forward again - a car jumping about on a connection that had
+    /// not lost anything at all.
+    /// </summary>
+    const int PlaceCounter = 2;
+
+    const int PlaceBytes =
+        3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2 + PlaceCounter;
+
+    /// <summary>Where the counter sits, which is after everything that was there before.</summary>
+    const int PlaceCounterAt = 3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2;
 
     /// <summary>
     /// Where every other player says their car is, by their seat in the room.
@@ -739,6 +755,38 @@ public sealed class LanSession : IDisposable
     readonly Dictionary<byte, RemoteCars.Pose> _places = [];
 
     public IReadOnlyDictionary<byte, RemoteCars.Pose> Places => _places;
+
+    /// <summary>This machine's own count, one higher on every place it sends.</summary>
+    ushort _placesSent;
+
+    /// <summary>The newest count seen from each seat, and how many have been refused since.</summary>
+    readonly Dictionary<byte, (ushort Newest, int Refused)> _placeCount = [];
+
+    /// <summary>
+    /// How many refusals in a row mean the other machine started counting
+    /// again rather than that this one is being overtaken.
+    ///
+    /// A player who leaves and comes back builds a new session, whose counter
+    /// starts at zero - and zero is a very old number. Without this the host
+    /// would refuse that player's every place until their counter climbed back
+    /// past where it left off, which at thirty a second is half an hour of a
+    /// car that does not move.
+    ///
+    /// Ten, because reordering moves a datagram past a handful of its
+    /// neighbours and not past ten in a row. A run that long is not a race
+    /// condition, it is a different sender.
+    /// </summary>
+    const int RefusalsThatMeanARestart = 10;
+
+    /// <summary>
+    /// Whether a count is newer than the last one seen from that seat.
+    ///
+    /// Half the space is "ahead" and half is "behind", so the comparison keeps
+    /// working when the counter wraps - at thirty places a second it wraps
+    /// every thirty-six minutes, which a long evening reaches.
+    /// </summary>
+    internal static bool IsNewer(ushort incoming, ushort newest) =>
+        (ushort)(incoming - newest) is > 0 and < 32768;
 
     /// <summary>What each seat's own machine said their race ended as.</summary>
     readonly Dictionary<byte, RaceResult.Finish> _results = [];
@@ -864,6 +912,11 @@ public sealed class LanSession : IDisposable
         for (int wheel = 0; wheel < PlaceWheels; wheel++)
             BitConverter.TryWriteBytes(data.AsSpan(21 + wheel * 2), pose.Wheels[wheel]);
 
+        // One per place sent, not one per frame or per second: what the far
+        // side needs is an order, and every place this machine sends is one
+        // step along it.
+        BitConverter.TryWriteBytes(data.AsSpan(PlaceCounterAt), _placesSent++);
+
         if (host is not null) Send(data, _link.HostAt(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
     }
@@ -904,7 +957,27 @@ public sealed class LanSession : IDisposable
             // game's own driver takes it over.
             Relay(data, from);
 
-            _places[data[2]] = new RemoteCars.Pose(
+            byte seat = data[2];
+            ushort count = BitConverter.ToUInt16(data, PlaceCounterAt);
+
+            if (_placeCount.TryGetValue(seat, out var seen))
+            {
+                if (!IsNewer(count, seen.Newest))
+                {
+                    // Overtaken on the way here, and the car is already
+                    // somewhere newer than this - unless it keeps happening,
+                    // which means the other machine started counting again.
+                    if (seen.Refused + 1 < RefusalsThatMeanARestart)
+                    {
+                        _placeCount[seat] = (seen.Newest, seen.Refused + 1);
+                        continue;
+                    }
+                }
+            }
+
+            _placeCount[seat] = (count, 0);
+
+            _places[seat] = new RemoteCars.Pose(
                 new RemoteCars.Place(
                     BitConverter.ToInt32(data, 3),
                     BitConverter.ToInt32(data, 7),
@@ -919,6 +992,9 @@ public sealed class LanSession : IDisposable
                     BitConverter.ToInt16(data, 27)));
         }
     }
+
+    /// <summary>How many places arrived out of order and were refused, for a test to count.</summary>
+    internal int PlacesRefused => _placeCount.Values.Sum(x => x.Refused);
 
     /// <summary>
     /// Passes a place on to every other machine, when this one is the host.

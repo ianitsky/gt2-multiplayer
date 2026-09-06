@@ -1064,4 +1064,128 @@ public class LanSessionTests
             other.Receive(ref from);
         });
     }
+
+    // Places, and the order they are believed in.
+
+    /// <summary>
+    /// A place on the wire: the magic, the kind, the seat, three coordinates,
+    /// three angles, four wheels, and the counter that says where it belongs
+    /// in the order. Written out here rather than borrowed from the sender,
+    /// so a change to the layout has to be made twice on purpose.
+    /// </summary>
+    static byte[] PlaceDatagram(byte seat, int x, ushort count)
+    {
+        var data = new byte[31];
+        data[0] = 0xA5;
+        data[1] = 3;
+        data[2] = seat;
+        BitConverter.TryWriteBytes(data.AsSpan(3), x);
+        BitConverter.TryWriteBytes(data.AsSpan(7), 0);
+        BitConverter.TryWriteBytes(data.AsSpan(11), 0);
+        BitConverter.TryWriteBytes(data.AsSpan(29), count);
+        return data;
+    }
+
+    /// <summary>
+    /// UDP reorders, and a relay and a tunnel in the path make it likelier.
+    /// The newest place used to be whichever arrived last, so an overtaken
+    /// datagram put the car back where it had been and the next one snapped it
+    /// forward - a car jumping about on a connection that had lost nothing.
+    /// </summary>
+    [Fact]
+    public void A_place_that_arrives_late_does_not_move_the_car_back()
+    {
+        const int hostPort = BasePort + 66;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 10));
+        session.CollectPlaces();
+        Assert.Equal(1000, session.Places[1].Place.X);
+
+        // Sent before the one above and overtaken on the way.
+        Deliver(other, session, PlaceDatagram(1, 500, 9));
+        session.CollectPlaces();
+
+        Assert.Equal(1000, session.Places[1].Place.X);
+    }
+
+    [Fact]
+    public void And_the_one_after_it_still_does()
+    {
+        const int hostPort = BasePort + 67;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 10));
+        Deliver(other, session, PlaceDatagram(1, 500, 9));
+        Deliver(other, session, PlaceDatagram(1, 1500, 11));
+        session.CollectPlaces();
+
+        Assert.Equal(1500, session.Places[1].Place.X);
+    }
+
+    /// <summary>
+    /// The same place twice is not news either. A relay that duplicates, or a
+    /// retransmission, would otherwise count as movement.
+    /// </summary>
+    [Fact]
+    public void The_same_place_twice_is_taken_once()
+    {
+        const int hostPort = BasePort + 68;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 10));
+        Deliver(other, session, PlaceDatagram(1, 7777, 10));
+        session.CollectPlaces();
+
+        Assert.Equal(1000, session.Places[1].Place.X);
+    }
+
+    /// <summary>
+    /// A player who leaves and comes back builds a new session, and its
+    /// counter starts at zero - which is a very old number. Refusing those
+    /// forever would be a car that never moves again for the rest of the
+    /// evening, so a long enough run of refusals is read as a sender that
+    /// started over rather than as this one being overtaken.
+    /// </summary>
+    [Fact]
+    public void A_sender_that_starts_counting_again_is_believed_after_a_while()
+    {
+        const int hostPort = BasePort + 69;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 40000));
+        session.CollectPlaces();
+        Assert.Equal(1000, session.Places[1].Place.X);
+
+        for (ushort count = 0; count < 12; count++)
+        {
+            Deliver(other, session, PlaceDatagram(1, 2000 + count, count));
+            session.CollectPlaces();
+        }
+
+        Assert.True(session.Places[1].Place.X >= 2000,
+            "a restarted sender should be believed rather than refused for half an hour");
+    }
+
+    /// <summary>
+    /// Half the space is ahead and half behind, so the comparison keeps
+    /// working when the counter wraps - at thirty places a second it wraps
+    /// every thirty-six minutes, which a long evening reaches.
+    /// </summary>
+    [Theory]
+    [InlineData(11, 10, true)]
+    [InlineData(10, 10, false)]
+    [InlineData(9, 10, false)]
+    [InlineData(0, 65535, true)]
+    [InlineData(65535, 0, false)]
+    [InlineData(1000, 60000, true)]
+    [InlineData(60000, 1000, false)]
+    public void A_counter_that_wraps_is_still_in_order(ushort incoming, ushort newest, bool newer)
+    {
+        Assert.Equal(newer, LanSession.IsNewer(incoming, newest));
+    }
 }
