@@ -99,21 +99,33 @@ public sealed class RemoteTrack
         // is nothing before it for its gap to be a gap from.
         if (_arrivedLast is { } before)
         {
+            // The timeline takes every gap, however long: the place really was
+            // that much later than the one before it, and a timeline that
+            // rounded a pause away would draw the car through ground it never
+            // covered.
             _source += sinceTheSendersLast;
 
-            double waited = (arrived - before).TotalMilliseconds;
-            double ragged = Math.Abs(waited - sinceTheSendersLast);
+            // The estimate takes only the ones that could be a cadence. The
+            // gap across a start barrier is seconds long, and trained on it
+            // the delay begins every race at its ceiling and takes half a
+            // minute to come down - a quarter second of latency bought to
+            // smooth a pause that had already ended.
+            if (sinceTheSendersLast <= Most.TotalMilliseconds)
+            {
+                double waited = (arrived - before).TotalMilliseconds;
+                double ragged = Math.Abs(waited - sinceTheSendersLast);
 
-            if (_measured)
-            {
-                _interval += (sinceTheSendersLast - _interval) * Follows;
-                _jitter += (ragged - _jitter) * Follows;
-            }
-            else
-            {
-                _interval = sinceTheSendersLast;
-                _jitter = ragged;
-                _measured = true;
+                if (_measured)
+                {
+                    _interval += (sinceTheSendersLast - _interval) * Follows;
+                    _jitter += (ragged - _jitter) * Follows;
+                }
+                else
+                {
+                    _interval = sinceTheSendersLast;
+                    _jitter = ragged;
+                    _measured = true;
+                }
             }
         }
 

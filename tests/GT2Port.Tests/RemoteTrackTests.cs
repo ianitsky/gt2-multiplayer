@@ -195,4 +195,32 @@ public class RemoteTrackTests
 
         Assert.True(track.Held < 40, $"holding {track.Held} places");
     }
+
+    /// <summary>
+    /// A pause is not a cadence. The gap across the start barrier is seconds
+    /// long, and a delay trained on it starts every race at its ceiling: a
+    /// real race opened at 250ms and took until its three-hundredth place to
+    /// come down to ninety, which is a quarter second of latency bought to
+    /// smooth a pause that had already ended.
+    /// </summary>
+    [Fact]
+    public void A_pause_before_the_race_does_not_set_the_delay()
+    {
+        var track = new RemoteTrack();
+        var arrived = Noon;
+
+        // One place, then the wait at the start line, then driving.
+        track.Heard(0, At(0), arrived);
+        arrived = arrived.AddMilliseconds(4000);
+        track.Heard(4000, At(0), arrived);
+
+        for (int i = 2; i < 10; i++)
+        {
+            arrived = arrived.AddMilliseconds(33);
+            track.Heard(33, At(i * 100), arrived);
+        }
+
+        Assert.Equal(RemoteTrack.Least, track.Delay);
+    }
+
 }
