@@ -26,7 +26,16 @@ public static class RuntimePatches
 
     public static void Load(string directory)
     {
-        if (!Directory.Exists(directory)) return;
+        // Said rather than skipped in silence. These are files a build is
+        // supposed to ship, so missing means a broken package, and a broken
+        // package that says nothing is one nobody notices until a car reads
+        // its speed in the wrong units.
+        if (!Directory.Exists(directory))
+        {
+            Console.Error.WriteLine(
+                $"[Patch] no runtime patches at {directory} - none will be applied");
+            return;
+        }
         foreach (var file in Directory.GetFiles(directory, "*.json"))
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(file));

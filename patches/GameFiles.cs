@@ -27,4 +27,19 @@ public static class GameFiles
 
         return relative;
     }
+
+    /// <summary>
+    /// The same, for a directory. A working directory is whatever launched the
+    /// game - a shortcut's, a shell's - and only the folder the executable sits
+    /// in is somewhere the game's own files are known to be.
+    /// </summary>
+    public static string FindDirectory(params string[] parts)
+    {
+        string relative = Path.Combine(parts);
+
+        string besideTheExe = Path.Combine(AppContext.BaseDirectory, relative);
+        if (Directory.Exists(besideTheExe)) return besideTheExe;
+
+        return relative;
+    }
 }

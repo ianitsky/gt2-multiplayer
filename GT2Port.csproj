@@ -34,6 +34,13 @@
              so adding a third does not quietly break a shipped build again.
              It is about a hundred kilobytes. -->
         <None Include="config/**" CopyToOutputDirectory="PreserveNewest" />
+
+        <!-- And the runtime patches, for exactly the same reason and after
+             exactly the same mistake: patches/runtime/*.json is read while the
+             game runs, it was not copied, and RuntimePatches.Load returns
+             quietly when the directory is not there - so a published build
+             lost the metric units and said nothing at all about it. -->
+        <None Include="patches/runtime/**" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

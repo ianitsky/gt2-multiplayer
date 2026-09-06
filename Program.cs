@@ -34,7 +34,7 @@ Dispatcher.Register("gt2_04", new Recompiled.Gt2_04DispatchTable());
 Dispatcher.Register("gt2_05", new Recompiled.Gt2_05DispatchTable());
 Dispatcher.Register("gt2_06", new Recompiled.Gt2_06DispatchTable());
 RecompOne.Runtime.Modding.ModLoader.LoadAll();
-GT2Port.RuntimePatches.Load("patches/runtime");
+GT2Port.RuntimePatches.Load(GT2Port.GameFiles.FindDirectory("patches", "runtime"));
 RecompOne.Runtime.Runtime.FramePatch = m =>
 {
     GT2Port.RuntimePatches.Apply(m);
