@@ -29,8 +29,8 @@ Console.CancelKeyPress += (_, e) =>
     stopping.Cancel();
 };
 
-Console.WriteLine($"gt2relay listening on udp/{server.BoundPort}");
-Console.WriteLine("rooms are forgotten after "
+Say.Line($"gt2relay listening on udp/{server.BoundPort}");
+Say.Line("rooms are forgotten after "
     + $"{RoomRegistry.Forgotten.TotalSeconds:F0}s without a publish");
 
 // A line only when something moved, so a quiet night stays quiet and a
@@ -45,10 +45,11 @@ server.Run(stopping.Token, it =>
     lastIn = it.Received;
     lastOut = it.Sent;
 
-    Console.WriteLine(
+    Say.Line(
         $"in {it.Received}  out {it.Sent}  failed {it.SendFailures}"
         + $"  rooms {it.RoomCount}  last {it.LastHeardFrom}");
 });
 
-Console.WriteLine("stopped");
+Say.Line("stopped");
+Say.Finish();
 return 0;
