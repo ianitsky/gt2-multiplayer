@@ -85,15 +85,26 @@ public static class CarSync
             // has none and applies them all.
             if (slot == mine && !race.Watching) continue;
 
+            // Where the car is drawn, which is a little way behind where it
+            // was last heard to be - see RemoteTrack. Falling back to the
+            // newest place keeps this honest for the first frames of a race,
+            // before there are two of them to draw between.
+            var drawn = wire.PoseFor(theirSeat, DateTime.UtcNow) ?? pose;
+
             // Before the frame, on purpose: the rebuild that turns these three
             // angles into the matrix the car is drawn from runs later in it.
-            RemoteCars.WritePose(m, slot, pose);
+            RemoteCars.WritePose(m, slot, drawn);
 
             // And the wheels after it, for the mirror image of that reason -
             // see WheelsAreBeingDrawn.
-            _wheels[slot] = pose.Wheels;
+            _wheels[slot] = drawn.Wheels;
             _applied++;
-            _lastApplied = pose.Place;
+            _lastApplied = drawn.Place;
+
+            // Watched on what arrived rather than on what was drawn. A car
+            // whose places have stopped coming goes on creeping for as long as
+            // the buffer lasts, and a watch on the drawn pose would call that
+            // movement and say nothing.
             WatchForAStop(theirSeat, race.Players[theirSeat].Name, pose.Place);
         }
 
@@ -314,7 +325,8 @@ public static class CarSync
 
             Console.Error.WriteLine(
                 $"[sync]   seat {theirSeat} ({who}) at ({pose.Place.X}, {pose.Place.Z})"
-                + $" - last moved {moved}");
+                + $" - last moved {moved},"
+                + $" drawn {wire.DelayFor(theirSeat).TotalMilliseconds:F0}ms behind");
         }
     }
 }

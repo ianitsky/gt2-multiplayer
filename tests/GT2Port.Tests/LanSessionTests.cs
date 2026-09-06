@@ -1075,7 +1075,7 @@ public class LanSessionTests
     /// </summary>
     static byte[] PlaceDatagram(byte seat, int x, ushort count)
     {
-        var data = new byte[31];
+        var data = new byte[33];
         data[0] = 0xA5;
         data[1] = 3;
         data[2] = seat;

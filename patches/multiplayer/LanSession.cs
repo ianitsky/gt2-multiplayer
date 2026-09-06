@@ -737,11 +737,24 @@ public sealed class LanSession : IDisposable
     /// </summary>
     const int PlaceCounter = 2;
 
+    /// <summary>
+    /// And how long the sender waited since its own previous place, which is
+    /// what lets the far side lay these out in time rather than in arrival
+    /// order.
+    ///
+    /// A gap and not an instant, because the two machines' clocks are minutes
+    /// apart - see RemoteTrack. Gaps add up into the sender's own timeline
+    /// without either machine having to know what time the other thinks it is.
+    /// </summary>
+    const int PlaceGap = 2;
+
     const int PlaceBytes =
-        3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2 + PlaceCounter;
+        3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2 + PlaceCounter + PlaceGap;
 
     /// <summary>Where the counter sits, which is after everything that was there before.</summary>
     const int PlaceCounterAt = 3 + PlaceWords * 4 + PlaceAngles * 2 + PlaceWheels * 2;
+
+    const int PlaceGapAt = PlaceCounterAt + PlaceCounter;
 
     /// <summary>
     /// Where every other player says their car is, by their seat in the room.
@@ -758,6 +771,28 @@ public sealed class LanSession : IDisposable
 
     /// <summary>This machine's own count, one higher on every place it sends.</summary>
     ushort _placesSent;
+
+    /// <summary>When it last sent one, so the next can say how long the gap was.</summary>
+    DateTime? _placeSentAt;
+
+    /// <summary>
+    /// Each seat's recent past, and where its car is drawn now. Filled as
+    /// places arrive rather than when a frame asks, because several can land
+    /// between two frames and a buffer that only saw the newest of them would
+    /// have nothing to interpolate through.
+    /// </summary>
+    readonly Dictionary<byte, RemoteTrack> _tracks = [];
+
+    /// <summary>
+    /// Where to draw that seat's car now, or null for a seat nothing has been
+    /// heard from.
+    /// </summary>
+    public RemoteCars.Pose? PoseFor(byte seat, DateTime now) =>
+        _tracks.TryGetValue(seat, out var track) ? track.At(now) : null;
+
+    /// <summary>How far behind that seat is being drawn, for the log to say.</summary>
+    public TimeSpan DelayFor(byte seat) =>
+        _tracks.TryGetValue(seat, out var track) ? track.Delay : TimeSpan.Zero;
 
     /// <summary>The newest count seen from each seat, and how many have been refused since.</summary>
     readonly Dictionary<byte, (ushort Newest, int Refused)> _placeCount = [];
@@ -917,6 +952,13 @@ public sealed class LanSession : IDisposable
         // step along it.
         BitConverter.TryWriteBytes(data.AsSpan(PlaceCounterAt), _placesSent++);
 
+        var sending = _clock();
+        ushort gap = _placeSentAt is { } sentAt
+            ? (ushort)Math.Clamp((sending - sentAt).TotalMilliseconds, 0, ushort.MaxValue)
+            : (ushort)0;
+        _placeSentAt = sending;
+        BitConverter.TryWriteBytes(data.AsSpan(PlaceGapAt), gap);
+
         if (host is not null) Send(data, _link.HostAt(host, _hostPort));
         foreach (var player in _known.Union(_atTheLine)) Send(data, player);
     }
@@ -977,7 +1019,7 @@ public sealed class LanSession : IDisposable
 
             _placeCount[seat] = (count, 0);
 
-            _places[seat] = new RemoteCars.Pose(
+            var arrived = new RemoteCars.Pose(
                 new RemoteCars.Place(
                     BitConverter.ToInt32(data, 3),
                     BitConverter.ToInt32(data, 7),
@@ -990,6 +1032,13 @@ public sealed class LanSession : IDisposable
                     BitConverter.ToInt16(data, 23),
                     BitConverter.ToInt16(data, 25),
                     BitConverter.ToInt16(data, 27)));
+
+            _places[seat] = arrived;
+
+            if (!_tracks.TryGetValue(seat, out var track))
+                _tracks[seat] = track = new RemoteTrack();
+
+            track.Heard(BitConverter.ToUInt16(data, PlaceGapAt), arrived, _clock());
         }
     }
 
