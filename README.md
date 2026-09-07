@@ -35,7 +35,7 @@ Windows.
 Clone with the submodules — the recompiler is one of them:
 
 ```bash
-git clone --recursive https://github.com/<you>/gt2-recompone.git
+git clone --recursive https://github.com/ianitsky/gt2-multiplayer.git
 ```
 
 Put your disc image in `disc/` and point `config/gt2.json` at it:
