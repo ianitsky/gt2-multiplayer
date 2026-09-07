@@ -105,14 +105,30 @@ public sealed class RemoteTrack
             // covered.
             _source += sinceTheSendersLast;
 
-            // The estimate takes only the ones that could be a cadence. The
-            // gap across a start barrier is seconds long, and trained on it
-            // the delay begins every race at its ceiling and takes half a
-            // minute to come down - a quarter second of latency bought to
-            // smooth a pause that had already ended.
-            if (sinceTheSendersLast <= Most.TotalMilliseconds)
+            // The estimate takes only the ones that could be a cadence, and
+            // that means both halves of it: how long the sender waited, and
+            // how long this machine did.
+            //
+            // The sender's half, because the gap across a start barrier is
+            // seconds long, and trained on it the delay begins every race at
+            // its ceiling and takes half a minute to come down.
+            //
+            // This machine's half, because a connection can stop while the
+            // sender does not. Six seconds of a race went missing over a
+            // tunnel: the sender kept to its thirty-three milliseconds
+            // throughout, so the sender's half was innocent, and the first
+            // place through afterwards had waited six seconds to arrive. Read
+            // as raggedness that is a jitter of seconds, and the delay went
+            // straight to its ceiling - a quarter of a second of latency
+            // bought to smooth an outage that was already over.
+            //
+            // Nothing that waits longer than the deepest buffer can be covered
+            // by buffering. It is an outage, and an outage is not a cadence.
+            double waited = (arrived - before).TotalMilliseconds;
+
+            if (sinceTheSendersLast <= Most.TotalMilliseconds
+                && waited <= Most.TotalMilliseconds)
             {
-                double waited = (arrived - before).TotalMilliseconds;
                 double ragged = Math.Abs(waited - sinceTheSendersLast);
 
                 if (_measured)

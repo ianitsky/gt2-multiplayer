@@ -794,8 +794,47 @@ public sealed class LanSession : IDisposable
     public TimeSpan DelayFor(byte seat) =>
         _tracks.TryGetValue(seat, out var track) ? track.Delay : TimeSpan.Zero;
 
-    /// <summary>The newest count seen from each seat, and how many have been refused since.</summary>
-    readonly Dictionary<byte, (ushort Newest, int Refused)> _placeCount = [];
+    /// <summary>
+    /// What has been heard from one seat, counted rather than inferred.
+    ///
+    /// The counter on the wire makes loss measurable: two places in a row
+    /// whose numbers differ by more than one are the ones in between, gone. A
+    /// race that froze for six seconds and then jumped was read off the
+    /// distance the car had covered, which is a guess dressed as a
+    /// measurement - and it cannot tell loss from a delivery that arrived late
+    /// in a heap, which is a different problem with a different fix.
+    /// </summary>
+    sealed class Heard
+    {
+        public ushort Newest;
+        public int Refused;
+
+        /// <summary>Places that arrived and were kept.</summary>
+        public int Kept;
+
+        /// <summary>Places the counter says were sent and never came.</summary>
+        public int Missed;
+
+        /// <summary>When the last one arrived, by this machine's clock.</summary>
+        public DateTime Last;
+    }
+
+    readonly Dictionary<byte, Heard> _placeCount = [];
+
+    /// <summary>How many of that seat's places never arrived.</summary>
+    public int MissedFrom(byte seat) =>
+        _placeCount.TryGetValue(seat, out var seen) ? seen.Missed : 0;
+
+    /// <summary>And how many did.</summary>
+    public int KeptFrom(byte seat) =>
+        _placeCount.TryGetValue(seat, out var seen) ? seen.Kept : 0;
+
+    /// <summary>
+    /// How long since anything was heard from that seat, or null while nothing
+    /// ever has been.
+    /// </summary>
+    public TimeSpan? SilenceFrom(byte seat, DateTime now) =>
+        _placeCount.TryGetValue(seat, out var seen) ? now - seen.Last : null;
 
     /// <summary>
     /// How many refusals in a row mean the other machine started counting
@@ -812,6 +851,13 @@ public sealed class LanSession : IDisposable
     /// condition, it is a different sender.
     /// </summary>
     const int RefusalsThatMeanARestart = 10;
+
+    /// <summary>
+    /// The largest run of places that can honestly be called lost. Ten seconds
+    /// of them at thirty a second - past that, a room has long since given up
+    /// on a player who is not being heard from, so the number is not loss.
+    /// </summary>
+    const int MostThatCouldBeLost = 300;
 
     /// <summary>
     /// Whether a count is newer than the last one seen from that seat.
@@ -1002,22 +1048,42 @@ public sealed class LanSession : IDisposable
             byte seat = data[2];
             ushort count = BitConverter.ToUInt16(data, PlaceCounterAt);
 
-            if (_placeCount.TryGetValue(seat, out var seen))
+            // A first place has nothing before it to be missing from, so it
+            // starts the count where it stands.
+            if (!_placeCount.TryGetValue(seat, out var seen))
+                _placeCount[seat] = seen = new Heard { Newest = count };
+            else if (!IsNewer(count, seen.Newest))
             {
-                if (!IsNewer(count, seen.Newest))
+                // Overtaken on the way here, and the car is already somewhere
+                // newer than this - unless it keeps happening, which means the
+                // other machine started counting again.
+                if (seen.Refused + 1 < RefusalsThatMeanARestart)
                 {
-                    // Overtaken on the way here, and the car is already
-                    // somewhere newer than this - unless it keeps happening,
-                    // which means the other machine started counting again.
-                    if (seen.Refused + 1 < RefusalsThatMeanARestart)
-                    {
-                        _placeCount[seat] = (seen.Newest, seen.Refused + 1);
-                        continue;
-                    }
+                    seen.Refused++;
+                    continue;
                 }
+
+                // A sender that started over. Its counter says nothing about
+                // what came before it, so nothing before it is missing.
+                seen.Newest = (ushort)(count - 1);
             }
 
-            _placeCount[seat] = (count, 0);
+            // Everything between the last one kept and this one was sent and
+            // did not arrive.
+            //
+            // Up to a point. Half the counter's space reads as ahead, so a
+            // sender that starts over at zero while this one remembers 40000
+            // is not behind - it is twenty-five thousand places ahead, and
+            // counted straight that is twenty-five thousand losses that never
+            // happened. Nobody loses ten seconds of places and is still in the
+            // room, so a jump that big is a different sender or a wrap, and
+            // either way it is not a measurement of this connection.
+            int gap = (ushort)(count - seen.Newest) - 1;
+            if (gap > 0 && gap <= MostThatCouldBeLost) seen.Missed += gap;
+            seen.Newest = count;
+            seen.Refused = 0;
+            seen.Kept++;
+            seen.Last = _clock();
 
             var arrived = new RemoteCars.Pose(
                 new RemoteCars.Place(

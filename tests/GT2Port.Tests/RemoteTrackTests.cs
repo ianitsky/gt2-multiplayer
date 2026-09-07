@@ -130,10 +130,20 @@ public class RemoteTrackTests
         Assert.True(track.Delay <= RemoteTrack.Most);
     }
 
+    /// <summary>
+    /// Ragged enough and the delay stops at the ceiling rather than following
+    /// the measurement wherever it goes.
+    ///
+    /// Driven by lateness the buffer could nearly cover: past the ceiling an
+    /// arrival is an outage rather than a cadence and is not measured at all -
+    /// see <see cref="Nor_does_a_gap_in_the_arrivals"/> - so a link that could
+    /// once be pushed here with nine-hundred-millisecond arrivals is now
+    /// pushed here with two-hundred-and-forty-millisecond ones.
+    /// </summary>
     [Fact]
     public void And_never_further_than_the_ceiling()
     {
-        var track = Steady(60, late: i => i % 2 == 0 ? 1 : 900);
+        var track = Steady(60, late: i => i % 2 == 0 ? 1 : 240);
 
         Assert.Equal(RemoteTrack.Most, track.Delay);
     }
@@ -223,4 +233,54 @@ public class RemoteTrackTests
         Assert.Equal(RemoteTrack.Least, track.Delay);
     }
 
+    /// <summary>
+    /// And neither does a gap in the arrivals, which is the same mistake seen
+    /// from the other side.
+    ///
+    /// A race froze for six seconds over a tunnel. The sender kept to its
+    /// thirty-three milliseconds throughout - so the sender's own gaps were
+    /// innocent and the guard above let them through - and the first place to
+    /// get here afterwards had waited six seconds on the wire. Read as
+    /// raggedness, that put the delay at its ceiling for the next lap.
+    /// </summary>
+    [Fact]
+    public void Nor_does_a_gap_in_the_arrivals()
+    {
+        var track = new RemoteTrack();
+        var arrived = Noon;
+
+        for (int i = 0; i < 20; i++)
+        {
+            if (i > 0) arrived = arrived.AddMilliseconds(33);
+            track.Heard(i == 0 ? 0 : 33, At(i * 100), arrived);
+        }
+
+        // Six seconds where nothing arrives. What comes out the other side is
+        // still one of the sender's ordinary places - it kept sending all
+        // along, and the ones in between were lost.
+        arrived = arrived.AddMilliseconds(6000);
+        track.Heard(33, At(2000), arrived);
+
+        for (int i = 21; i < 30; i++)
+        {
+            arrived = arrived.AddMilliseconds(33);
+            track.Heard(33, At(i * 100), arrived);
+        }
+
+        Assert.Equal(RemoteTrack.Least, track.Delay);
+    }
+
+    /// <summary>
+    /// A late arrival the buffer could actually cover still counts. Guarding
+    /// the estimate must not turn into ignoring the raggedness it exists to
+    /// measure.
+    /// </summary>
+    [Fact]
+    public void But_lateness_within_the_ceiling_still_counts()
+    {
+        var track = Steady(60, late: i => i % 2 == 0 ? 3 : 63);
+
+        Assert.True(track.Delay > RemoteTrack.Least,
+            $"a jittery link settled on {track.Delay.TotalMilliseconds:F0}ms, the floor");
+    }
 }

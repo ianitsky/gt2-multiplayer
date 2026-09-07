@@ -1172,6 +1172,97 @@ public class LanSessionTests
     }
 
     /// <summary>
+    /// What the counter is for, beyond ordering: the ones that never came are
+    /// countable, and counting them is the difference between knowing a
+    /// connection dropped datagrams and inferring it from how far a car
+    /// jumped.
+    /// </summary>
+    [Fact]
+    public void The_places_that_never_arrived_are_counted()
+    {
+        const int hostPort = BasePort + 70;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 10));
+        session.CollectPlaces();
+
+        // Eleven, twelve and thirteen were sent and are not here.
+        Deliver(other, session, PlaceDatagram(1, 5000, 14));
+        session.CollectPlaces();
+
+        Assert.Equal(3, session.MissedFrom(1));
+        Assert.Equal(2, session.KeptFrom(1));
+    }
+
+    /// <summary>
+    /// A first place has nothing before it to be missing from. Counted against
+    /// a counter starting at zero, one that opens at 900 would report nine
+    /// hundred losses before the race began.
+    /// </summary>
+    [Fact]
+    public void But_the_first_one_is_missing_nothing()
+    {
+        const int hostPort = BasePort + 71;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 900));
+        session.CollectPlaces();
+
+        Assert.Equal(0, session.MissedFrom(1));
+        Assert.Equal(1, session.KeptFrom(1));
+    }
+
+    /// <summary>
+    /// And neither is the first place from a sender that started over - its
+    /// new counter says nothing about what its old one sent.
+    /// </summary>
+    [Fact]
+    public void Nor_is_the_first_one_from_a_sender_that_started_over()
+    {
+        const int hostPort = BasePort + 72;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 40000));
+        session.CollectPlaces();
+
+        for (ushort count = 0; count < 12; count++)
+        {
+            Deliver(other, session, PlaceDatagram(1, 2000 + count, count));
+            session.CollectPlaces();
+        }
+
+        // Not the far side of a twenty-five-thousand-place hole: half the
+        // counter's space reads as ahead, so a sender starting over at zero
+        // looks like an enormous jump forward rather than like a restart.
+        Assert.Equal(0, session.MissedFrom(1));
+    }
+
+    /// <summary>
+    /// How long a seat has been quiet, which is what tells an outage from a
+    /// player who has simply stopped driving.
+    /// </summary>
+    [Fact]
+    public void How_long_a_seat_has_been_quiet_is_askable()
+    {
+        const int hostPort = BasePort + 73;
+        using var session = LanSession.ForClient(hostPort, () => _now);
+        using var other = new UdpClient(0);
+
+        Assert.Null(session.SilenceFrom(1, _now));
+
+        Deliver(other, session, PlaceDatagram(1, 1000, 10));
+        session.CollectPlaces();
+
+        Assert.Equal(TimeSpan.Zero, session.SilenceFrom(1, _now));
+
+        Advance(6);
+        Assert.Equal(TimeSpan.FromSeconds(6), session.SilenceFrom(1, _now));
+    }
+
+    /// <summary>
     /// Half the space is ahead and half behind, so the comparison keeps
     /// working when the counter wraps - at thirty places a second it wraps
     /// every thirty-six minutes, which a long evening reaches.

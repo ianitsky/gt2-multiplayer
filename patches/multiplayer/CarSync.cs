@@ -106,6 +106,7 @@ public static class CarSync
             // the buffer lasts, and a watch on the drawn pose would call that
             // movement and say nothing.
             WatchForAStop(theirSeat, race.Players[theirSeat].Name, pose.Place);
+            WatchForSilence(wire, theirSeat, race.Players[theirSeat].Name);
         }
 
         Say(wire, race);
@@ -219,6 +220,7 @@ public static class CarSync
         _lastApplied = null;
         _movement.Clear();
         _stopped.Clear();
+        _silence.Clear();
         Array.Clear(_wheels);
     }
 
@@ -290,8 +292,59 @@ public static class CarSync
 
         Console.Error.WriteLine(
             $"[sync] {now:HH:mm:ss.fff} seat {seat} ({who}) has not moved for"
-            + $" {(now - was.Moved).TotalSeconds:F1}s - stuck at ({where.X}, {where.Z}),"
-            + $" {_sent} sent and {_applied} applied so far");
+            + $" {(now - was.Moved).TotalSeconds:F1}s - stuck at ({where.X}, {where.Z})");
+    }
+
+    /// <summary>
+    /// How long nothing arriving from a seat stops being ordinary. Places come
+    /// thirty times a second, so half a second is fifteen of them: past any
+    /// reordering or late arrival, and short enough to catch an outage while
+    /// it is still happening rather than after it.
+    /// </summary>
+    static readonly TimeSpan LongEnoughToBeSilence = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>When a seat went quiet, and what had been counted by then.</summary>
+    static readonly Dictionary<int, (DateTime Began, int Missed, int Kept)> _silence = [];
+
+    /// <summary>
+    /// Says when a seat stops being heard from at all, and what the gap cost.
+    ///
+    /// This is the half <see cref="WatchForAStop"/> cannot tell you. A car that
+    /// stops moving has two quite different causes - the other player is
+    /// standing still, or nothing is reaching this machine - and on screen they
+    /// are the same picture. The counter on the wire settles it: places lost
+    /// during the quiet means the datagrams went missing, and none lost means
+    /// they were merely late and arrived in a heap.
+    ///
+    /// Six seconds of a race went that way over a tunnel, and separating the
+    /// two took reading how far the car had jumped when it came back. That is
+    /// a guess. This is a count.
+    /// </summary>
+    static void WatchForSilence(LanSession wire, int seat, string who)
+    {
+        var now = DateTime.UtcNow;
+        if (wire.SilenceFrom((byte)seat, now) is not { } quiet) return;
+
+        int missed = wire.MissedFrom((byte)seat);
+        int kept = wire.KeptFrom((byte)seat);
+
+        if (quiet >= LongEnoughToBeSilence)
+        {
+            if (_silence.ContainsKey(seat)) return;
+
+            _silence[seat] = (now - quiet, missed, kept);
+            Console.Error.WriteLine(
+                $"[sync] {now:HH:mm:ss.fff} nothing from seat {seat} ({who}) for"
+                + $" {quiet.TotalSeconds:F1}s - {kept} place(s) kept and {missed} missed so far");
+            return;
+        }
+
+        if (!_silence.Remove(seat, out var was)) return;
+
+        Console.Error.WriteLine(
+            $"[sync] {now:HH:mm:ss.fff} seat {seat} ({who}) is heard again after"
+            + $" {(now - was.Began).TotalSeconds:F1}s - {missed - was.Missed} place(s) lost"
+            + $" in it, {kept - was.Kept} arrived");
     }
 
     static string Where(RemoteCars.Place? place) =>
