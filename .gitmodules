@@ -1,6 +1,7 @@
 [submodule "RecompOne"]
 	path = RecompOne
-	url = https://github.com/BlackLabelHQ/RecompOne.git
+	url = https://github.com/ianitsky/RecompOne.git
+	branch = vblank-interrupts
 [submodule "externals/gt2-reversing"]
 	path = externals/gt2-reversing
 	url = https://github.com/ginryuoku/gt2-reversing.git
