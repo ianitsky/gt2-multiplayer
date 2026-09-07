@@ -16,8 +16,8 @@ namespace GT2Port.Multiplayer;
 /// player as the car a human drives, and the others as ones the game drives.
 /// That is what stops six machines from all steering the same car.
 ///
-/// The block's layout is recorded in
-/// docs/superpowers/specs/2026-08-23-race-start-findings.md.
+/// The block's layout was worked out by reading the game and is written
+/// up in this repository's history.
 /// </summary>
 public static class RaceGrid
 {

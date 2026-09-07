@@ -21,8 +21,8 @@ namespace GT2Port.Multiplayer;
 /// address. But the owner is handed to the loader on every tick, so watching
 /// one tick is enough to learn it.
 ///
-/// The layout this rests on is recorded in
-/// docs/superpowers/specs/2026-08-23-race-start-findings.md.
+/// The layout this rests on was worked out by reading the game and is
+/// written up in this repository's history.
 /// </summary>
 public static class CarLoad
 {

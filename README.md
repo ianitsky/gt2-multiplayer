@@ -102,7 +102,6 @@ the game plays on a local network and the internet room list stays empty.
 | `RecompOne/` | The recompiler and runtime (submodule) |
 | `externals/gt2-reversing/` | Reversing notes this port draws on (submodule) |
 | `tools/` | Python for disc extraction, symbol maps, cheats, images |
-| `docs/superpowers/` | Design specs and implementation plans |
 | `tests/` | The test suites |
 
 ## Tests
