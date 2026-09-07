@@ -76,19 +76,119 @@ by hand.
 
 ## Playing against other people
 
-On one network, a host creates a room and the other machines find it under
-"rooms on this network". Nothing else is needed.
+Pick the second item on the title menu — the port renames it **MULTIPLAYER** —
+and the multiplayer window opens over the game. Type a name, and either join a
+room somebody is showing or press **Create a room**, choose a track and a
+player limit, and wait for people in the lobby.
 
-Over the internet, both machines need a rendezvous server to find each other
-through, and to relay the race when neither can be addressed directly. That
-server is `GT2Relay/` in this repository — run it anywhere with a reachable UDP
-port, or over a free tunnel. `GT2Relay/DEPLOY-TUNNEL.md` walks through the
-tunnel, `GT2Relay/DEPLOY-GCP.md` through a machine with an address of its own.
+One machine hosts. The race itself is host and players talking directly to
+each other, so the only real question is how the others' datagrams reach the
+host's machine. There are four answers, and they can all be true at once: a
+host reachable directly answers directly, and answers through a relay at the
+same time.
 
-Tell the game where that server is by copying `config/relay.txt.example` to
-`config/relay.txt` and putting your address in the copy. A player can also type
-one into the Server box, and `GT2_RELAY` overrides both. Without any of them
-the game plays on a local network and the internet room list stays empty.
+Everything is UDP:
+
+| Port | Who listens | What for |
+| --- | --- | --- |
+| 34718 | every player | rooms announcing themselves on the local network |
+| 34719 | the host | the lobby and the race |
+| 34720 | the relay | rooms and traffic passed between networks |
+
+### 1. On the same network
+
+Nothing to set up. The host presses **Create a room**; the room announces
+itself on the network every second, and on the other machines it appears under
+**Rooms on this network** with a **Join** beside it.
+
+If it does not appear, the announcement is being dropped rather than lost:
+some routers do not pass broadcast between wireless and wired, and a "public
+network" profile on Windows blocks the port. Allow the game through the
+Windows firewall on UDP 34718 and 34719, and check both machines are on the
+same subnet.
+
+### 2. Over the internet, with the game itself as the server
+
+One port forwarded on one router, and no server to run.
+
+The host's game asks the router itself: while it is hosting it tries UPnP, and
+the lobby says which of these happened.
+
+- *"Asking your router to open the port..."* — it is trying.
+- *"Others join at 203.0.113.9:34719"* — done, and that is the address to hand
+  out.
+- *"The router would not open it: ..."* — UPnP is off or not supported. Forward
+  it by hand: in the router's admin pages, forward **UDP 34719** to the host
+  machine's local address. The wording varies — "port forwarding", "virtual
+  server", "NAT rules".
+
+Then allow the game through the host's own firewall on UDP 34719, and tell the
+other players the host's public address. They type it into **Address** as
+`address:34719` — the port is not optional there — and press **Join by
+address**. If the room was created with a **Secret**, it goes in the Secret box
+beside it.
+
+A host with a home address that changes is worth pointing a dynamic-DNS name
+at: the Address box takes a name as happily as a number.
+
+This does not work behind carrier-grade NAT, where the public address is not
+yours to forward. If the router has no WAN address of its own — it starts with
+`100.64.` through `100.127.` — skip to 3 or 4.
+
+### 3. With a relay
+
+Nobody forwards anything. Both sides reach the relay with outbound UDP, which
+every home router allows, and it passes their traffic along. It is also what
+makes rooms visible outside a network at all.
+
+Run it on any machine with a reachable address — a small VPS is plenty; it
+holds no state and forgets a room thirty seconds after it goes quiet:
+
+```bash
+dotnet publish GT2Relay -c Release -r linux-x64 --self-contained false -o out
+```
+
+```bash
+./out/gt2relay --port 34720
+```
+
+Open **UDP 34720** in that machine's firewall — on a cloud provider that
+usually means two firewalls, the provider's and the instance's, and opening
+one and not the other looks exactly like the server being down.
+`GT2Relay/README.md` covers Oracle's free tier and running it as a service,
+and `GT2Relay/DEPLOY-GCP.md` covers Google Cloud.
+
+Then point the game at it, in any of three ways:
+
+- copy `config/relay.txt.example` to `config/relay.txt` and put the address in
+  the copy, which is how a shipped build comes up already pointed somewhere;
+- type it into the **Server** box, which is remembered for next time;
+- set `GT2_RELAY`, which overrides both and is how a test machine points at a
+  local server.
+
+Rooms then appear under **Rooms on the internet**. A host is also given a
+six-character code — *"Or by code K7QM2F through the relay"* — and anybody with
+that code can type it into **Join by code** without knowing any address at all.
+The alphabet leaves out the letters and digits people mistake for each other,
+so a code survives being read out loud.
+
+### 4. With a relay behind a tunnel
+
+For when the machine running the relay cannot be reached from outside either:
+carrier-grade NAT, a router you do not control, a provider that will not route
+UDP to you.
+
+[playit.gg](https://playit.gg) gives a free UDP tunnel. Run the relay on your
+own machine as above, install the playit agent, and in its dashboard add a
+tunnel with protocol **UDP** and local port **34720**. It answers with an
+address like `something.playit.gg:41007`, and that address is what goes in
+`config/relay.txt` or the Server box — the relay's own port is never typed by
+anybody.
+
+`GT2Relay/DEPLOY-TUNNEL.md` has the whole thing, including the variant that
+tunnels the host's game instead of the relay, and the failure worth knowing
+about: the tunnel agent authenticates against a clock, so a machine whose time
+has drifted more than a few seconds gets a tunnel that dies quietly.
 
 ## Layout
 
