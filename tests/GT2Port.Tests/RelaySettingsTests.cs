@@ -67,22 +67,34 @@ public class RelaySettingsTests
     }
 
     /// <summary>
-    /// And the file the port actually ships has to be one of those, or every
-    /// player starts with a box that quietly says nothing.
+    /// And the example beside it has to be one of those, or the file somebody
+    /// copies is a file that quietly says nothing.
+    ///
+    /// The example rather than relay.txt itself, because relay.txt is a
+    /// per-machine choice and is not in the repository: the address in it is
+    /// whoever built this copy, and a tunnel address handed out for free is
+    /// theirs the way a phone number is.
+    ///
+    /// The line is read rather than resolved. Resolving it was a name lookup
+    /// against a live server in the middle of a unit test, so the suite failed
+    /// whenever that tunnel was rotated, the machine was offline, or a
+    /// resolver was slow - none of which say anything about this code. What
+    /// the example has to get right is its shape.
     /// </summary>
     [Fact]
-    public void The_file_that_ships_names_a_relay_that_can_be_reached()
+    public void The_example_beside_it_shows_a_line_the_game_could_read()
     {
-        string path = GameFiles.Find("config", "relay.txt");
+        string path = GameFiles.Find("config", "relay.txt.example");
         Assert.True(File.Exists(path), $"{path} should ship with the port");
 
         string shipped = RelaySettings.FirstUsefulLine(File.ReadAllLines(path));
 
         Assert.NotEqual("", shipped);
-        Assert.True(RelaySettings.TryReadAddress(shipped, out var where),
-            $"\"{shipped}\" is not an address the game could reach");
-        Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork,
-            where.Address.AddressFamily);
+
+        int colon = shipped.LastIndexOf(':');
+        Assert.True(colon > 0, $"\"{shipped}\" shows no port, and the example should");
+        Assert.True(int.TryParse(shipped[(colon + 1)..], out int port) && port is > 0 and <= 65535,
+            $"\"{shipped}\" names a port the game would refuse");
     }
 
     [Fact]

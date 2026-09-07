@@ -21,3 +21,13 @@ idx.txt
 *.log
 captures/
 out/
+dist/
+versions/
+
+# Release output.
+*.zip
+
+# The relay this copy points at is a per-machine choice, and the address
+# in it is somebody's own tunnel. config/relay.txt.example is the tracked
+# one; copy it and put your address in the copy.
+config/relay.txt

@@ -99,7 +99,10 @@ gives back another `name:port`.
 
 ### 3. Point every player at it
 
-Put the address in `config/relay.txt`, which ships beside the executable:
+Copy `config/relay.txt.example` to `config/relay.txt` and put the address in
+the copy. That file ships beside the executable; the example is the one in the
+repository, because an address is per-machine and a tunnel address is somebody's
+own:
 
 ```
 # The rendezvous and relay this copy of the game points at.

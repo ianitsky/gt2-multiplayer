@@ -1,0 +1,15 @@
+# The rendezvous and relay this copy of the game points at.
+#
+# Copy this file to config/relay.txt and put your own address in the copy.
+# Without a relay.txt the game still plays over a local network; what it
+# loses is "rooms on the internet", which is what the relay carries.
+#
+# One address, "host" or "host:port". Without a port it means 34720.
+# Blank lines and lines starting with # are ignored.
+#
+# This is only a default. A player who types something into the Server box
+# keeps their own choice, and GT2_RELAY overrides both.
+#
+# GT2Relay/DEPLOY-TUNNEL.md sets one of these up over a free UDP tunnel, and
+# GT2Relay/DEPLOY-GCP.md on a machine with an address of its own.
+relay.example.com:34720
