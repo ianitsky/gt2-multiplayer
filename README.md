@@ -38,6 +38,19 @@ Clone with the submodules — the recompiler is one of them:
 git clone --recursive https://github.com/ianitsky/gt2-multiplayer.git
 ```
 
+Only `RecompOne` is needed to build. `externals/gt2-reversing` is reversing
+notes this port drew on, and it carries submodules of its own that a Windows
+checkout can refuse for path length; if the recursive clone stops there, this
+is enough:
+
+```bash
+git clone https://github.com/ianitsky/gt2-multiplayer.git
+```
+
+```bash
+git -C gt2-multiplayer submodule update --init RecompOne
+```
+
 Put your disc image in `disc/` and point `config/gt2.json` at it:
 
 ```json
