@@ -211,13 +211,9 @@ public static class RaceStartLine
         // Every frame, because whatever sets it does so while the race is
         // starting - a value written before that is one about to be lost.
         ReplayView.HoldTheRaceContext(m);
-        RaceBlockDump.RaceIsRunning(m);
 
         SecondDriver.DrivePadOne(m);
         SecondDriver.CheckItStuck(m);
-        CarHunt.FrameBegins(m);
-        CarState.FrameBegins(m);
-        CarFind.FrameBegins(m);
         RemoteCars.FrameBegins(m);
         CarSync.FrameBegins(m);
 
@@ -228,10 +224,6 @@ public static class RaceStartLine
         // And every frame because a clock runs out between two of them.
         TimedRace.Tick(m);
 
-        // And every frame because a button is held between two of them.
-        PadWatch.Tick(m);
-
-
         if (WatchReadsAt >= 0 && _frames == WatchReadsAt)
         {
             Console.Error.WriteLine($"[read] {_frames} frames into the race - arming now");
@@ -239,8 +231,6 @@ public static class RaceStartLine
         }
 
         var gc = Collector();
-        string? whereItWas = StallWatch.WhereItWas();
-        StallWatch.FrameBegins();
 
         if (_frames++ > 0)
         {
@@ -270,8 +260,7 @@ public static class RaceStartLine
                     + $" card {Part(R.CardTicks, _cardTicks):F0}"
                     + $" patch {Part(R.PatchTicks, _patchTicks):F0}],"
                     + $" {(now - _began).TotalSeconds:F1}s into the race,"
-                    + $" {++_stalls} so far)"
-                    + (whereItWas is null ? "" : Environment.NewLine + $"[stall]     {whereItWas}"));
+                    + $" {++_stalls} so far)");
         }
 
         _frameBegan = now;
@@ -394,11 +383,7 @@ public static class RaceStartLine
     /// <summary>The frame the barrier holds at unless the environment moves it.</summary>
     internal static int HoldsAtFrame => HoldAtFrame;
 
-    /// <summary>
-    /// Everything that belongs to one race, cleared. Separate from
-    /// <see cref="Forget"/> only because that one also tells CarDriving, which
-    /// has its own reasons and its own moment.
-    /// </summary>
+    /// <summary>Everything that belongs to one race, cleared.</summary>
     static void ForgetTheRaceBefore()
     {
         _frame = 0;
@@ -419,6 +404,5 @@ public static class RaceStartLine
     public static void Forget()
     {
         ForgetTheRaceBefore();
-        CarDriving.Forget();
     }
 }

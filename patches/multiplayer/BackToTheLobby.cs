@@ -97,13 +97,8 @@ public static class BackToTheLobby
             $"[lobby] the race overlay is gone - 0x{entry:X8} is what follows it");
 
         // The last instant the race's own memory is still standing, and so the
-        // only moment either of these can be done: a search for what the
-        // results screen said, and a reading of what the race ended as.
-        if (m is not null)
-        {
-            RaceResult.Say(m, DirectRace.Racing?.MySlot ?? 0);
-            RaceTimeHunt.Look(m);
-        }
+        // only moment what the race ended as can be read.
+        if (m is not null) RaceResult.Say(m, DirectRace.Racing?.MySlot ?? 0);
 
         if (!Wanted || means != Arrival.TheRaceIsOverAndTheRoomIsThere) return;
 

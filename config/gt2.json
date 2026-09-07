@@ -2761,11 +2761,6 @@
       "mode": "pre"
     },
     {
-      "function": "gt2_main_func21",
-      "target": "GT2Port.RaceWatch.Installing",
-      "mode": "pre"
-    },
-    {
       "function": "gt2_main_vol_get_file_data_sector_offset",
       "target": "GT2Port.LoadTrace.Reading",
       "mode": "pre"
@@ -2774,17 +2769,6 @@
       "overlay": "gt2_03",
       "address": "0x80016640",
       "target": "GT2Port.Multiplayer.CarLoad.Ticking",
-      "mode": "pre"
-    },
-    {
-      "overlay": "gt2_03",
-      "address": "0x80010C84",
-      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.ObjectBuilt",
-      "mode": "post"
-    },
-    {
-      "function": "gt2_load_overlay",
-      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.LoadingOverlay",
       "mode": "pre"
     },
     {
@@ -2809,12 +2793,6 @@
       "overlay": "gt2_03",
       "address": "0x80010C84",
       "target": "GT2Port.Multiplayer.ArcadeOrder.ParametersBuilt",
-      "mode": "pre"
-    },
-    {
-      "overlay": "gt2_03",
-      "address": "0x80014898",
-      "target": "GT2Port.Multiplayer.ArcadeSetupWatch.PreRaceScreen",
       "mode": "pre"
     },
     {
@@ -2863,23 +2841,6 @@
       "mode": "post"
     },
     {
-      "address": "0x80010554",
-      "target": "GT2Port.Multiplayer.CarFillWatch.Filling",
-      "mode": "pre",
-      "overlay": "gt2_03"
-    },
-    {
-      "address": "0x80076FC0",
-      "target": "GT2Port.Multiplayer.CarFillWatch.LoadingParts",
-      "mode": "pre"
-    },
-    {
-      "overlay": "gt2_03",
-      "address": "0x80010000",
-      "target": "GT2Port.Multiplayer.CarFillWatch.ResolvingRecord",
-      "mode": "pre"
-    },
-    {
       "overlay": "gt2_01",
       "address": "0x80015FB0",
       "target": "GT2Port.Multiplayer.RacePhases.PhaseDecided",
@@ -2898,26 +2859,10 @@
       "mode": "pre"
     },
     {
-      "address": "0x8007FAB8",
-      "target": "GT2Port.Multiplayer.PadWatch.ReaderRegistered",
-      "mode": "pre"
-    },
-    {
-      "address": "0x8007FC30",
-      "target": "GT2Port.Multiplayer.PadWatch.PadDecoded",
-      "mode": "pre"
-    },
-    {
       "overlay": "gt2_01",
       "address": "0x80015B64",
       "target": "GT2Port.Multiplayer.RaceStartLine.FrameDone",
       "mode": "post"
-    },
-    {
-      "overlay": "gt2_01",
-      "address": "0x800133F0",
-      "target": "GT2Port.Multiplayer.CarDriving.MatricesBeingBuilt",
-      "mode": "pre"
     },
     {
       "overlay": "gt2_01",
