@@ -145,12 +145,16 @@ Run it on any machine with a reachable address — a small VPS is plenty; it
 holds no state and forgets a room thirty seconds after it goes quiet:
 
 ```bash
-dotnet publish GT2Relay -c Release -r linux-x64 --self-contained false -o out
+dotnet publish GT2Relay -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o out
 ```
 
 ```bash
 ./out/gt2relay --port 34720
 ```
+
+One file with the runtime inside it, so there is nothing to install on the
+server. Use `-r linux-arm64` if that machine is ARM — `uname -m` on it
+decides, and a mismatch fails in a way that reads like a permissions problem.
 
 Open **UDP 34720** in that machine's firewall — on a cloud provider that
 usually means two firewalls, the provider's and the instance's, and opening
