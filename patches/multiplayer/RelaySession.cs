@@ -76,13 +76,15 @@ public sealed class RelaySession : IGameLink
         // A relay that is not listening makes Windows deliver an ICMP refusal
         // as a ConnectionReset on the *next* receive, which would look like
         // the link breaking rather than like nobody answering.
-        try
+        //
+        // Asked only where it exists, for the reason written out in
+        // GT2Relay's RelayServer: everywhere else this throws
+        // PlatformNotSupportedException, which is not a SocketException and
+        // walks out through a catch written for one.
+        if (OperatingSystem.IsWindows())
         {
             const int SIO_UDP_CONNRESET = -1744830452;
             _socket.Client.IOControl(SIO_UDP_CONNRESET, [0, 0, 0, 0], null);
-        }
-        catch (SocketException)
-        {
         }
 
         BoundPort = ((IPEndPoint)_socket.Client.LocalEndPoint!).Port;

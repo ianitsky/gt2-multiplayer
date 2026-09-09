@@ -60,14 +60,20 @@ public sealed class RelayServer : IDisposable
         // *next* receive as a ConnectionReset - so one departed player would
         // otherwise break reads for everybody. There is no way to answer it
         // usefully, so it is turned off.
-        try
+        //
+        // Asked only where it exists. This used to be attempted everywhere and
+        // wrapped in a catch for SocketException, on the assumption that other
+        // platforms would refuse it that way. Linux throws
+        // PlatformNotSupportedException instead, which went straight past that
+        // catch - so the relay died here, in its own constructor, on the first
+        // machine it was ever deployed to. systemd restarted it every two
+        // seconds for four hundred and twenty-four restarts while players'
+        // datagrams arrived at a port whose reader was already gone, which
+        // from outside is indistinguishable from a server that ignores you.
+        if (OperatingSystem.IsWindows())
         {
             const int SIO_UDP_CONNRESET = -1744830452;
             _socket.Client.IOControl(SIO_UDP_CONNRESET, [0, 0, 0, 0], null);
-        }
-        catch (SocketException)
-        {
-            // Not Windows. Nothing to turn off.
         }
 
         BoundPort = ((IPEndPoint)_socket.Client.LocalEndPoint!).Port;
