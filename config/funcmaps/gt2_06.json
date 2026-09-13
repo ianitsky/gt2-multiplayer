@@ -12,42 +12,42 @@
     },
     {
       "address": "0x80010078",
-      "name": "gt2_ovr6_large_task00",
+      "name": "gt2_ovr6_movie_set_frame_ring",
       "size": 16
     },
     {
       "address": "0x80010088",
-      "name": "gt2_ovr6_large_task01",
+      "name": "gt2_ovr6_movie_set_decode_buffers",
       "size": 12
     },
     {
       "address": "0x80010094",
-      "name": "gt2_ovr6_large_task02",
+      "name": "gt2_ovr6_movie_set_mdec_output_area",
       "size": 16
     },
     {
       "address": "0x800100A4",
-      "name": "gt2_ovr6_main_task200110_caller0",
+      "name": "gt2_ovr6_start_movie_stream_by_index",
       "size": 84
     },
     {
       "address": "0x800100F8",
-      "name": "gt2_ovr6_main_task200110_caller00",
+      "name": "gt2_ovr6_begin_streaming_sectors",
       "size": 124
     },
     {
       "address": "0x80010174",
-      "name": "gt2_ovr6_large_task03",
+      "name": "gt2_ovr6_movie_start_decoder",
       "size": 64
     },
     {
       "address": "0x800101B4",
-      "name": "gt2_ovr6_callback_task0",
+      "name": "gt2_ovr6_movie_status",
       "size": 156
     },
     {
       "address": "0x80010250",
-      "name": "gt2_ovr6_dctout_callback_task0",
+      "name": "gt2_ovr6_movie_stop_decoder",
       "size": 56
     },
     {
@@ -57,37 +57,37 @@
     },
     {
       "address": "0x800102A8",
-      "name": "gt2_ovr6_DecDCT_inout_caller0",
+      "name": "gt2_ovr6_movie_decode_pending_frame",
       "size": 112
     },
     {
       "address": "0x80010318",
-      "name": "gt2_ovr6_DecDCT_inout_caller020",
+      "name": "gt2_ovr6_movie_prepare_next_frame",
       "size": 144
     },
     {
       "address": "0x800103A8",
-      "name": "gt2_ovr6_DecDCT_inout_caller01",
+      "name": "gt2_ovr6_movie_decode_then_prepare_next",
       "size": 76
     },
     {
       "address": "0x800103F4",
-      "name": "gt2_ovr6_DecDCT_inout_caller02",
+      "name": "gt2_ovr6_movie_prepare_then_decode_next",
       "size": 44
     },
     {
       "address": "0x80010420",
-      "name": "gt2_ovr6_main_task200110_caller000",
+      "name": "gt2_ovr6_stream_sector_callback",
       "size": 48
     },
     {
       "address": "0x80010450",
-      "name": "gt2_ovr6_main_task200110_caller0000",
+      "name": "gt2_ovr6_stream_receive_sector",
       "size": 76
     },
     {
       "address": "0x8001049C",
-      "name": "gt2_ovr6_decdctout_caller0",
+      "name": "gt2_ovr6_mdec_out_callback",
       "size": 40
     },
     {
@@ -112,37 +112,37 @@
     },
     {
       "address": "0x80010634",
-      "name": "gt2_ovr6_callback_task1",
+      "name": "gt2_ovr6_movie_ring_reset",
       "size": 112
     },
     {
       "address": "0x800106A4",
-      "name": "gt2_ovr6_dctout_callback_task00",
+      "name": "gt2_ovr6_movie_ring_stop",
       "size": 72
     },
     {
       "address": "0x800106EC",
-      "name": "gt2_ovr6_cdgetsector_task0",
+      "name": "gt2_ovr6_stream_read_sector_into_frame",
       "size": 424
     },
     {
       "address": "0x80010894",
-      "name": "gt2_ovr6_DecDCT_inout_caller0200",
+      "name": "gt2_ovr6_frame_ring_peek_next",
       "size": 120
     },
     {
       "address": "0x8001090C",
-      "name": "gt2_ovr6_DecDCT_inout_caller0201",
+      "name": "gt2_ovr6_frame_ring_consume",
       "size": 68
     },
     {
       "address": "0x80010950",
-      "name": "gt2_ovr6_memset_caller1",
+      "name": "gt2_ovr6_mdec_output_init",
       "size": 68
     },
     {
       "address": "0x80010994",
-      "name": "gt2_ovr6_DecDCT_inout_caller00",
+      "name": "gt2_ovr6_mdec_set_output_size",
       "size": 80
     },
     {
@@ -157,7 +157,7 @@
     },
     {
       "address": "0x80010AC0",
-      "name": "gt2_ovr6_arcadevideo_func0_gte",
+      "name": "gt2_ovr6_decode_bitstream_to_mdec_words",
       "size": 632
     },
     {
@@ -167,12 +167,12 @@
     },
     {
       "address": "0x80010D78",
-      "name": "gt2_ovr6_gpu_task0",
+      "name": "gt2_ovr6_blank_display_and_wait",
       "size": 48
     },
     {
       "address": "0x80010DA8",
-      "name": "gt2_ovr6_gpu_task0_caller0",
+      "name": "gt2_ovr6_clear_vram_to_black",
       "size": 132
     },
     {
@@ -182,7 +182,7 @@
     },
     {
       "address": "0x80010E64",
-      "name": "gt2_ovr6_task07100_caller0",
+      "name": "__12psxMovieLoop",
       "size": 200
     },
     {
@@ -232,37 +232,37 @@
     },
     {
       "address": "0x800112EC",
-      "name": "gt2_ovr6_nop3",
+      "name": "gt2_ovr6_psxMovieLoop_slot44_does_nothing",
       "size": 8
     },
     {
       "address": "0x800112F4",
-      "name": "gt2_ovr6_task2",
+      "name": "gt2_ovr6_psxMovieLoop_restart_stream_read",
       "size": 32
     },
     {
       "address": "0x80011314",
-      "name": "gt2_ovr6_task6",
+      "name": "gt2_ovr6_psxMovieLoop_count_frame",
       "size": 20
     },
     {
       "address": "0x80011328",
-      "name": "gt2_ovr6_task10",
+      "name": "gt2_ovr6_play_movie_24_in_24bit",
       "size": 128
     },
     {
       "address": "0x800113A8",
-      "name": "gt2_ovr6_task30",
+      "name": "gt2_ovr6_play_movie_26",
       "size": 136
     },
     {
       "address": "0x80011430",
-      "name": "gt2_ovr6_task31",
+      "name": "gt2_ovr6_play_movie_25",
       "size": 136
     },
     {
       "address": "0x800114B8",
-      "name": "gt2_ovr6_entrypoint0",
+      "name": "gt2_ovr6_entry_play_movie_then_load_menu",
       "size": 40
     },
     {

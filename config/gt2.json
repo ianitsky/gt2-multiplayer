@@ -2846,7 +2846,25 @@
       "gzip": true,
       "base": "0x80010000",
       "linearSweep": true,
-      "image": "ovl_patched/gt2_04.bin"
+      "image": "ovl_patched/gt2_04.bin",
+      "functions": [
+        {
+          "address": "0x80010024",
+          "name": "gt2_ovr4_build_car_spec_from_parts"
+        },
+        {
+          "address": "0x80011CFC",
+          "name": "gt2_ovr4_max_of_three"
+        },
+        {
+          "address": "0x80011D38",
+          "name": "gt2_ovr4_min_of_three"
+        },
+        {
+          "address": "0x80012130",
+          "name": "gt2_ovr4_choose_entrant_paint"
+        }
+      ]
     },
     {
       "name": "gt2_05",

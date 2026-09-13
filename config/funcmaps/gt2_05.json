@@ -2,7 +2,7 @@
   "functions": [
     {
       "address": "0x80010000",
-      "name": "gt2_ovr5_load_license_task0",
+      "name": "gt2_ovr5_license_index_from_code",
       "size": 120
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "address": "0x80010984",
-      "name": "gt2_ovr5_load_replay_mode_04_task1",
+      "name": "gt2_ovr5_choose_entrant_paint",
       "size": 172
     },
     {
@@ -57,12 +57,12 @@
     },
     {
       "address": "0x80011160",
-      "name": "gt2_ovr5_load_event_task4",
+      "name": "gt2_ovr5_fill_event_record_with_ff",
       "size": 36
     },
     {
       "address": "0x80011184",
-      "name": "gt2_ovr5_load_event_task5",
+      "name": "gt2_ovr5_build_car_spec_from_parts",
       "size": 6196
     },
     {
@@ -317,7 +317,7 @@
     },
     {
       "address": "0x80015404",
-      "name": "gt2_ovr5_memset_caller0",
+      "name": "gt2_ovr5_clear_and_build_car_spec_from_parts",
       "size": 6232
     },
     {
