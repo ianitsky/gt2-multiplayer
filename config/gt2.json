@@ -21,615 +21,615 @@
       "functions": [
         {
           "address": "0x80010000",
-          "name": "func_80010000"
+          "name": "gt2_ovr1_camera_init"
         },
         {
           "address": "0x80010070",
-          "name": "func_80010070"
+          "name": "gt2_ovr1_camera_init_entry_80010070"
         },
         {
           "address": "0x80010074",
-          "name": "func_80010074"
+          "name": "func_80010070_entry_80010074"
         },
         {
           "address": "0x80010088",
-          "name": "func_80010088"
+          "name": "gt2_ovr1_camera_set_viewport_and_projection"
         },
         {
           "address": "0x800100F4",
-          "name": "func_800100F4"
+          "name": "gt2_ovr1_camera_update"
         },
         {
           "address": "0x80010158",
-          "name": "func_80010158"
+          "name": "gt2_ovr1_camera_update_entry_80010158"
         },
         {
           "address": "0x80010164",
-          "name": "func_80010164"
+          "name": "func_80010158_entry_80010164"
         },
         {
           "address": "0x800101FC",
-          "name": "func_800101FC"
+          "name": "gt2_ovr1_camera_copy_target_car_matrix"
         },
         {
           "address": "0x80010298",
-          "name": "func_80010298"
+          "name": "gt2_ovr1_camera_apply_default_fov"
         },
         {
           "address": "0x800102D8",
-          "name": "func_800102D8"
+          "name": "gt2_ovr1_camera_update_player_view"
         },
         {
           "address": "0x80010314",
-          "name": "func_80010314"
+          "name": "gt2_ovr1_camera_update_player_view_entry_80010314"
         },
         {
           "address": "0x80010340",
-          "name": "func_80010340"
+          "name": "func_80010314_entry_80010340"
         },
         {
           "address": "0x80010344",
-          "name": "func_80010344"
+          "name": "func_80010340_entry_80010344"
         },
         {
           "address": "0x80010364",
-          "name": "func_80010364"
+          "name": "func_80010340_entry_80010364"
         },
         {
           "address": "0x80010378",
-          "name": "func_80010378"
+          "name": "func_80010364_entry_80010378"
         },
         {
           "address": "0x80010388",
-          "name": "func_80010388"
+          "name": "gt2_ovr1_camera_apply_mounted_view"
         },
         {
           "address": "0x800103C0",
-          "name": "func_800103C0"
+          "name": "gt2_ovr1_camera_view_relative_to_car"
         },
         {
           "address": "0x80010460",
-          "name": "func_80010460"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_80010460"
         },
         {
           "address": "0x8001046C",
-          "name": "func_8001046C"
+          "name": "func_80010460_entry_8001046C"
         },
         {
           "address": "0x80010478",
-          "name": "func_80010478"
+          "name": "func_80010460_entry_80010478"
         },
         {
           "address": "0x800104B0",
-          "name": "func_800104B0"
+          "name": "func_80010460_entry_800104B0"
         },
         {
           "address": "0x800104C4",
-          "name": "func_800104C4"
+          "name": "func_800104B0_entry_800104C4"
         },
         {
           "address": "0x8001052C",
-          "name": "func_8001052C"
+          "name": "func_800104C4_entry_8001052C"
         },
         {
           "address": "0x8001054C",
-          "name": "func_8001054C"
+          "name": "func_8001052C_entry_8001054C"
         },
         {
           "address": "0x8001056C",
-          "name": "func_8001056C"
+          "name": "func_8001052C_entry_8001056C"
         },
         {
           "address": "0x80010598",
-          "name": "func_80010598"
+          "name": "gt2_ovr1_lerp_by_fraction_64"
         },
         {
           "address": "0x800105E0",
-          "name": "func_800105E0"
+          "name": "gt2_ovr1_lerp_fixed_12"
         },
         {
           "address": "0x80010608",
-          "name": "func_80010608"
+          "name": "gt2_ovr1_camera_update_replay_view"
         },
         {
           "address": "0x800106A0",
-          "name": "func_800106A0"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_800106A0"
         },
         {
           "address": "0x800106BC",
-          "name": "func_800106BC"
+          "name": "func_800106A0_entry_800106BC"
         },
         {
           "address": "0x800107D0",
-          "name": "func_800107D0"
+          "name": "func_800106A0_entry_800107D0"
         },
         {
           "address": "0x800107E0",
-          "name": "func_800107E0"
+          "name": "func_800106A0_entry_800107E0"
         },
         {
           "address": "0x800108E0",
-          "name": "func_800108E0"
+          "name": "func_800106A0_entry_800108E0"
         },
         {
           "address": "0x800108E4",
-          "name": "func_800108E4"
+          "name": "func_800106A0_entry_800108E4"
         },
         {
           "address": "0x80010934",
-          "name": "func_80010934"
+          "name": "func_800106A0_entry_80010934"
         },
         {
           "address": "0x80010938",
-          "name": "func_80010938"
+          "name": "func_800106A0_entry_80010938"
         },
         {
           "address": "0x80010944",
-          "name": "func_80010944"
+          "name": "func_800106A0_entry_80010944"
         },
         {
           "address": "0x8001094C",
-          "name": "func_8001094C"
+          "name": "func_800106A0_entry_8001094C"
         },
         {
           "address": "0x8001097C",
-          "name": "func_8001097C"
+          "name": "gt2_ovr1_find_car_slot_by_id"
         },
         {
           "address": "0x800109A0",
-          "name": "func_800109A0"
+          "name": "gt2_ovr1_find_car_slot_by_id_entry_800109A0"
         },
         {
           "address": "0x800109A8",
-          "name": "func_800109A8"
+          "name": "func_800109A0_entry_800109A8"
         },
         {
           "address": "0x800109C4",
-          "name": "func_800109C4"
+          "name": "func_800109A0_entry_800109C4"
         },
         {
           "address": "0x800109E8",
-          "name": "func_800109E8"
+          "name": "func_800109A0_entry_800109E8"
         },
         {
           "address": "0x800109EC",
-          "name": "func_800109EC"
+          "name": "func_800109E8_entry_800109EC"
         },
         {
           "address": "0x800109FC",
-          "name": "func_800109FC"
+          "name": "gt2_ovr1_camera_update_trackside_view"
         },
         {
           "address": "0x80010A34",
-          "name": "func_80010A34"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010A34"
         },
         {
           "address": "0x80010A38",
-          "name": "func_80010A38"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010A38"
         },
         {
           "address": "0x80010A84",
-          "name": "func_80010A84"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010A84"
         },
         {
           "address": "0x80010AD0",
-          "name": "func_80010AD0"
+          "name": "func_80010A84_entry_80010AD0"
         },
         {
           "address": "0x80010AFC",
-          "name": "func_80010AFC"
+          "name": "func_80010AD0_entry_80010AFC"
         },
         {
           "address": "0x80010B28",
-          "name": "func_80010B28"
+          "name": "func_80010AFC_entry_80010B28"
         },
         {
           "address": "0x80010B48",
-          "name": "func_80010B48"
+          "name": "func_80010B28_entry_80010B48"
         },
         {
           "address": "0x80010B8C",
-          "name": "func_80010B8C"
+          "name": "func_80010B48_entry_80010B8C"
         },
         {
           "address": "0x80010BA0",
-          "name": "func_80010BA0"
+          "name": "func_80010B8C_entry_80010BA0"
         },
         {
           "address": "0x80010BB4",
-          "name": "func_80010BB4"
+          "name": "func_80010BA0_entry_80010BB4"
         },
         {
           "address": "0x80010BC0",
-          "name": "func_80010BC0"
+          "name": "func_80010BB4_entry_80010BC0"
         },
         {
           "address": "0x80010BC4",
-          "name": "func_80010BC4"
+          "name": "func_80010BC0_entry_80010BC4"
         },
         {
           "address": "0x80010BEC",
-          "name": "func_80010BEC"
+          "name": "func_80010BC0_entry_80010BEC"
         },
         {
           "address": "0x80010BF0",
-          "name": "func_80010BF0"
+          "name": "func_80010BEC_entry_80010BF0"
         },
         {
           "address": "0x80010C18",
-          "name": "func_80010C18"
+          "name": "func_80010BEC_entry_80010C18"
         },
         {
           "address": "0x80010C40",
-          "name": "func_80010C40"
+          "name": "func_80010C18_entry_80010C40"
         },
         {
           "address": "0x80010C5C",
-          "name": "func_80010C5C"
+          "name": "func_80010C40_entry_80010C5C"
         },
         {
           "address": "0x80010C90",
-          "name": "func_80010C90"
+          "name": "func_80010C5C_entry_80010C90"
         },
         {
           "address": "0x80010C94",
-          "name": "func_80010C94"
+          "name": "func_80010C90_entry_80010C94"
         },
         {
           "address": "0x80010C98",
-          "name": "func_80010C98"
+          "name": "func_80010C90_entry_80010C98"
         },
         {
           "address": "0x80010CF4",
-          "name": "func_80010CF4"
+          "name": "func_80010C90_entry_80010CF4"
         },
         {
           "address": "0x80010D18",
-          "name": "func_80010D18"
+          "name": "func_80010CF4_entry_80010D18"
         },
         {
           "address": "0x80010D24",
-          "name": "func_80010D24"
+          "name": "func_80010CF4_entry_80010D24"
         },
         {
           "address": "0x80010D60",
-          "name": "func_80010D60"
+          "name": "func_80010D24_entry_80010D60"
         },
         {
           "address": "0x80010D64",
-          "name": "func_80010D64"
+          "name": "func_80010D24_entry_80010D64"
         },
         {
           "address": "0x80010D98",
-          "name": "func_80010D98"
+          "name": "func_80010D24_entry_80010D98"
         },
         {
           "address": "0x80010DB4",
-          "name": "func_80010DB4"
+          "name": "func_80010D98_entry_80010DB4"
         },
         {
           "address": "0x80010DC4",
-          "name": "func_80010DC4"
+          "name": "func_80010DB4_entry_80010DC4"
         },
         {
           "address": "0x80010DD8",
-          "name": "func_80010DD8"
+          "name": "func_80010DC4_entry_80010DD8"
         },
         {
           "address": "0x80010DEC",
-          "name": "func_80010DEC"
+          "name": "func_80010DD8_entry_80010DEC"
         },
         {
           "address": "0x80010DFC",
-          "name": "func_80010DFC"
+          "name": "func_80010DEC_entry_80010DFC"
         },
         {
           "address": "0x80010E04",
-          "name": "func_80010E04"
+          "name": "func_80010DFC_entry_80010E04"
         },
         {
           "address": "0x80010E20",
-          "name": "func_80010E20"
+          "name": "gt2_ovr1_camera_look_along_vector"
         },
         {
           "address": "0x80010E70",
-          "name": "func_80010E70"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010E70"
         },
         {
           "address": "0x80010E7C",
-          "name": "func_80010E7C"
+          "name": "func_80010E70_entry_80010E7C"
         },
         {
           "address": "0x80010E88",
-          "name": "func_80010E88"
+          "name": "func_80010E70_entry_80010E88"
         },
         {
           "address": "0x80010EC8",
-          "name": "func_80010EC8"
+          "name": "func_80010E70_entry_80010EC8"
         },
         {
           "address": "0x80010ED8",
-          "name": "func_80010ED8"
+          "name": "func_80010EC8_entry_80010ED8"
         },
         {
           "address": "0x80010F48",
-          "name": "func_80010F48"
+          "name": "func_80010EC8_entry_80010F48"
         },
         {
           "address": "0x80010F80",
-          "name": "func_80010F80"
+          "name": "func_80010F48_entry_80010F80"
         },
         {
           "address": "0x80010F8C",
-          "name": "func_80010F8C"
+          "name": "func_80010F80_entry_80010F8C"
         },
         {
           "address": "0x80010FDC",
-          "name": "func_80010FDC"
+          "name": "func_80010F80_entry_80010FDC"
         },
         {
           "address": "0x80011088",
-          "name": "func_80011088"
+          "name": "gt2_ovr1_lerp_vector_fixed_12"
         },
         {
           "address": "0x80011144",
-          "name": "func_80011144"
+          "name": "gt2_ovr1_vector_length_coarse"
         },
         {
           "address": "0x800111A8",
-          "name": "func_800111A8"
+          "name": "gt2_ovr1_trackside_camera_look_at_car"
         },
         {
           "address": "0x800112C4",
-          "name": "func_800112C4"
+          "name": "gt2_ovr1_trackside_camera_fixed_rotation"
         },
         {
           "address": "0x80011378",
-          "name": "func_80011378"
+          "name": "gt2_ovr1_trackside_camera_mounted"
         },
         {
           "address": "0x800113C0",
-          "name": "func_800113C0"
+          "name": "gt2_ovr1_camera_view_from_car_mount"
         },
         {
           "address": "0x8001144C",
-          "name": "func_8001144C"
+          "name": "gt2_ovr1_camera_view_from_car_mount_entry_8001144C"
         },
         {
           "address": "0x8001145C",
-          "name": "func_8001145C"
+          "name": "func_8001144C_entry_8001145C"
         },
         {
           "address": "0x800114B8",
-          "name": "func_800114B8"
+          "name": "func_8001144C_entry_800114B8"
         },
         {
           "address": "0x80011568",
-          "name": "func_80011568"
+          "name": "gt2_ovr1_trackside_camera_follow_zoom"
         },
         {
           "address": "0x8001167C",
-          "name": "func_8001167C"
+          "name": "gt2_ovr1_trackside_camera_follow_zoom_entry_8001167C"
         },
         {
           "address": "0x80011684",
-          "name": "func_80011684"
+          "name": "func_8001167C_entry_80011684"
         },
         {
           "address": "0x800116C4",
-          "name": "func_800116C4"
+          "name": "func_8001167C_entry_800116C4"
         },
         {
           "address": "0x800116D0",
-          "name": "func_800116D0"
+          "name": "func_800116C4_entry_800116D0"
         },
         {
           "address": "0x80011704",
-          "name": "func_80011704"
+          "name": "gt2_ovr1_camera_apply_view_mode"
         },
         {
           "address": "0x80011750",
-          "name": "func_80011750"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011750"
         },
         {
           "address": "0x80011758",
-          "name": "func_80011758"
+          "name": "func_80011750_entry_80011758"
         },
         {
           "address": "0x8001175C",
-          "name": "func_8001175C"
+          "name": "func_80011750_entry_8001175C"
         },
         {
           "address": "0x80011770",
-          "name": "func_80011770"
+          "name": "func_80011750_entry_80011770"
         },
         {
           "address": "0x80011778",
-          "name": "func_80011778"
+          "name": "func_80011770_entry_80011778"
         },
         {
           "address": "0x80011780",
-          "name": "func_80011780"
+          "name": "func_80011770_entry_80011780"
         },
         {
           "address": "0x80011788",
-          "name": "func_80011788"
+          "name": "func_80011770_entry_80011788"
         },
         {
           "address": "0x80011790",
-          "name": "func_80011790"
+          "name": "func_80011770_entry_80011790"
         },
         {
           "address": "0x80011798",
-          "name": "func_80011798"
+          "name": "func_80011770_entry_80011798"
         },
         {
           "address": "0x800117A0",
-          "name": "func_800117A0"
+          "name": "func_80011770_entry_800117A0"
         },
         {
           "address": "0x800117A4",
-          "name": "func_800117A4"
+          "name": "func_80011770_entry_800117A4"
         },
         {
           "address": "0x800117B0",
-          "name": "func_800117B0"
+          "name": "func_80011770_entry_800117B0"
         },
         {
           "address": "0x800117C4",
-          "name": "func_800117C4"
+          "name": "gt2_ovr1_find_trackside_camera_zone"
         },
         {
           "address": "0x80011800",
-          "name": "func_80011800"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_80011800"
         },
         {
           "address": "0x80011804",
-          "name": "func_80011804"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_80011804"
         },
         {
           "address": "0x80011850",
-          "name": "func_80011850"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_80011850"
         },
         {
           "address": "0x80011864",
-          "name": "func_80011864"
+          "name": "func_80011850_entry_80011864"
         },
         {
           "address": "0x8001187C",
-          "name": "func_8001187C"
+          "name": "func_80011850_entry_8001187C"
         },
         {
           "address": "0x80011880",
-          "name": "func_80011880"
+          "name": "func_80011850_entry_80011880"
         },
         {
           "address": "0x80011888",
-          "name": "func_80011888"
+          "name": "func_80011850_entry_80011888"
         },
         {
           "address": "0x80011890",
-          "name": "func_80011890"
+          "name": "gt2_ovr1_camera_path_evaluate"
         },
         {
           "address": "0x800118C0",
-          "name": "func_800118C0"
+          "name": "gt2_ovr1_camera_path_evaluate_entry_800118C0"
         },
         {
           "address": "0x800118D0",
-          "name": "func_800118D0"
+          "name": "func_800118C0_entry_800118D0"
         },
         {
           "address": "0x800118D8",
-          "name": "func_800118D8"
+          "name": "func_800118D0_entry_800118D8"
         },
         {
           "address": "0x800118F8",
-          "name": "func_800118F8"
+          "name": "gt2_ovr1_camera_path_linear"
         },
         {
           "address": "0x8001192C",
-          "name": "func_8001192C"
+          "name": "gt2_ovr1_camera_path_linear_entry_8001192C"
         },
         {
           "address": "0x80011944",
-          "name": "func_80011944"
+          "name": "func_8001192C_entry_80011944"
         },
         {
           "address": "0x80011954",
-          "name": "func_80011954"
+          "name": "func_8001192C_entry_80011954"
         },
         {
           "address": "0x80011970",
-          "name": "func_80011970"
+          "name": "func_8001192C_entry_80011970"
         },
         {
           "address": "0x800119A4",
-          "name": "func_800119A4"
+          "name": "func_8001192C_entry_800119A4"
         },
         {
           "address": "0x800119D0",
-          "name": "func_800119D0"
+          "name": "func_800119A4_entry_800119D0"
         },
         {
           "address": "0x80011A00",
-          "name": "func_80011A00"
+          "name": "func_800119D0_entry_80011A00"
         },
         {
           "address": "0x80011A04",
-          "name": "func_80011A04"
+          "name": "func_800119D0_entry_80011A04"
         },
         {
           "address": "0x80011A14",
-          "name": "func_80011A14"
+          "name": "func_800119D0_entry_80011A14"
         },
         {
           "address": "0x80011A20",
-          "name": "func_80011A20"
+          "name": "func_800119D0_entry_80011A20"
         },
         {
           "address": "0x80011A24",
-          "name": "func_80011A24"
+          "name": "func_800119D0_entry_80011A24"
         },
         {
           "address": "0x80011A40",
-          "name": "func_80011A40"
+          "name": "func_800119D0_entry_80011A40"
         },
         {
           "address": "0x80011A58",
-          "name": "func_80011A58"
+          "name": "gt2_ovr1_camera_path_spline"
         },
         {
           "address": "0x80011A94",
-          "name": "func_80011A94"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011A94"
         },
         {
           "address": "0x80011AAC",
-          "name": "func_80011AAC"
+          "name": "func_80011A94_entry_80011AAC"
         },
         {
           "address": "0x80011ABC",
-          "name": "func_80011ABC"
+          "name": "func_80011A94_entry_80011ABC"
         },
         {
           "address": "0x80011AD8",
-          "name": "func_80011AD8"
+          "name": "func_80011A94_entry_80011AD8"
         },
         {
           "address": "0x80011B0C",
-          "name": "func_80011B0C"
+          "name": "func_80011A94_entry_80011B0C"
         },
         {
           "address": "0x80011B34",
-          "name": "func_80011B34"
+          "name": "func_80011B0C_entry_80011B34"
         },
         {
           "address": "0x80011B64",
-          "name": "func_80011B64"
+          "name": "func_80011B34_entry_80011B64"
         },
         {
           "address": "0x80011B68",
-          "name": "func_80011B68"
+          "name": "func_80011B34_entry_80011B68"
         },
         {
           "address": "0x80011B78",
-          "name": "func_80011B78"
+          "name": "func_80011B34_entry_80011B78"
         },
         {
           "address": "0x80011B84",
-          "name": "func_80011B84"
+          "name": "func_80011B34_entry_80011B84"
         },
         {
           "address": "0x80011B88",
-          "name": "func_80011B88"
+          "name": "func_80011B34_entry_80011B88"
         },
         {
           "address": "0x80011EA8",
-          "name": "func_80011EA8"
+          "name": "gt2_ovr1_does_nothing_at_80011EA8"
         },
         {
           "address": "0x80011EC8",
-          "name": "func_80011EC8"
+          "name": "gt2_ovr1_race_screen_construct"
         },
         {
           "address": "0x80011EFC",
@@ -953,7 +953,7 @@
         },
         {
           "address": "0x80016258",
-          "name": "ptr_80016258"
+          "name": "gt2_ovr1_stub_80016258"
         },
         {
           "address": "0x80016270",
@@ -1254,6 +1254,10 @@
         {
           "address": "0x80018AD8",
           "name": "entry_80018AD8"
+        },
+        {
+          "address": "0x80018B00",
+          "name": "gt2_ovr1_draw_direct_gpu_blink_bars"
         },
         {
           "address": "0x80018CE8",
@@ -1656,6 +1660,10 @@
           "name": "entry_8002A94C"
         },
         {
+          "address": "0x8002AAF0",
+          "name": "gt2_ovr1_race_mode_or_first_150_frames"
+        },
+        {
           "address": "0x8002AB60",
           "name": "entry_8002AB60"
         },
@@ -2054,6 +2062,402 @@
         {
           "address": "0x8002F928",
           "name": "gt2_ovr1_data_decoded_as_code_8002F928"
+        },
+        {
+          "address": "0x8002F92C",
+          "name": "gt2_ovr1_car_update_clutch_for_player"
+        },
+        {
+          "address": "0x8002F9CC",
+          "name": "gt2_ovr1_car_update_clutch_for_ai"
+        },
+        {
+          "address": "0x8002FA60",
+          "name": "gt2_ovr1_car_ramp_throttle_at_low_speed"
+        },
+        {
+          "address": "0x8002FB18",
+          "name": "gt2_ovr1_car_process_player_controls"
+        },
+        {
+          "address": "0x80030308",
+          "name": "gt2_ovr1_car_set_event_bytes_764"
+        },
+        {
+          "address": "0x80030330",
+          "name": "gt2_ovr1_physics_scale_helper_b"
+        },
+        {
+          "address": "0x80030424",
+          "name": "gt2_ovr1_physics_scale_helper"
+        },
+        {
+          "address": "0x800304DC",
+          "name": "gt2_ovr1_car_body_force_helper"
+        },
+        {
+          "address": "0x800306C0",
+          "name": "gt2_ovr1_car_body_step"
+        },
+        {
+          "address": "0x80030950",
+          "name": "gt2_ovr1_car_compute_engine_torque_table"
+        },
+        {
+          "address": "0x80030BA4",
+          "name": "gt2_ovr1_map_weight_to_physics_value"
+        },
+        {
+          "address": "0x80030C2C",
+          "name": "gt2_ovr1_clamp_to_12000_a"
+        },
+        {
+          "address": "0x80030C44",
+          "name": "gt2_ovr1_clamp_to_12000_b"
+        },
+        {
+          "address": "0x80030C5C",
+          "name": "gt2_ovr1_car_compute_drivetrain_ratios"
+        },
+        {
+          "address": "0x80030D10",
+          "name": "gt2_ovr1_car_set_byte_1c"
+        },
+        {
+          "address": "0x80030D18",
+          "name": "gt2_ovr1_drivetrain_type_to_index"
+        },
+        {
+          "address": "0x80030D64",
+          "name": "gt2_ovr1_car_set_control_mode"
+        },
+        {
+          "address": "0x80030D70",
+          "name": "gt2_ovr1_car_apply_control_mode"
+        },
+        {
+          "address": "0x80030DA0",
+          "name": "gt2_ovr1_suspension_compute_damper_coefficient"
+        },
+        {
+          "address": "0x80030F50",
+          "name": "gt2_ovr1_suspension_interpolate_setting"
+        },
+        {
+          "address": "0x80030F94",
+          "name": "gt2_ovr1_suspension_setup_dampers"
+        },
+        {
+          "address": "0x800312FC",
+          "name": "gt2_ovr1_car_compute_spring_rates"
+        },
+        {
+          "address": "0x80031440",
+          "name": "gt2_ovr1_car_link_physics_substructures"
+        },
+        {
+          "address": "0x800314DC",
+          "name": "gt2_ovr1_car_setup_wheel_params"
+        },
+        {
+          "address": "0x800316F4",
+          "name": "gt2_ovr1_build_lookup_curve_from_bytes"
+        },
+        {
+          "address": "0x80031794",
+          "name": "gt2_ovr1_car_setup_body_params"
+        },
+        {
+          "address": "0x800319A8",
+          "name": "gt2_ovr1_car_physics_init_from_spec"
+        },
+        {
+          "address": "0x80032A1C",
+          "name": "gt2_ovr1_car_reset_wheel_states"
+        },
+        {
+          "address": "0x80032AAC",
+          "name": "gt2_ovr1_car_clear_wheel_contact"
+        },
+        {
+          "address": "0x80032B0C",
+          "name": "gt2_ovr1_car_place_on_grid"
+        },
+        {
+          "address": "0x80032E44",
+          "name": "gt2_ovr1_car_reset_steering_state"
+        },
+        {
+          "address": "0x80032E6C",
+          "name": "gt2_ovr1_car_reset_dynamics"
+        },
+        {
+          "address": "0x8003311C",
+          "name": "gt2_ovr1_car_setup_engine_state"
+        },
+        {
+          "address": "0x80033384",
+          "name": "gt2_ovr1_car_setup_for_race"
+        },
+        {
+          "address": "0x8003360C",
+          "name": "gt2_ovr1_drivetrain_clear_flags"
+        },
+        {
+          "address": "0x80033634",
+          "name": "gt2_ovr1_wheel_force_curve"
+        },
+        {
+          "address": "0x8003373C",
+          "name": "gt2_ovr1_wheel_force_step"
+        },
+        {
+          "address": "0x80033D34",
+          "name": "gt2_ovr1_wheel_ground_normal"
+        },
+        {
+          "address": "0x80033E6C",
+          "name": "gt2_ovr1_wheel_ground_probe"
+        },
+        {
+          "address": "0x800340A4",
+          "name": "gt2_ovr1_wheel_ground_update"
+        },
+        {
+          "address": "0x80034320",
+          "name": "gt2_ovr1_car_wheels_ground_update"
+        },
+        {
+          "address": "0x80034480",
+          "name": "gt2_ovr1_car_drivetrain_and_wheels_step"
+        },
+        {
+          "address": "0x80034688",
+          "name": "gt2_ovr1_remap_gear_bytes_forward"
+        },
+        {
+          "address": "0x800346EC",
+          "name": "gt2_ovr1_remap_gear_bytes_back"
+        },
+        {
+          "address": "0x80034740",
+          "name": "gt2_ovr1_transmission_rebuild_ratios"
+        },
+        {
+          "address": "0x800347C4",
+          "name": "gt2_ovr1_transmission_setup"
+        },
+        {
+          "address": "0x800350FC",
+          "name": "gt2_ovr1_car_snapshot_physics_state"
+        },
+        {
+          "address": "0x8003519C",
+          "name": "gt2_ovr1_car_reset_physics_state"
+        },
+        {
+          "address": "0x8003533C",
+          "name": "gt2_ovr1_engine_torque_with_rev_limit"
+        },
+        {
+          "address": "0x800353DC",
+          "name": "gt2_ovr1_engine_compute_torque"
+        },
+        {
+          "address": "0x80035714",
+          "name": "gt2_ovr1_car_has_finished_laps"
+        },
+        {
+          "address": "0x800357C8",
+          "name": "gt2_ovr1_ai_line_blend_factor"
+        },
+        {
+          "address": "0x80035874",
+          "name": "gt2_ovr1_interpolate_by_fraction"
+        },
+        {
+          "address": "0x800358E0",
+          "name": "gt2_ovr1_ai_first_available_line_for_mode"
+        },
+        {
+          "address": "0x80035948",
+          "name": "gt2_ovr1_ai_project_onto_line"
+        },
+        {
+          "address": "0x80035B68",
+          "name": "gt2_ovr1_ai_update_line_position"
+        },
+        {
+          "address": "0x80035C48",
+          "name": "gt2_ovr1_ai_find_segment"
+        },
+        {
+          "address": "0x80035D68",
+          "name": "gt2_ovr1_ai_compute_target_point"
+        },
+        {
+          "address": "0x800360C8",
+          "name": "gt2_ovr1_ai_segment_allows_overtake"
+        },
+        {
+          "address": "0x80036160",
+          "name": "gt2_ovr1_ai_compute_braking_point"
+        },
+        {
+          "address": "0x80036340",
+          "name": "gt2_ovr1_ai_switch_line"
+        },
+        {
+          "address": "0x8003643C",
+          "name": "gt2_ovr1_ai_steer_toward_line"
+        },
+        {
+          "address": "0x800367AC",
+          "name": "gt2_ovr1_ai_select_line"
+        },
+        {
+          "address": "0x800367CC",
+          "name": "gt2_ovr1_ai_line_1_if_available"
+        },
+        {
+          "address": "0x80036808",
+          "name": "gt2_ovr1_ai_line_2_if_available"
+        },
+        {
+          "address": "0x80036844",
+          "name": "gt2_ovr1_ai_choose_line_prefer_2"
+        },
+        {
+          "address": "0x80036890",
+          "name": "gt2_ovr1_ai_choose_line_prefer_1"
+        },
+        {
+          "address": "0x800368DC",
+          "name": "gt2_ovr1_ai_line_for_mode_6"
+        },
+        {
+          "address": "0x80036910",
+          "name": "gt2_ovr1_ai_line_3_if_available"
+        },
+        {
+          "address": "0x80036948",
+          "name": "gt2_ovr1_ai_line_4_if_available"
+        },
+        {
+          "address": "0x80036980",
+          "name": "gt2_ovr1_ai_pick_line"
+        },
+        {
+          "address": "0x80036ACC",
+          "name": "gt2_ovr1_ai_init_for_course"
+        },
+        {
+          "address": "0x80036BA0",
+          "name": "gt2_ovr1_ai_is_in_special_mode"
+        },
+        {
+          "address": "0x80036BDC",
+          "name": "gt2_ovr1_ai_in_line_4_zone"
+        },
+        {
+          "address": "0x80036CA4",
+          "name": "gt2_ovr1_ai_setup_all_cars"
+        },
+        {
+          "address": "0x800372EC",
+          "name": "gt2_ovr1_ai_update_race_position"
+        },
+        {
+          "address": "0x80037420",
+          "name": "gt2_ovr1_ai_throttle_from_speed_error"
+        },
+        {
+          "address": "0x80037494",
+          "name": "gt2_ovr1_ai_control_speed"
+        },
+        {
+          "address": "0x80037538",
+          "name": "gt2_ovr1_ai_plan_corner"
+        },
+        {
+          "address": "0x80037664",
+          "name": "gt2_ovr1_car_rate_limit_steering"
+        },
+        {
+          "address": "0x800376D8",
+          "name": "gt2_ovr1_ai_steer"
+        },
+        {
+          "address": "0x800377E8",
+          "name": "gt2_ovr1_ai_release_controls"
+        },
+        {
+          "address": "0x80037834",
+          "name": "gt2_ovr1_ai_drive_car"
+        },
+        {
+          "address": "0x80038540",
+          "name": "gt2_ovr1_ai_control_car"
+        },
+        {
+          "address": "0x800386B4",
+          "name": "gt2_ovr1_course_query_at_point"
+        },
+        {
+          "address": "0x800386F4",
+          "name": "gt2_ovr1_car_follow_course_surface"
+        },
+        {
+          "address": "0x800389E0",
+          "name": "gt2_ovr1_car_align_to_course"
+        },
+        {
+          "address": "0x80038C88",
+          "name": "gt2_ovr1_car_reset_to_line"
+        },
+        {
+          "address": "0x80038DA0",
+          "name": "gt2_ovr1_car_recover_to_track"
+        },
+        {
+          "address": "0x80039040",
+          "name": "gt2_ovr1_ai_place_on_start_line"
+        },
+        {
+          "address": "0x800392AC",
+          "name": "gt2_ovr1_ai_line_4_offset"
+        },
+        {
+          "address": "0x800392D8",
+          "name": "gt2_ovr1_slip_multiplier_from_speed"
+        },
+        {
+          "address": "0x8003932C",
+          "name": "gt2_ovr1_physics_helper_8003932C"
+        },
+        {
+          "address": "0x8003941C",
+          "name": "gt2_ovr1_engine_rpm_from_wheel_speed"
+        },
+        {
+          "address": "0x80039470",
+          "name": "gt2_ovr1_transmission_mark_clutch_state"
+        },
+        {
+          "address": "0x80039490",
+          "name": "gt2_ovr1_entry_b40_update"
+        },
+        {
+          "address": "0x80039778",
+          "name": "gt2_ovr1_update_all_b40_entries"
+        },
+        {
+          "address": "0x800397D0",
+          "name": "gt2_ovr1_physics_helper_800397D0"
+        },
+        {
+          "address": "0x8003991C",
+          "name": "gt2_ovr1_transmission_update_gear_state"
         },
         {
           "address": "0x80039994",
@@ -2520,8 +2924,20 @@
           "name": "entry_8004530C"
         },
         {
+          "address": "0x80045688",
+          "name": "gt2_ovr1_car_physics_substep_1"
+        },
+        {
+          "address": "0x800457B0",
+          "name": "gt2_ovr1_car_physics_substep_2"
+        },
+        {
           "address": "0x800459A8",
           "name": "entry_800459A8"
+        },
+        {
+          "address": "0x80045AE8",
+          "name": "gt2_ovr1_car_physics_substep_3_engine"
         },
         {
           "address": "0x80045B98",
@@ -2568,12 +2984,20 @@
           "name": "entry_80046344"
         },
         {
+          "address": "0x800465E0",
+          "name": "gt2_ovr1_car_physics_substep_4"
+        },
+        {
           "address": "0x80046720",
           "name": "entry_80046720"
         },
         {
           "address": "0x80046824",
           "name": "entry_80046824"
+        },
+        {
+          "address": "0x80046B58",
+          "name": "gt2_ovr1_car_physics_substeps"
         },
         {
           "address": "0x80046F38",
