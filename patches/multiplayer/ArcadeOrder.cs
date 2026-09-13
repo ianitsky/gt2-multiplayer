@@ -10,7 +10,7 @@ namespace GT2Port.Multiplayer;
 /// loses whatever ran as part of them. Everything else about the direct launch
 /// is settled; what is not is which side of that line the car loader's owner
 /// falls on. The code that installs the two request records lives in
-/// func_80013BE4, which nothing calls by address - it is reached through a
+/// gt2_ovr3_arcade_screen_first_pass_installs_car_requests, which nothing calls by address - it is reached through a
 /// pointer - so reading cannot answer it and watching can.
 ///
 /// Each step says when it happened and how many came before, so the answer is

@@ -58,7 +58,7 @@ public static class DirectRace
     /// The arcade's own "stop the music", on the object at 0x800F3A20.
     ///
     /// The menus are a stack of pages, and popping one calls the page's slot 0
-    /// with 1, which is func_8001D568, which calls this. A player reaches the
+    /// with 1, which is gt2_ovr3_arcade_page_enter_or_leave_starts_or_stops_the_music, which calls this. A player reaches the
     /// race through pages, so by the time they start one the music has already
     /// been stopped by a pop. A launch that walks no pages never stops it, and
     /// the sequencer then keeps stepping a stream that gt2_01 has landed on
@@ -566,7 +566,7 @@ public static class DirectRace
     ///
     /// The car is not this method's business. The builder reads the chosen id
     /// out of the block, resolves it through 0x80010000, builds the whole race
-    /// through func_80010554 and puts the player's car into the block at +0x1C
+    /// through gt2_ovr3_build_race_block_and_fill_all_six_entrants and puts the player's car into the block at +0x1C
     /// through load_car_parts - all of it from the id patched in beforehand. So
     /// what is left here is the part the arcade has no idea about: who else is
     /// on the grid.

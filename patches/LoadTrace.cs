@@ -58,14 +58,14 @@ public static class LoadTrace
         Request(c, m);
     }
 
-    /// <summary>Where func_80016640 asks for the two halves of a car object.</summary>
+    /// <summary>Where gt2_ovr3_car_request_advance_one_load_step asks for the two halves of a car object.</summary>
     const uint AsksForTheModel = 0x80016770u;
     const uint AsksForTheTextures = 0x80016828u;
 
     /// <summary>
     /// Reports the request record behind a car-object read.
     ///
-    /// Loading a car is not a call but a queue: func_80016640 is a state
+    /// Loading a car is not a call but a queue: gt2_ovr3_car_request_advance_one_load_step is a state
     /// machine over a request record, stepping through it one file at a time,
     /// and the record says which file and where to put it. A pre-hook runs
     /// before the callee's prologue spills anything, so the caller's registers

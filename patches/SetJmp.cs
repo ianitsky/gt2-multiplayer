@@ -44,7 +44,7 @@ public static class SetJmp
     }
 
     /// <summary>
-    /// longjmp(env, value) — gt2_main_task201_reload_regs at 0x8007AD90.
+    /// longjmp(env, value) at 0x8007AD90.
     /// Restores the callee-saved set the matching setjmp stored, then unwinds.
     /// </summary>
     public static void LongJmp(CpuContext c, IMemory m)

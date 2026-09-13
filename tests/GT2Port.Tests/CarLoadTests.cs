@@ -118,7 +118,7 @@ public class CarLoadTests
         m.WriteU32(Owner + FirstSlot, Request);
         Tick(c, m, Owner);
 
-        // Step zero is what func_80016234 leaves behind: the request exists
+        // Step zero is what gt2_ovr3_car_request_init_with_unpack_buffers leaves behind: the request exists
         // but has not been set going, so waiting for it would wait for ever.
         m.WriteU8(Request + Step, 0);
         Assert.True(CarLoad.DoneIn(m, 0));

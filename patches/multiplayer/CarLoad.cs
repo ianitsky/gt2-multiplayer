@@ -9,7 +9,7 @@ namespace GT2Port.Multiplayer;
 ///
 /// A race started outside the menus dies for want of the player's car object,
 /// and building one from outside is not the answer: gt2_03 already has a
-/// function that does the whole job. `func_800162C0(request, owner, id)` looks
+/// function that does the whole job. `gt2_ovr3_car_request_begin_loading_car_by_packed_id(request, owner, id)` looks
 /// the packed five-character id up in the car table, cancels whatever the
 /// request was doing, writes the file index and both file sizes into it, and
 /// sets it going. The arcade's frame loop then ticks the request through eight
@@ -86,7 +86,7 @@ public static class CarLoad
     static int _insisted;
 
     /// <summary>
-    /// Pre-hook on func_80016640, whose second argument is the owner.
+    /// Pre-hook on gt2_ovr3_car_request_advance_one_load_step, whose second argument is the owner.
     ///
     /// Cheaper than it looks: the loader is ticked once per request per frame,
     /// so this is a couple of stores a frame, and it is the only route to an

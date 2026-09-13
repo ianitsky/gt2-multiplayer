@@ -11,9 +11,9 @@ namespace GT2Port.Multiplayer;
 /// the lever a lobby would pull to reach a race without the player walking the
 /// menus to get there.
 ///
-/// Read from func_80011750_gt2_03 at 0x800117A4, where it is loaded as
+/// Read from gt2_ovr3_arcade_entrypoint_run_menus_then_load_chosen_overlay at 0x800117A4, where it is loaded as
 /// `[0x801F0000 - 0xA0C]` and compared against 5 before indexing the jump
-/// table at 0x800267DC. Setting it up is entry_800141B8's job, at 0x80014400.
+/// table at 0x800267DC. Setting it up is gt2_ovr3_arcade_screen_tick_car_requests_and_say_whether_to_continue's job, at 0x80014400.
 ///
 /// Off unless GT2_ARCADE_WATCH is set.
 /// </summary>
