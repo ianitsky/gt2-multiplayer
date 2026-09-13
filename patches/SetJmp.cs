@@ -10,7 +10,7 @@ namespace GT2Port;
 /// is wrong: the routine overwrites RA from the jmp_buf, so on hardware its
 /// final `jr ra` lands wherever setjmp was called, never back in its caller.
 /// gt2_load_overlay relies on exactly that - it loads an overlay and jumps
-/// back into gt2_main_task_trampoline rather than returning - and letting it return
+/// back into gt2_main_setjmp_then_call_pending_task rather than returning - and letting it return
 /// carried on through code that was never meant to run again, with registers
 /// belonging to another context.
 ///

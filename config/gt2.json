@@ -3437,7 +3437,7 @@
         },
         {
           "address": "0x8004E444",
-          "name": "gt2_ovr1_call_race_func18"
+          "name": "gt2_ovr1_call_license_test_file_slot"
         },
         {
           "address": "0x8004E464",
@@ -3665,7 +3665,7 @@
         },
         {
           "address": "0x80052928",
-          "name": "gt2_ovr1_call_gt_race_func3_reordered"
+          "name": "gt2_ovr1_call_car_record_apply_part_reordered"
         },
         {
           "address": "0x80052958",
