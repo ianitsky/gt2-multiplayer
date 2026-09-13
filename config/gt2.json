@@ -2460,8 +2460,28 @@
           "name": "gt2_ovr2_choose_entrant_paint"
         },
         {
+          "address": "0x800110C4",
+          "name": "gt2_ovr2_load_cached_file_return_length"
+        },
+        {
+          "address": "0x800110FC",
+          "name": "gt2_ovr2_upload_tim_image_to_vram_slot"
+        },
+        {
+          "address": "0x80011178",
+          "name": "gt2_ovr2_load_menu_textures"
+        },
+        {
           "address": "0x800117B4",
           "name": "gt2_ovr2_apply_saved_analog_calibration"
+        },
+        {
+          "address": "0x80011868",
+          "name": "gt2_ovr2_BaseMenu_load_cached_file"
+        },
+        {
+          "address": "0x800118A0",
+          "name": "gt2_ovr2_upload_tim_image_to_vram_slot_at_800118A0"
         },
         {
           "address": "0x80011B5C",
@@ -2580,6 +2600,10 @@
           "name": "gt2_ovr2_does_nothing_at_80017718"
         },
         {
+          "address": "0x80017720",
+          "name": "gt2_ovr2_upload_tim_image_to_vram_slot_at_80017720"
+        },
+        {
           "address": "0x80017D74",
           "name": "gt2_ovr2_get_option_value"
         },
@@ -2624,8 +2648,48 @@
           "name": "gt2_ovr2_does_nothing_at_8001DC30"
         },
         {
+          "address": "0x8001DF04",
+          "name": "gt2_ovr2_gt1_import_menu_start_mode_0"
+        },
+        {
+          "address": "0x8001E014",
+          "name": "gt2_ovr2_gt1_import_merge_course_records"
+        },
+        {
+          "address": "0x8001E284",
+          "name": "gt2_ovr2_gt1_import_merge_top_five_records"
+        },
+        {
+          "address": "0x8001E38C",
+          "name": "gt2_ovr2_gt1_import_merge_records_table_3c88"
+        },
+        {
+          "address": "0x8001E408",
+          "name": "gt2_ovr2_gt1_import_merge_records_table_3d2c"
+        },
+        {
+          "address": "0x8001E484",
+          "name": "gt2_ovr2_gt1_import_merge_records_table_3dd0"
+        },
+        {
+          "address": "0x8001E500",
+          "name": "gt2_ovr2_gt1_import_menu_start_mode_1"
+        },
+        {
+          "address": "0x8001E704",
+          "name": "gt2_ovr2_gt1_import_menu_start_mode_2"
+        },
+        {
           "address": "0x8001E808",
           "name": "gt2_ovr2_format_number_with_commas"
+        },
+        {
+          "address": "0x8001EAD8",
+          "name": "gt2_ovr2_gt1_import_check_car_record"
+        },
+        {
+          "address": "0x8001EB60",
+          "name": "gt2_ovr2_gt1_import_append_car_record"
         },
         {
           "address": "0x8001FBFC",
@@ -2650,6 +2714,10 @@
         {
           "address": "0x80020788",
           "name": "gt2_ovr2_gt1_import_menu_install"
+        },
+        {
+          "address": "0x80020828",
+          "name": "gt2_ovr2_gt1_import_menu_begin_with_mode"
         },
         {
           "address": "0x80020CB4",

@@ -6592,7 +6592,7 @@
     },
     {
       "address": "0x8007AF30",
-      "name": "gt2_main_task0702",
+      "name": "gt2_main_wait_for_gpu_idle",
       "size": 48
     },
     {
@@ -6697,12 +6697,12 @@
     },
     {
       "address": "0x8007BA70",
-      "name": "gt2_main_task0701",
+      "name": "gt2_main_upload_pixels_to_vram_rect",
       "size": 356
     },
     {
       "address": "0x8007BBD4",
-      "name": "gt2_main_task0761",
+      "name": "gt2_main_upload_tim_image_block",
       "size": 72
     },
     {
