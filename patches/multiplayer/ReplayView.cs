@@ -10,7 +10,7 @@ namespace GT2Port.Multiplayer;
 ///
 /// **The record.** Writing 2 into the kind byte at +0x0A of an arcade race
 /// loaded it and walked straight back out to the menu, because
-/// gt2_main_func21 - the installer, at 0x80069AC4 - copies 0x58C bytes into the
+/// gt2_main_install_race_record - the installer, at 0x80069AC4 - copies 0x58C bytes into the
 /// block and then reads the kind out of what it has just copied and branches on
 /// it. The kind does not turn anything on; it says what shape the rest of the
 /// record is in. Captured side by side, a demo's record and an arcade race's

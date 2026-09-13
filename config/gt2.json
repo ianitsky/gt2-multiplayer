@@ -2755,12 +2755,12 @@
       "mode": "pre"
     },
     {
-      "function": "gt2_main_task201_reload_regs",
+      "function": "longjmp",
       "target": "GT2Port.SetJmp.LongJmp",
       "mode": "replace"
     },
     {
-      "function": "gt2_main_saveregisters",
+      "function": "setjmp",
       "target": "GT2Port.SetJmp.SaveJmp",
       "mode": "pre"
     },

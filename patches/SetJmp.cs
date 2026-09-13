@@ -10,7 +10,7 @@ namespace GT2Port;
 /// is wrong: the routine overwrites RA from the jmp_buf, so on hardware its
 /// final `jr ra` lands wherever setjmp was called, never back in its caller.
 /// gt2_load_overlay relies on exactly that - it loads an overlay and jumps
-/// back into gt2_main_task1 rather than returning - and letting it return
+/// back into gt2_main_task_trampoline rather than returning - and letting it return
 /// carried on through code that was never meant to run again, with registers
 /// belonging to another context.
 ///
@@ -29,7 +29,7 @@ public static class SetJmp
     static readonly bool Trace = Environment.GetEnvironmentVariable("GT2_TASK_TRACE") is not (null or "");
 
     /// <summary>
-    /// setjmp(env) - gt2_main_saveregisters at 0x8007AD58, which runs as normal
+    /// setjmp(env) - setjmp at 0x8007AD58, which runs as normal
     /// after this. Filling a jmp_buf is also what decides where a later longjmp
     /// has to stop, so the dispatcher notes how deep the call stack was here:
     /// the frame that called setjmp is the frame the unwind must not pass.
