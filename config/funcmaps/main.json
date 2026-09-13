@@ -3257,7 +3257,7 @@
     },
     {
       "address": "0x8005E73C",
-      "name": "gt2_main_clear_race_state_block",
+      "name": "gt2_main_clear_15a5c_bytes",
       "size": 40
     },
     {
@@ -6402,7 +6402,7 @@
     },
     {
       "address": "0x8007A104",
-      "name": "gt2_main_spu_set_reverb_depth",
+      "name": "gt2_main_spu_set_reverb_output_volume",
       "size": 20
     },
     {
@@ -6652,12 +6652,12 @@
     },
     {
       "address": "0x8007B320",
-      "name": "gt2_main_projection_set_screen_offsets",
+      "name": "gt2_main_view_set_window",
       "size": 84
     },
     {
       "address": "0x8007B374",
-      "name": "gt2_main_matrix_invert_transform",
+      "name": "gt2_main_view_set_camera_and_clip_planes",
       "size": 568
     },
     {
@@ -6827,7 +6827,7 @@
     },
     {
       "address": "0x8007C744",
-      "name": "gt2_main_cd_send_command",
+      "name": "gt2_main_cd_run_command_list",
       "size": 676
     },
     {
