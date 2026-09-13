@@ -227,7 +227,7 @@
     },
     {
       "address": "0x800101F8",
-      "name": "entry_800101F8",
+      "name": "gt2_ovr0_vol_search_vol_dir_entry_800101F8",
       "size": 4
     },
     {
@@ -327,7 +327,7 @@
     },
     {
       "address": "0x800102D8",
-      "name": "entry_800102D8",
+      "name": "gt2_ovr0_vol_gtfs_init_entry_800102D8",
       "size": 4
     },
     {
@@ -502,7 +502,7 @@
     },
     {
       "address": "0x80010478",
-      "name": "entry_80010478",
+      "name": "gt2_main_boot_count_demo_race_setups_entry_80010478",
       "size": 4
     },
     {
@@ -522,7 +522,7 @@
     },
     {
       "address": "0x8001049C",
-      "name": "entry_8001049C",
+      "name": "gt2_main_boot_reset_game_state_entry_8001049C",
       "size": 4
     },
     {
@@ -842,7 +842,7 @@
     },
     {
       "address": "0x80010794",
-      "name": "entry_80010794",
+      "name": "gt2_main_set_starting_credits_and_defaults_entry_80010794",
       "size": 4
     },
     {
@@ -892,7 +892,7 @@
     },
     {
       "address": "0x800107E4",
-      "name": "entry_800107E4",
+      "name": "gt2_main_boot_reset_globals_98a0_and_6f18_entry_800107E4",
       "size": 4
     },
     {
@@ -967,7 +967,7 @@
     },
     {
       "address": "0x80010864",
-      "name": "entry_80010864",
+      "name": "gt2_main_boot_load_game_data_entry_80010864",
       "size": 4
     },
     {
@@ -1012,7 +1012,7 @@
     },
     {
       "address": "0x800108BC",
-      "name": "entry_800108BC",
+      "name": "gt2_sysinit_sysclock_setup_entry_800108BC",
       "size": 4
     },
     {
@@ -1117,7 +1117,7 @@
     },
     {
       "address": "0x80010950",
-      "name": "entry_80010950",
+      "name": "gt2_sysinit_vsync_setup_entry_80010950",
       "size": 4
     },
     {
@@ -1152,7 +1152,7 @@
     },
     {
       "address": "0x80010994",
-      "name": "entry_80010994",
+      "name": "gt2_sysinit_entry_80010994",
       "size": 4
     },
     {
@@ -1287,7 +1287,7 @@
     },
     {
       "address": "0x80010A84",
-      "name": "entry_80010A84",
+      "name": "gt2_main_VendorBootLogo_init_layer_list_entry_80010A84",
       "size": 4
     },
     {
@@ -1332,7 +1332,7 @@
     },
     {
       "address": "0x80010AD0",
-      "name": "entry_80010AD0",
+      "name": "gt2_main_VendorBootLogo_count_frames_until_done_entry_80010AD0",
       "size": 4
     },
     {
@@ -1832,7 +1832,7 @@
     },
     {
       "address": "0x80010EC8",
-      "name": "entry_80010EC8",
+      "name": "__tf14VendorBootLogo_entry_80010EC8",
       "size": 4
     },
     {
@@ -1892,7 +1892,7 @@
     },
     {
       "address": "0x80010F58",
-      "name": "entry_80010F58",
+      "name": "gt2_main_volume_mount_iso9660_entry_80010F58",
       "size": 4
     },
     {
@@ -2357,7 +2357,7 @@
     },
     {
       "address": "0x8001156C",
-      "name": "entry_8001156C",
+      "name": "gt2_main_boot_parse_carwheel_directory_entry_8001156C",
       "size": 4
     },
     {
@@ -2522,7 +2522,7 @@
     },
     {
       "address": "0x80011704",
-      "name": "entry_80011704",
+      "name": "gt2_ovr0_build_base36_digit_lookup_table_entry_80011704",
       "size": 4
     },
     {
@@ -2882,7 +2882,7 @@
     },
     {
       "address": "0x80011AF0",
-      "name": "entry_80011AF0",
+      "name": "gt2_main_boot_load_car_files_entry_80011AF0",
       "size": 4
     },
     {
@@ -7522,7 +7522,7 @@
     },
     {
       "address": "0x80080000",
-      "name": "entry_80080000",
+      "name": "gt2_main_psxViewLoopDoubleBuffer_show_drawn_buffer_entry_80080000",
       "size": 4
     },
     {
@@ -8017,7 +8017,7 @@
     },
     {
       "address": "0x80082648",
-      "name": "entry_80082648",
+      "name": "gt2_main_card_find_frame_slot_entry_80082648",
       "size": 4
     },
     {
@@ -8577,7 +8577,7 @@
     },
     {
       "address": "0x80086918",
-      "name": "entry_80086918",
+      "name": "LIBPRESS_OBJ_2C0",
       "size": 212
     },
     {
@@ -8592,7 +8592,7 @@
     },
     {
       "address": "0x80086A08",
-      "name": "entry_80086A08",
+      "name": "LIBPRESS_OBJ_3B0",
       "size": 144
     },
     {
@@ -8602,7 +8602,7 @@
     },
     {
       "address": "0x80086B24",
-      "name": "entry_80086B24",
+      "name": "LIBPRESS_OBJ_4CC",
       "size": 132
     },
     {
@@ -8627,7 +8627,7 @@
     },
     {
       "address": "0x80086C64",
-      "name": "entry_80086C64",
+      "name": "LIBPRESS_OBJ_60C",
       "size": 28
     },
     {
@@ -8687,7 +8687,7 @@
     },
     {
       "address": "0x80086EBC",
-      "name": "entry_80086EBC",
+      "name": "gt2_sdk_card_patch_code_a_entry_80086EBC",
       "size": 8
     },
     {
@@ -8702,7 +8702,7 @@
     },
     {
       "address": "0x80086F2C",
-      "name": "entry_80086F2C",
+      "name": "gt2_sdk_card_patch_code_b_entry_80086F2C",
       "size": 28
     },
     {
@@ -8747,12 +8747,12 @@
     },
     {
       "address": "0x80087128",
-      "name": "entry_80087128",
+      "name": "_new_card_entry_80087128",
       "size": 16
     },
     {
       "address": "0x80087134",
-      "name": "entry_80087134",
+      "name": "_new_card_entry_80087134",
       "size": 4
     },
     {
@@ -8822,7 +8822,7 @@
     },
     {
       "address": "0x80087494",
-      "name": "entry_80087494",
+      "name": "PDENT4_OBJ_BC",
       "size": 4
     },
     {
@@ -8867,7 +8867,7 @@
     },
     {
       "address": "0x80087654",
-      "name": "entry_80087654",
+      "name": "_padIsVsync_entry_80087654",
       "size": 20
     },
     {
@@ -8892,7 +8892,7 @@
     },
     {
       "address": "0x80087A5C",
-      "name": "entry_80087A5C",
+      "name": "PDRESRES_OBJ_404_entry_80087A5C",
       "size": 16
     },
     {
@@ -8902,7 +8902,7 @@
     },
     {
       "address": "0x80087AD8",
-      "name": "entry_80087AD8",
+      "name": "PDRESRES_OBJ_470",
       "size": 16
     },
     {
@@ -8912,7 +8912,7 @@
     },
     {
       "address": "0x80087B4C",
-      "name": "entry_80087B4C",
+      "name": "PDRESRES_OBJ_4E4",
       "size": 52
     },
     {
@@ -8967,7 +8967,7 @@
     },
     {
       "address": "0x8008803C",
-      "name": "entry_8008803C",
+      "name": "PDRESRES_OBJ_9D4",
       "size": 204
     },
     {
@@ -9012,7 +9012,7 @@
     },
     {
       "address": "0x8008837C",
-      "name": "entry_8008837C",
+      "name": "PDRESRES_OBJ_D14",
       "size": 76
     },
     {
@@ -9022,12 +9022,12 @@
     },
     {
       "address": "0x800883D0",
-      "name": "entry_800883D0",
+      "name": "PDRESRES_OBJ_D68",
       "size": 252
     },
     {
       "address": "0x800883E4",
-      "name": "entry_800883E4",
+      "name": "PDRESRES_OBJ_D7C",
       "size": 232
     },
     {
@@ -9077,12 +9077,12 @@
     },
     {
       "address": "0x80088750",
-      "name": "entry_80088750",
+      "name": "PDRESRES_OBJ_10E8",
       "size": 220
     },
     {
       "address": "0x80088780",
-      "name": "entry_80088780",
+      "name": "PDRESRES_OBJ_1118",
       "size": 172
     },
     {
@@ -9092,7 +9092,7 @@
     },
     {
       "address": "0x800888D8",
-      "name": "entry_800888D8",
+      "name": "PDRESRES_OBJ_1270",
       "size": 124
     },
     {
@@ -9102,7 +9102,7 @@
     },
     {
       "address": "0x8008896C",
-      "name": "entry_8008896C",
+      "name": "PDRESRES_OBJ_1304",
       "size": 12
     },
     {
@@ -9222,7 +9222,7 @@
     },
     {
       "address": "0x80089324",
-      "name": "entry_80089324",
+      "name": "PDRESRES_OBJ_1CBC",
       "size": 388
     },
     {
@@ -9267,7 +9267,7 @@
     },
     {
       "address": "0x80089724",
-      "name": "entry_80089724",
+      "name": "PDDIRRES_OBJ_24C",
       "size": 16
     },
     {
@@ -9312,7 +9312,7 @@
     },
     {
       "address": "0x80089904",
-      "name": "entry_80089904",
+      "name": "PDDIRRES_OBJ_42C",
       "size": 12
     },
     {
@@ -9327,7 +9327,7 @@
     },
     {
       "address": "0x80089968",
-      "name": "entry_80089968",
+      "name": "PDDIRRES_OBJ_490",
       "size": 244
     },
     {
@@ -9372,7 +9372,7 @@
     },
     {
       "address": "0x80089DB8",
-      "name": "entry_80089DB8",
+      "name": "PDDIRRES_OBJ_8E0",
       "size": 8
     },
     {
@@ -9487,7 +9487,7 @@
     },
     {
       "address": "0x8008A5DC",
-      "name": "entry_8008A5DC",
+      "name": "BIOS_1_OBJ_54",
       "size": 16
     },
     {
@@ -9527,7 +9527,7 @@
     },
     {
       "address": "0x8008AAB8",
-      "name": "entry_8008AAB8",
+      "name": "BIOS_1_OBJ_530",
       "size": 32
     },
     {
@@ -9627,7 +9627,7 @@
     },
     {
       "address": "0x8008B3C8",
-      "name": "entry_8008B3C8",
+      "name": "BIOS_1_OBJ_E40",
       "size": 80
     },
     {
@@ -9707,7 +9707,7 @@
     },
     {
       "address": "0x8008BC44",
-      "name": "entry_8008BC44",
+      "name": "gt2_sdk_exception_entry_save_registers",
       "size": 48
     },
     {
@@ -9822,7 +9822,7 @@
     },
     {
       "address": "0x8008C314",
-      "name": "entry_8008C314",
+      "name": "INTR_OBJ_69C",
       "size": 36
     },
     {

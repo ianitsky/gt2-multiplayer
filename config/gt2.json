@@ -5525,7 +5525,7 @@
         },
         {
           "address": "0x8004C8C4",
-          "name": "entry_8004C8C4"
+          "name": "gt2_ovr2_trailing_stub_reload_overlay_2"
         }
       ],
       "image": "ovl_patched/gt2_02.bin"
@@ -5806,19 +5806,19 @@
         },
         {
           "address": "0x80015AB4",
-          "name": "entry_80015AB4"
+          "name": "gt2_ovr3_car_preview_loader_step"
         },
         {
           "address": "0x80015AE8",
-          "name": "entry_80015AE8"
+          "name": "gt2_ovr3_car_preview_loader_step_entry_80015AE8"
         },
         {
           "address": "0x80015B18",
-          "name": "entry_80015B18"
+          "name": "gt2_ovr3_car_preview_loader_step_entry_80015B18"
         },
         {
           "address": "0x80015B38",
-          "name": "entry_80015B38"
+          "name": "gt2_ovr3_car_preview_loader_step_entry_80015B38"
         },
         {
           "address": "0x80015B6C",
@@ -6214,83 +6214,83 @@
         },
         {
           "address": "0x80019B80",
-          "name": "entry_80019B80"
+          "name": "gt2_ovr3_spec_panels_draw"
         },
         {
           "address": "0x80019C20",
-          "name": "entry_80019C20"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C20"
         },
         {
           "address": "0x80019C24",
-          "name": "entry_80019C24"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C24"
         },
         {
           "address": "0x80019C38",
-          "name": "entry_80019C38"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C38"
         },
         {
           "address": "0x80019C44",
-          "name": "entry_80019C44"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C44"
         },
         {
           "address": "0x80019C58",
-          "name": "entry_80019C58"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C58"
         },
         {
           "address": "0x80019C78",
-          "name": "entry_80019C78"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C78"
         },
         {
           "address": "0x80019C9C",
-          "name": "entry_80019C9C"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019C9C"
         },
         {
           "address": "0x80019CD8",
-          "name": "entry_80019CD8"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019CD8"
         },
         {
           "address": "0x80019CE0",
-          "name": "entry_80019CE0"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019CE0"
         },
         {
           "address": "0x80019D08",
-          "name": "entry_80019D08"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019D08"
         },
         {
           "address": "0x80019D10",
-          "name": "entry_80019D10"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019D10"
         },
         {
           "address": "0x80019D3C",
-          "name": "entry_80019D3C"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019D3C"
         },
         {
           "address": "0x80019D60",
-          "name": "entry_80019D60"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019D60"
         },
         {
           "address": "0x80019D84",
-          "name": "entry_80019D84"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019D84"
         },
         {
           "address": "0x80019D8C",
-          "name": "entry_80019D8C"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019D8C"
         },
         {
           "address": "0x80019DA4",
-          "name": "entry_80019DA4"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019DA4"
         },
         {
           "address": "0x80019DAC",
-          "name": "entry_80019DAC"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019DAC"
         },
         {
           "address": "0x80019DCC",
-          "name": "entry_80019DCC"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019DCC"
         },
         {
           "address": "0x80019E30",
-          "name": "entry_80019E30"
+          "name": "gt2_ovr3_spec_panels_draw_entry_80019E30"
         },
         {
           "address": "0x80011750",
@@ -7561,7 +7561,7 @@
     },
     {
       "address": "0x80080AC4",
-      "name": "entry_80080AC4"
+      "name": "gt2_main_psxViewLoop_run_one_frame_entry_80080AC4"
     },
     {
       "address": "0x800811B0",
