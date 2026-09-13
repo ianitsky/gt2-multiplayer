@@ -13,9 +13,11 @@ machine is the game, as a program your machine understands.
 **No game data is in this repository, and none ever will be.** Everything here
 is code, symbol maps and notes. You supply your own disc.
 
+You specifically need the "Gran Turismo 2 Combined Disc (USA)" disc.
+
 ## What works
 
-- The game boots and plays: menus, licences, arcade, the simulation mode.
+- The game boots and plays: menus and arcade mode.
 - Multiplayer, in alpha: a room list, a lobby, qualifying, and a race against
   other players. On a local network, and over the internet through a relay.
 - Save data on emulated memory cards.
@@ -25,6 +27,10 @@ interpolated between the places that arrive for it, so a connection that drops
 packets for a long stretch holds the car at its last known place rather than
 guessing where it went. Loading is slower than it should be at one particular
 moment of a race start, for a reason that is understood and written down.
+
+## Download
+
+Download the latest release at: [releases](https://github.com/ianitsky/gt2-multiplayer/releases)
 
 ## Getting it running
 
