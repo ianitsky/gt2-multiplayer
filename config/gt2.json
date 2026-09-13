@@ -2452,8 +2452,28 @@
       "linearSweep": true,
       "functions": [
         {
+          "address": "0x8001003C",
+          "name": "gt2_ovr2_min_of_three"
+        },
+        {
+          "address": "0x80010434",
+          "name": "gt2_ovr2_choose_entrant_paint"
+        },
+        {
+          "address": "0x800117B4",
+          "name": "gt2_ovr2_apply_saved_analog_calibration"
+        },
+        {
+          "address": "0x80011B5C",
+          "name": "__8BaseMenu"
+        },
+        {
           "address": "0x80011B90",
           "name": "gt2_ovr2_BaseMenu_destructor"
+        },
+        {
+          "address": "0x80011BB8",
+          "name": "gt2_ovr2_BaseMenu_reset_screen_stack"
         },
         {
           "address": "0x80011BC4",
@@ -2468,6 +2488,14 @@
           "name": "gt2_ovr2_BaseMenu_draw"
         },
         {
+          "address": "0x800122A0",
+          "name": "gt2_ovr2_BaseMenu_push_screen"
+        },
+        {
+          "address": "0x800122D4",
+          "name": "gt2_ovr2_BaseMenu_pop_screen"
+        },
+        {
           "address": "0x80012314",
           "name": "gt2_ovr2_BaseMenu_end"
         },
@@ -2480,6 +2508,54 @@
           "name": "__tf8BaseMenu"
         },
         {
+          "address": "0x80012554",
+          "name": "gt2_ovr2_does_nothing_at_80012554"
+        },
+        {
+          "address": "0x800125C8",
+          "name": "gt2_ovr2_does_nothing_at_800125C8"
+        },
+        {
+          "address": "0x80012F28",
+          "name": "gt2_ovr2_does_nothing_at_80012F28"
+        },
+        {
+          "address": "0x80012FCC",
+          "name": "gt2_ovr2_does_nothing_at_80012FCC"
+        },
+        {
+          "address": "0x8001314C",
+          "name": "gt2_ovr2_does_nothing_at_8001314C"
+        },
+        {
+          "address": "0x800134C4",
+          "name": "gt2_ovr2_card_menu_total_frames_of_selected"
+        },
+        {
+          "address": "0x80013518",
+          "name": "gt2_ovr2_card_menu_count_selected_files"
+        },
+        {
+          "address": "0x80013694",
+          "name": "gt2_ovr2_card_menu_toggle_file_selection"
+        },
+        {
+          "address": "0x800136C4",
+          "name": "gt2_ovr2_card_menu_clear_selection"
+        },
+        {
+          "address": "0x800136EC",
+          "name": "gt2_ovr2_card_menu_count_used_frames"
+        },
+        {
+          "address": "0x80015B00",
+          "name": "gt2_ovr2_card_menu_default_state_returns_minus_one"
+        },
+        {
+          "address": "0x80015B08",
+          "name": "gt2_ovr2_card_menu_enter_state"
+        },
+        {
           "address": "0x80015B6C",
           "name": "entry_80015B6C"
         },
@@ -2488,12 +2564,52 @@
           "name": "entry_80015BBC"
         },
         {
+          "address": "0x80015CF8",
+          "name": "gt2_ovr2_card_menu_install"
+        },
+        {
+          "address": "0x80017718",
+          "name": "gt2_ovr2_does_nothing_at_80017718"
+        },
+        {
           "address": "0x80018574",
           "name": "ptr_80018574"
         },
         {
           "address": "0x800186D0",
           "name": "ptr_800186D0"
+        },
+        {
+          "address": "0x8001919C",
+          "name": "gt2_ovr2_does_nothing_at_8001919C"
+        },
+        {
+          "address": "0x8001ACB4",
+          "name": "gt2_ovr2_clamp_scroll_window"
+        },
+        {
+          "address": "0x8001DBBC",
+          "name": "gt2_ovr2_does_nothing_at_8001DBBC"
+        },
+        {
+          "address": "0x8001DC30",
+          "name": "gt2_ovr2_does_nothing_at_8001DC30"
+        },
+        {
+          "address": "0x8001FBFC",
+          "name": "gt2_ovr2_crc16_ccitt_and_byte_sum"
+        },
+        {
+          "address": "0x800205C0",
+          "name": "gt2_ovr2_default_state_returns_minus_one_for_menu_at_800b1588"
+        },
+        {
+          "address": "0x800205C8",
+          "name": "gt2_ovr2_enter_state_of_menu_at_800b1588"
+        },
+        {
+          "address": "0x80020788",
+          "name": "gt2_ovr2_install_menu_at_800b1588"
         },
         {
           "address": "0x8004C8C4",
