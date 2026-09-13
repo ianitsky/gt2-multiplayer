@@ -87,12 +87,12 @@
     },
     {
       "address": "0x80012F7C",
-      "name": "entry_80012F7C",
+      "name": "gt2_ovr5_pick_random_entrant_from_list",
       "size": 1708
     },
     {
       "address": "0x80013108",
-      "name": "entry_80013108",
+      "name": "gt2_ovr5_prepare_event_race",
       "size": 1312
     },
     {
@@ -102,22 +102,22 @@
     },
     {
       "address": "0x80013A28",
-      "name": "entry_80013A28",
+      "name": "gt2_ovr5_parse_two_letter_and_digit_code",
       "size": 2336
     },
     {
       "address": "0x80013B28",
-      "name": "entry_80013B28",
+      "name": "gt2_ovr5_read_file_slot_return_length",
       "size": 2080
     },
     {
       "address": "0x80013B60",
-      "name": "entry_80013B60",
+      "name": "gt2_ovr5_upload_tim_image_to_vram_slot",
       "size": 2024
     },
     {
       "address": "0x80013BD4",
-      "name": "entry_80013BD4",
+      "name": "gt2_ovr5_GTMenu_constructor",
       "size": 1908
     },
     {
@@ -147,7 +147,7 @@
     },
     {
       "address": "0x800142CC",
-      "name": "entry_800142CC",
+      "name": "gt2_ovr5_menu_accept_selected_list_item",
       "size": 124
     },
     {
@@ -157,7 +157,7 @@
     },
     {
       "address": "0x80014380",
-      "name": "entry_80014380",
+      "name": "gt2_ovr5_menu_button_action",
       "size": 4228
     },
     {
@@ -242,32 +242,32 @@
     },
     {
       "address": "0x80014E60",
-      "name": "entry_80014E60",
+      "name": "gt2_ovr5_GTLoadingMenu_constructor",
       "size": 1444
     },
     {
       "address": "0x80014E9C",
-      "name": "entry_80014E9C",
+      "name": "gt2_ovr5_GTLoadingMenu_destructor",
       "size": 1384
     },
     {
       "address": "0x80014EC4",
-      "name": "entry_80014EC4",
+      "name": "gt2_ovr5_GTLoadingMenu_begin",
       "size": 1344
     },
     {
       "address": "0x80014F50",
-      "name": "entry_80014F50",
+      "name": "gt2_ovr5_GTLoadingMenu_tick",
       "size": 1204
     },
     {
       "address": "0x80014F94",
-      "name": "entry_80014F94",
+      "name": "gt2_ovr5_GTLoadingMenu_draw",
       "size": 1136
     },
     {
       "address": "0x80014FEC",
-      "name": "entry_80014FEC",
+      "name": "__tf13GTLoadingMenu",
       "size": 1048
     },
     {
@@ -277,17 +277,17 @@
     },
     {
       "address": "0x8001508C",
-      "name": "entry_8001508C",
+      "name": "gt2_ovr5_battle_menu_state",
       "size": 888
     },
     {
       "address": "0x80015098",
-      "name": "entry_80015098",
+      "name": "gt2_ovr5_battle_menu_set_current_car",
       "size": 876
     },
     {
       "address": "0x80015108",
-      "name": "entry_80015108",
+      "name": "gt2_ovr5_GTBattleMenu_constructor",
       "size": 764
     },
     {
@@ -332,17 +332,17 @@
     },
     {
       "address": "0x80016F10",
-      "name": "entry_80016F10",
+      "name": "gt2_ovr5_car_record_copy_and_update_display_stats",
       "size": 1032
     },
     {
       "address": "0x80016FEC",
-      "name": "entry_80016FEC",
+      "name": "gt2_ovr5_apply_part_6_from_17bc_and_copy_record",
       "size": 812
     },
     {
       "address": "0x8001706C",
-      "name": "entry_8001706C",
+      "name": "gt2_ovr5_part_kind_switch",
       "size": 684
     },
     {
@@ -452,12 +452,12 @@
     },
     {
       "address": "0x800171C0",
-      "name": "entry_800171C0",
+      "name": "gt2_ovr5_rebuild_current_car_spec",
       "size": 344
     },
     {
       "address": "0x80017288",
-      "name": "entry_80017288",
+      "name": "gt2_ovr5_build_spec_for_garage_car",
       "size": 144
     },
     {
@@ -467,57 +467,57 @@
     },
     {
       "address": "0x800173E8",
-      "name": "entry_800173E8",
+      "name": "gt2_ovr5_build_work_spec_for_garage_car",
       "size": 1004
     },
     {
       "address": "0x80017480",
-      "name": "entry_80017480",
+      "name": "gt2_ovr5_build_work_spec_for_car",
       "size": 852
     },
     {
       "address": "0x800174A0",
-      "name": "entry_800174A0",
+      "name": "gt2_ovr5_work_car_spec",
       "size": 820
     },
     {
       "address": "0x800174AC",
-      "name": "entry_800174AC",
+      "name": "gt2_ovr5_work_spec_has_parts",
       "size": 808
     },
     {
       "address": "0x800174D0",
-      "name": "entry_800174D0",
+      "name": "gt2_ovr5_work_spec_part_count",
       "size": 772
     },
     {
       "address": "0x800174F4",
-      "name": "entry_800174F4",
+      "name": "gt2_ovr5_work_spec_reset_part_cursor",
       "size": 736
     },
     {
       "address": "0x80017530",
-      "name": "entry_80017530",
+      "name": "gt2_ovr5_work_spec_next_part",
       "size": 676
     },
     {
       "address": "0x800175A0",
-      "name": "entry_800175A0",
+      "name": "gt2_ovr5_work_spec_byte_54_is_zero",
       "size": 564
     },
     {
       "address": "0x800175B0",
-      "name": "entry_800175B0",
+      "name": "gt2_ovr5_work_spec_field_17d6_positive",
       "size": 548
     },
     {
       "address": "0x800175C0",
-      "name": "entry_800175C0",
+      "name": "gt2_ovr5_work_spec_has_no_tuning_values",
       "size": 532
     },
     {
       "address": "0x80017750",
-      "name": "entry_80017750",
+      "name": "gt2_ovr5_build_temp_spec_and_check_17d6",
       "size": 132
     },
     {
@@ -532,7 +532,7 @@
     },
     {
       "address": "0x800178E4",
-      "name": "entry_800178E4",
+      "name": "gt2_ovr5_car_part_17_class_below_3",
       "size": 48
     },
     {
@@ -547,12 +547,12 @@
     },
     {
       "address": "0x80017A68",
-      "name": "entry_80017A68",
+      "name": "gt2_ovr5_return_zero_80017A68",
       "size": 156
     },
     {
       "address": "0x80017A70",
-      "name": "entry_80017A70",
+      "name": "gt2_ovr5_sell_garage_car",
       "size": 148
     },
     {
@@ -577,7 +577,7 @@
     },
     {
       "address": "0x80017F18",
-      "name": "entry_80017F18",
+      "name": "gt2_ovr5_equip_part_variant_on_garage_car",
       "size": 236
     },
     {
@@ -622,7 +622,7 @@
     },
     {
       "address": "0x80018350",
-      "name": "entry_80018350",
+      "name": "gt2_ovr5_car_colour_index_of_swatch",
       "size": 104
     },
     {
@@ -667,12 +667,12 @@
     },
     {
       "address": "0x80018768",
-      "name": "entry_80018768",
+      "name": "gt2_ovr5_free_race_index_from_name",
       "size": 328
     },
     {
       "address": "0x800187DC",
-      "name": "entry_800187DC",
+      "name": "gt2_ovr5_build_event_index_by_first_char",
       "size": 212
     },
     {
@@ -682,12 +682,12 @@
     },
     {
       "address": "0x80018954",
-      "name": "entry_80018954",
+      "name": "gt2_ovr5_digit_value",
       "size": 124
     },
     {
       "address": "0x80018970",
-      "name": "entry_80018970",
+      "name": "gt2_ovr5_copy_string_without_last_two_chars",
       "size": 96
     },
     {
@@ -697,17 +697,17 @@
     },
     {
       "address": "0x80018A00",
-      "name": "entry_80018A00",
+      "name": "gt2_ovr5_parse_last_two_digits",
       "size": 532
     },
     {
       "address": "0x80018A84",
-      "name": "entry_80018A84",
+      "name": "gt2_ovr5_build_event_course_list",
       "size": 400
     },
     {
       "address": "0x80018BF4",
-      "name": "entry_80018BF4",
+      "name": "gt2_ovr5_clear_event_slots",
       "size": 32
     },
     {
@@ -722,22 +722,22 @@
     },
     {
       "address": "0x80018F6C",
-      "name": "entry_80018F6C",
+      "name": "gt2_ovr5_menu_music_init",
       "size": 272
     },
     {
       "address": "0x80018FA4",
-      "name": "entry_80018FA4",
+      "name": "gt2_ovr5_menu_music_request_track",
       "size": 216
     },
     {
       "address": "0x80018FF0",
-      "name": "entry_80018FF0",
+      "name": "gt2_ovr5_menu_music_stop_if_pending",
       "size": 140
     },
     {
       "address": "0x80019028",
-      "name": "entry_80019028",
+      "name": "gt2_ovr5_menu_music_countdown_and_play",
       "size": 84
     },
     {
@@ -747,37 +747,37 @@
     },
     {
       "address": "0x800190E4",
-      "name": "entry_800190E4",
+      "name": "gt2_ovr5_league_index_from_name_prefix",
       "size": 1108
     },
     {
       "address": "0x8001915C",
-      "name": "entry_8001915C",
+      "name": "gt2_ovr5_license_all_tests_have_result",
       "size": 988
     },
     {
       "address": "0x800191C4",
-      "name": "entry_800191C4",
+      "name": "gt2_ovr5_first_license_not_completed",
       "size": 884
     },
     {
       "address": "0x8001924C",
-      "name": "entry_8001924C",
+      "name": "gt2_ovr5_get_part_type_2_by_number",
       "size": 748
     },
     {
       "address": "0x8001928C",
-      "name": "entry_8001928C",
+      "name": "gt2_ovr5_fill_event_record",
       "size": 684
     },
     {
       "address": "0x80019474",
-      "name": "entry_80019474",
+      "name": "gt2_ovr5_build_event_table",
       "size": 196
     },
     {
       "address": "0x800194FC",
-      "name": "entry_800194FC",
+      "name": "gt2_ovr5_current_event_field_1e",
       "size": 60
     },
     {
@@ -787,17 +787,17 @@
     },
     {
       "address": "0x80019578",
-      "name": "entry_80019578",
+      "name": "gt2_ovr5_current_event_flag_bit0_clear",
       "size": 1656
     },
     {
       "address": "0x800195BC",
-      "name": "entry_800195BC",
+      "name": "gt2_ovr5_current_event_class_bits",
       "size": 1588
     },
     {
       "address": "0x80019634",
-      "name": "entry_80019634",
+      "name": "gt2_ovr5_event_status_by_kind",
       "size": 1468
     },
     {
@@ -832,22 +832,22 @@
     },
     {
       "address": "0x800196C8",
-      "name": "entry_800196C8",
+      "name": "gt2_ovr5_event_field_1e",
       "size": 1320
     },
     {
       "address": "0x800196EC",
-      "name": "entry_800196EC",
+      "name": "gt2_ovr5_event_value",
       "size": 1284
     },
     {
       "address": "0x80019718",
-      "name": "entry_80019718",
+      "name": "gt2_ovr5_event_first_value",
       "size": 1240
     },
     {
       "address": "0x8001973C",
-      "name": "entry_8001973C",
+      "name": "gt2_ovr5_check_event_entry_requirements",
       "size": 1204
     },
     {
@@ -917,7 +917,7 @@
     },
     {
       "address": "0x80019B88",
-      "name": "entry_80019B88",
+      "name": "gt2_ovr5_league_license_check",
       "size": 104
     },
     {
@@ -927,17 +927,17 @@
     },
     {
       "address": "0x80019C60",
-      "name": "entry_80019C60",
+      "name": "gt2_ovr5_races_entered",
       "size": 148
     },
     {
       "address": "0x80019C70",
-      "name": "entry_80019C70",
+      "name": "gt2_ovr5_races_won",
       "size": 132
     },
     {
       "address": "0x80019C80",
-      "name": "entry_80019C80",
+      "name": "gt2_ovr5_win_rate_times_100",
       "size": 116
     },
     {
@@ -952,137 +952,137 @@
     },
     {
       "address": "0x80019DF8",
-      "name": "entry_80019DF8",
+      "name": "gt2_ovr5_get_game_state_pair_110",
       "size": 4528
     },
     {
       "address": "0x80019E1C",
-      "name": "entry_80019E1C",
+      "name": "gt2_ovr5_garage_car_count",
       "size": 4492
     },
     {
       "address": "0x80019E2C",
-      "name": "entry_80019E2C",
+      "name": "gt2_ovr5_garage_total_value_split",
       "size": 4476
     },
     {
       "address": "0x80019E98",
-      "name": "entry_80019E98",
+      "name": "gt2_ovr5_garage_car_with_highest_stat_98",
       "size": 4368
     },
     {
       "address": "0x80019EF8",
-      "name": "entry_80019EF8",
+      "name": "gt2_ovr5_count_license_tests_with_result",
       "size": 4272
     },
     {
       "address": "0x80019F5C",
-      "name": "entry_80019F5C",
+      "name": "gt2_ovr5_ratio_300000_over_square",
       "size": 4172
     },
     {
       "address": "0x80019FA0",
-      "name": "entry_80019FA0",
+      "name": "gt2_ovr5_set_u16_2_clamped_to_fffe",
       "size": 4104
     },
     {
       "address": "0x80019FBC",
-      "name": "entry_80019FBC",
+      "name": "gt2_ovr5_pack_flag_bits_byte_4",
       "size": 4076
     },
     {
       "address": "0x80019FE8",
-      "name": "entry_80019FE8",
+      "name": "gt2_ovr5_battle_list_init",
       "size": 4032
     },
     {
       "address": "0x8001A000",
-      "name": "entry_8001A000",
+      "name": "gt2_ovr5_battle_list_compute_next_car",
       "size": 4008
     },
     {
       "address": "0x8001A0FC",
-      "name": "entry_8001A0FC",
+      "name": "gt2_ovr5_battle_list_insert_sorted",
       "size": 3756
     },
     {
       "address": "0x8001A1B4",
-      "name": "entry_8001A1B4",
+      "name": "gt2_ovr5_battle_list_sort",
       "size": 3572
     },
     {
       "address": "0x8001A24C",
-      "name": "entry_8001A24C",
+      "name": "gt2_ovr5_battle_list_pick_near_rating",
       "size": 3420
     },
     {
       "address": "0x8001A454",
-      "name": "entry_8001A454",
+      "name": "gt2_ovr5_car_preview_colour_letter",
       "size": 2900
     },
     {
       "address": "0x8001A4AC",
-      "name": "entry_8001A4AC",
+      "name": "gt2_ovr5_car_preview_colour_name",
       "size": 2812
     },
     {
       "address": "0x8001A504",
-      "name": "entry_8001A504",
+      "name": "gt2_ovr5_car_preview_colour_count",
       "size": 2724
     },
     {
       "address": "0x8001A530",
-      "name": "entry_8001A530",
+      "name": "gt2_ovr5_car_preview_step_colour",
       "size": 2680
     },
     {
       "address": "0x8001A5B8",
-      "name": "entry_8001A5B8",
+      "name": "gt2_ovr5_car_preview_set_colour",
       "size": 2544
     },
     {
       "address": "0x8001A624",
-      "name": "entry_8001A624",
+      "name": "gt2_ovr5_car_preview_apply_colour",
       "size": 2436
     },
     {
       "address": "0x8001A654",
-      "name": "entry_8001A654",
+      "name": "gt2_ovr5_draw_centered_sprite",
       "size": 2388
     },
     {
       "address": "0x8001A708",
-      "name": "entry_8001A708",
+      "name": "gt2_ovr5_car_preview_draw_colour_swatches",
       "size": 2208
     },
     {
       "address": "0x8001A8A4",
-      "name": "entry_8001A8A4",
+      "name": "gt2_ovr5_car_preview_draw_model",
       "size": 1796
     },
     {
       "address": "0x8001AAF4",
-      "name": "entry_8001AAF4",
+      "name": "gt2_ovr5_car_preview_init",
       "size": 1204
     },
     {
       "address": "0x8001AB64",
-      "name": "entry_8001AB64",
+      "name": "gt2_ovr5_car_preview_deactivate",
       "size": 1092
     },
     {
       "address": "0x8001AB6C",
-      "name": "entry_8001AB6C",
+      "name": "gt2_ovr5_car_preview_load_current_garage_car",
       "size": 1084
     },
     {
       "address": "0x8001AC20",
-      "name": "entry_8001AC20",
+      "name": "gt2_ovr5_car_preview_load_car",
       "size": 904
     },
     {
       "address": "0x8001AEF8",
-      "name": "entry_8001AEF8",
+      "name": "gt2_ovr5_car_preview_reload_textures",
       "size": 176
     },
     {
@@ -1112,7 +1112,7 @@
     },
     {
       "address": "0x8001B378",
-      "name": "entry_8001B378",
+      "name": "gt2_ovr5_widget_load_unicode_string",
       "size": 1184
     },
     {
@@ -1122,12 +1122,12 @@
     },
     {
       "address": "0x8001B680",
-      "name": "entry_8001B680",
+      "name": "gt2_ovr5_widget_license_unlocked",
       "size": 408
     },
     {
       "address": "0x8001B6F0",
-      "name": "entry_8001B6F0",
+      "name": "gt2_ovr5_widget_is_enabled",
       "size": 296
     },
     {
@@ -1417,132 +1417,132 @@
     },
     {
       "address": "0x8001D090",
-      "name": "entry_8001D090",
+      "name": "gt2_ovr5_preview_camera_init",
       "size": 3932
     },
     {
       "address": "0x8001D0E8",
-      "name": "entry_8001D0E8",
+      "name": "gt2_ovr5_preview_camera_turn",
       "size": 3844
     },
     {
       "address": "0x8001D104",
-      "name": "entry_8001D104",
+      "name": "gt2_ovr5_menu_begin_transition",
       "size": 3816
     },
     {
       "address": "0x8001D118",
-      "name": "entry_8001D118",
+      "name": "gt2_ovr5_menu_screen_init",
       "size": 3796
     },
     {
       "address": "0x8001D208",
-      "name": "entry_8001D208",
+      "name": "gt2_ovr5_menu_screen_prepare_frame",
       "size": 3556
     },
     {
       "address": "0x8001D258",
-      "name": "entry_8001D258",
+      "name": "gt2_ovr5_menu_screen_tick_camera_and_transition",
       "size": 3476
     },
     {
       "address": "0x8001D2CC",
-      "name": "entry_8001D2CC",
+      "name": "gt2_ovr5_menu_screen_load_page",
       "size": 3360
     },
     {
       "address": "0x8001D4E8",
-      "name": "entry_8001D4E8",
+      "name": "gt2_ovr5_find_widget_of_type_9",
       "size": 2820
     },
     {
       "address": "0x8001D554",
-      "name": "entry_8001D554",
+      "name": "gt2_ovr5_find_widget_of_type_50",
       "size": 2712
     },
     {
       "address": "0x8001D5C8",
-      "name": "entry_8001D5C8",
+      "name": "gt2_ovr5_menu_screen_show_car",
       "size": 2596
     },
     {
       "address": "0x8001D680",
-      "name": "entry_8001D680",
+      "name": "gt2_ovr5_menu_screen_field_c",
       "size": 2412
     },
     {
       "address": "0x8001D68C",
-      "name": "entry_8001D68C",
+      "name": "gt2_ovr5_list_selected_index",
       "size": 2400
     },
     {
       "address": "0x8001D698",
-      "name": "entry_8001D698",
+      "name": "gt2_ovr5_menu_screen_query_page_value",
       "size": 2388
     },
     {
       "address": "0x8001D6CC",
-      "name": "entry_8001D6CC",
+      "name": "gt2_ovr5_find_first_focusable_widget",
       "size": 2336
     },
     {
       "address": "0x8001D754",
-      "name": "entry_8001D754",
+      "name": "gt2_ovr5_find_nearest_widget_in_direction",
       "size": 2200
     },
     {
       "address": "0x8001D954",
-      "name": "entry_8001D954",
+      "name": "gt2_ovr5_widget_at_point",
       "size": 1688
     },
     {
       "address": "0x8001DA24",
-      "name": "entry_8001DA24",
+      "name": "gt2_ovr5_transaction_init",
       "size": 1480
     },
     {
       "address": "0x8001DA30",
-      "name": "entry_8001DA30",
+      "name": "gt2_ovr5_transaction_clear",
       "size": 1468
     },
     {
       "address": "0x8001DA38",
-      "name": "entry_8001DA38",
+      "name": "gt2_ovr5_transaction_set_sell_car",
       "size": 1460
     },
     {
       "address": "0x8001DA98",
-      "name": "entry_8001DA98",
+      "name": "gt2_ovr5_transaction_set_kind_7",
       "size": 1364
     },
     {
       "address": "0x8001DAA8",
-      "name": "entry_8001DAA8",
+      "name": "gt2_ovr5_transaction_set_buy_car",
       "size": 1348
     },
     {
       "address": "0x8001DAF0",
-      "name": "entry_8001DAF0",
+      "name": "gt2_ovr5_transaction_set_current_car_kind_5",
       "size": 1276
     },
     {
       "address": "0x8001DB0C",
-      "name": "entry_8001DB0C",
+      "name": "gt2_ovr5_transaction_set_kind_5_cost_2000",
       "size": 1248
     },
     {
       "address": "0x8001DB24",
-      "name": "entry_8001DB24",
+      "name": "gt2_ovr5_transaction_set_buy_part",
       "size": 1224
     },
     {
       "address": "0x8001DB90",
-      "name": "entry_8001DB90",
+      "name": "gt2_ovr5_transaction_set_buy_part_with_preview",
       "size": 1116
     },
     {
       "address": "0x8001DCD0",
-      "name": "entry_8001DCD0",
+      "name": "gt2_ovr5_transaction_execute",
       "size": 796
     },
     {
@@ -1577,7 +1577,7 @@
     },
     {
       "address": "0x8001DD3C",
-      "name": "entry_8001DD3C",
+      "name": "gt2_ovr5_transaction_execute_entry_8001DD3C",
       "size": 688
     },
     {
@@ -1602,7 +1602,7 @@
     },
     {
       "address": "0x8001DDAC",
-      "name": "entry_8001DDAC",
+      "name": "gt2_ovr5_transaction_execute_entry_8001DDAC",
       "size": 576
     },
     {
@@ -1742,12 +1742,12 @@
     },
     {
       "address": "0x8001E22C",
-      "name": "entry_8001E22C",
+      "name": "gt2_ovr5_cursor_init",
       "size": 3832
     },
     {
       "address": "0x8001E26C",
-      "name": "entry_8001E26C",
+      "name": "gt2_ovr5_cursor_move",
       "size": 3768
     },
     {
@@ -1792,42 +1792,42 @@
     },
     {
       "address": "0x8001E328",
-      "name": "entry_8001E328",
+      "name": "gt2_ovr5_cursor_tick",
       "size": 3580
     },
     {
       "address": "0x8001E924",
-      "name": "entry_8001E924",
+      "name": "gt2_ovr5_cursor_snap_to_widget",
       "size": 2048
     },
     {
       "address": "0x8001E9D0",
-      "name": "entry_8001E9D0",
+      "name": "gt2_ovr5_cursor_set_widget",
       "size": 1876
     },
     {
       "address": "0x8001EA24",
-      "name": "entry_8001EA24",
+      "name": "gt2_ovr5_cursor_draw",
       "size": 1792
     },
     {
       "address": "0x8001EC0C",
-      "name": "entry_8001EC0C",
+      "name": "gt2_ovr5_car_record_create",
       "size": 1304
     },
     {
       "address": "0x8001EDAC",
-      "name": "entry_8001EDAC",
+      "name": "gt2_ovr5_garage_remove_car",
       "size": 888
     },
     {
       "address": "0x8001EE78",
-      "name": "entry_8001EE78",
+      "name": "gt2_ovr5_garage_add_car",
       "size": 684
     },
     {
       "address": "0x8001EF10",
-      "name": "entry_8001EF10",
+      "name": "gt2_ovr5_garage_move_car",
       "size": 532
     },
     {
@@ -1837,72 +1837,72 @@
     },
     {
       "address": "0x8001F210",
-      "name": "entry_8001F210",
+      "name": "gt2_ovr5_font_build_glyph_lookup",
       "size": 2524
     },
     {
       "address": "0x8001F2C8",
-      "name": "entry_8001F2C8",
+      "name": "gt2_ovr5_font_glyph_index",
       "size": 2340
     },
     {
       "address": "0x8001F38C",
-      "name": "entry_8001F38C",
+      "name": "gt2_ovr5_font_draw_wide_string",
       "size": 2144
     },
     {
       "address": "0x8001F4B0",
-      "name": "entry_8001F4B0",
+      "name": "gt2_ovr5_font_draw_wide_string_right_aligned",
       "size": 1852
     },
     {
       "address": "0x8001F520",
-      "name": "entry_8001F520",
+      "name": "gt2_ovr5_font_draw_string",
       "size": 1740
     },
     {
       "address": "0x8001F65C",
-      "name": "entry_8001F65C",
+      "name": "gt2_ovr5_font_draw_string_right_aligned",
       "size": 1424
     },
     {
       "address": "0x8001F6CC",
-      "name": "entry_8001F6CC",
+      "name": "gt2_ovr5_font_measure_wide_string",
       "size": 1312
     },
     {
       "address": "0x8001F740",
-      "name": "entry_8001F740",
+      "name": "gt2_ovr5_font_measure_string",
       "size": 1196
     },
     {
       "address": "0x8001F7CC",
-      "name": "entry_8001F7CC",
+      "name": "gt2_ovr5_small_font_draw_wide_string",
       "size": 1056
     },
     {
       "address": "0x8001F8FC",
-      "name": "entry_8001F8FC",
+      "name": "gt2_ovr5_small_font_draw_wide_string_right_aligned",
       "size": 752
     },
     {
       "address": "0x8001F96C",
-      "name": "entry_8001F96C",
+      "name": "gt2_ovr5_small_font_draw_string",
       "size": 640
     },
     {
       "address": "0x8001FAB4",
-      "name": "entry_8001FAB4",
+      "name": "gt2_ovr5_small_font_draw_string_right_aligned",
       "size": 312
     },
     {
       "address": "0x8001FB24",
-      "name": "entry_8001FB24",
+      "name": "gt2_ovr5_small_font_measure_wide_string",
       "size": 200
     },
     {
       "address": "0x8001FB7C",
-      "name": "entry_8001FB7C",
+      "name": "gt2_ovr5_small_font_measure_string",
       "size": 112
     },
     {
@@ -1912,27 +1912,27 @@
     },
     {
       "address": "0x8001FC28",
-      "name": "entry_8001FC28",
+      "name": "gt2_ovr5_draw_wide_string_right_aligned_either_font",
       "size": 932
     },
     {
       "address": "0x8001FC64",
-      "name": "entry_8001FC64",
+      "name": "gt2_ovr5_draw_string_either_font",
       "size": 872
     },
     {
       "address": "0x8001FCA0",
-      "name": "entry_8001FCA0",
+      "name": "gt2_ovr5_draw_string_right_aligned_either_font",
       "size": 812
     },
     {
       "address": "0x8001FCDC",
-      "name": "entry_8001FCDC",
+      "name": "gt2_ovr5_format_decimal_wide",
       "size": 752
     },
     {
       "address": "0x8001FE0C",
-      "name": "entry_8001FE0C",
+      "name": "gt2_ovr5_format_decimal_wide_two_part",
       "size": 448
     },
     {
@@ -1957,27 +1957,27 @@
     },
     {
       "address": "0x80020490",
-      "name": "entry_80020490",
+      "name": "gt2_ovr5_garage_list_init",
       "size": 616
     },
     {
       "address": "0x800204D8",
-      "name": "entry_800204D8",
+      "name": "gt2_ovr5_garage_list_set_position",
       "size": 544
     },
     {
       "address": "0x800204EC",
-      "name": "entry_800204EC",
+      "name": "gt2_ovr5_garage_list_reset",
       "size": 524
     },
     {
       "address": "0x8002055C",
-      "name": "entry_8002055C",
+      "name": "gt2_ovr5_garage_list_tick",
       "size": 412
     },
     {
       "address": "0x8002068C",
-      "name": "entry_8002068C",
+      "name": "gt2_ovr5_garage_list_draw",
       "size": 108
     },
     {
@@ -1987,42 +1987,42 @@
     },
     {
       "address": "0x800209B0",
-      "name": "entry_800209B0",
+      "name": "gt2_ovr5_item_list_init",
       "size": 672
     },
     {
       "address": "0x800209F8",
-      "name": "entry_800209F8",
+      "name": "gt2_ovr5_item_list_set_position",
       "size": 600
     },
     {
       "address": "0x80020A0C",
-      "name": "entry_80020A0C",
+      "name": "gt2_ovr5_item_list_reset",
       "size": 580
     },
     {
       "address": "0x80020A94",
-      "name": "entry_80020A94",
+      "name": "gt2_ovr5_item_list_tick",
       "size": 444
     },
     {
       "address": "0x80020B70",
-      "name": "entry_80020B70",
+      "name": "gt2_ovr5_item_list_draw",
       "size": 224
     },
     {
       "address": "0x80020BDC",
-      "name": "entry_80020BDC",
+      "name": "gt2_ovr5_item_list_selected_value",
       "size": 116
     },
     {
       "address": "0x80020C00",
-      "name": "entry_80020C00",
+      "name": "gt2_ovr5_item_list_selected_byte_7",
       "size": 80
     },
     {
       "address": "0x80020C24",
-      "name": "entry_80020C24",
+      "name": "gt2_ovr5_item_list_selected_low_24_bits",
       "size": 44
     },
     {
@@ -2032,112 +2032,112 @@
     },
     {
       "address": "0x80020D58",
-      "name": "entry_80020D58",
+      "name": "gt2_ovr5_set_menu_data_pointers",
       "size": 3348
     },
     {
       "address": "0x80020D90",
-      "name": "entry_80020D90",
+      "name": "gt2_ovr5_load_menu_data_file",
       "size": 3292
     },
     {
       "address": "0x80020E4C",
-      "name": "entry_80020E4C",
+      "name": "gt2_ovr5_load_menu_page_index",
       "size": 3104
     },
     {
       "address": "0x80020ECC",
-      "name": "entry_80020ECC",
+      "name": "gt2_ovr5_load_menu_texture_strip",
       "size": 2976
     },
     {
       "address": "0x80020F54",
-      "name": "entry_80020F54",
+      "name": "gt2_ovr5_menu_page_table_lookup",
       "size": 2840
     },
     {
       "address": "0x80020FBC",
-      "name": "entry_80020FBC",
+      "name": "gt2_ovr5_read_slot_c3_entry_streamed",
       "size": 2736
     },
     {
       "address": "0x80020FF0",
-      "name": "entry_80020FF0",
+      "name": "gt2_ovr5_read_menu_page_file",
       "size": 2684
     },
     {
       "address": "0x80021078",
-      "name": "entry_80021078",
+      "name": "gt2_ovr5_read_archive_entry_sync",
       "size": 2548
     },
     {
       "address": "0x800210F8",
-      "name": "entry_800210F8",
+      "name": "gt2_ovr5_begin_archive_entry_read",
       "size": 2420
     },
     {
       "address": "0x8002117C",
-      "name": "entry_8002117C",
+      "name": "gt2_ovr5_read_archive_entry_streamed",
       "size": 2288
     },
     {
       "address": "0x800211FC",
-      "name": "entry_800211FC",
+      "name": "gt2_ovr5_load_menu_page",
       "size": 2160
     },
     {
       "address": "0x80021284",
-      "name": "entry_80021284",
+      "name": "gt2_ovr5_upload_menu_page_images",
       "size": 2024
     },
     {
       "address": "0x8002136C",
-      "name": "entry_8002136C",
+      "name": "gt2_ovr5_upload_menu_page_strip",
       "size": 1792
     },
     {
       "address": "0x800213C4",
-      "name": "entry_800213C4",
+      "name": "gt2_ovr5_parse_menu_page",
       "size": 1704
     },
     {
       "address": "0x8002150C",
-      "name": "entry_8002150C",
+      "name": "gt2_ovr5_copy_page_widgets",
       "size": 1376
     },
     {
       "address": "0x800215B0",
-      "name": "entry_800215B0",
+      "name": "gt2_ovr5_ot_splice_packet_chain",
       "size": 1212
     },
     {
       "address": "0x800215C8",
-      "name": "entry_800215C8",
+      "name": "gt2_ovr5_page_widget_at",
       "size": 1188
     },
     {
       "address": "0x80021608",
-      "name": "entry_80021608",
+      "name": "gt2_ovr5_stream_image_sector",
       "size": 1124
     },
     {
       "address": "0x800218BC",
-      "name": "entry_800218BC",
+      "name": "gt2_ovr5_stream_image_reset",
       "size": 432
     },
     {
       "address": "0x800218DC",
-      "name": "entry_800218DC",
+      "name": "gt2_ovr5_stream_image_cd_ready_callback",
       "size": 400
     },
     {
       "address": "0x80021968",
-      "name": "entry_80021968",
+      "name": "gt2_ovr5_stream_image_begin_read",
       "size": 260
     },
     {
       "address": "0x80021A40",
-      "name": "entry_80021A40",
+      "name": "gt2_ovr5_get_part_type_0",
       "size": 44
     },
     {
@@ -2152,157 +2152,157 @@
     },
     {
       "address": "0x80021B38",
-      "name": "entry_80021B38",
+      "name": "gt2_ovr5_fill_item_with_car_paint",
       "size": 3628
     },
     {
       "address": "0x80021BEC",
-      "name": "entry_80021BEC",
+      "name": "gt2_ovr5_main_car_paint_byte",
       "size": 3448
     },
     {
       "address": "0x80021C38",
-      "name": "entry_80021C38",
+      "name": "gt2_ovr5_packet_writer_begin",
       "size": 3372
     },
     {
       "address": "0x80021C5C",
-      "name": "entry_80021C5C",
+      "name": "gt2_ovr5_packet_writer_reserve",
       "size": 3336
     },
     {
       "address": "0x80021CB4",
-      "name": "entry_80021CB4",
+      "name": "gt2_ovr5_packet_writer_set_texpage",
       "size": 3248
     },
     {
       "address": "0x80021D00",
-      "name": "entry_80021D00",
+      "name": "gt2_ovr5_packet_writer_end",
       "size": 3172
     },
     {
       "address": "0x80021D30",
-      "name": "entry_80021D30",
+      "name": "gt2_ovr5_packet_writer_add_flat_rect",
       "size": 3124
     },
     {
       "address": "0x80021DE8",
-      "name": "entry_80021DE8",
+      "name": "gt2_ovr5_packet_writer_add_sprite",
       "size": 2940
     },
     {
       "address": "0x80021EB0",
-      "name": "entry_80021EB0",
+      "name": "gt2_ovr5_packet_writer_add_grid_sprite",
       "size": 2740
     },
     {
       "address": "0x80021F88",
-      "name": "entry_80021F88",
+      "name": "gt2_ovr5_page_build_background_grid",
       "size": 2524
     },
     {
       "address": "0x8002202C",
-      "name": "entry_8002202C",
+      "name": "gt2_ovr5_page_build_sprite_list",
       "size": 2360
     },
     {
       "address": "0x800220C8",
-      "name": "entry_800220C8",
+      "name": "gt2_ovr5_page_build_tiled_runs",
       "size": 2204
     },
     {
       "address": "0x80022278",
-      "name": "entry_80022278",
+      "name": "gt2_ovr5_page_build_packets",
       "size": 1772
     },
     {
       "address": "0x800222E4",
-      "name": "entry_800222E4",
+      "name": "gt2_ovr5_load_colour_name_files",
       "size": 1664
     },
     {
       "address": "0x80022368",
-      "name": "entry_80022368",
+      "name": "gt2_ovr5_offset_table_entry_at_8",
       "size": 1532
     },
     {
       "address": "0x8002237C",
-      "name": "entry_8002237C",
+      "name": "gt2_ovr5_colour_name_entry",
       "size": 1512
     },
     {
       "address": "0x800223B0",
-      "name": "entry_800223B0",
+      "name": "gt2_ovr5_offset_table_entry",
       "size": 1460
     },
     {
       "address": "0x800223C4",
-      "name": "entry_800223C4",
+      "name": "gt2_ovr5_car_colour_name",
       "size": 1440
     },
     {
       "address": "0x800224B0",
-      "name": "entry_800224B0",
+      "name": "gt2_ovr5_offset_table_entry_4",
       "size": 1204
     },
     {
       "address": "0x800224C4",
-      "name": "entry_800224C4",
+      "name": "gt2_ovr5_table_entry_4_plus_2",
       "size": 1184
     },
     {
       "address": "0x800224D4",
-      "name": "entry_800224D4",
+      "name": "gt2_ovr5_used_car_table_buffer",
       "size": 1168
     },
     {
       "address": "0x800224E0",
-      "name": "entry_800224E0",
+      "name": "gt2_ovr5_load_used_car_table_for_day",
       "size": 1156
     },
     {
       "address": "0x80022634",
-      "name": "entry_80022634",
+      "name": "gt2_ovr5_used_car_table_group",
       "size": 816
     },
     {
       "address": "0x800226A0",
-      "name": "entry_800226A0",
+      "name": "gt2_ovr5_music_player_init",
       "size": 708
     },
     {
       "address": "0x80022714",
-      "name": "entry_80022714",
+      "name": "gt2_ovr5_music_player_load_bank",
       "size": 592
     },
     {
       "address": "0x80022758",
-      "name": "entry_80022758",
+      "name": "gt2_ovr5_music_player_read_sequence_file",
       "size": 524
     },
     {
       "address": "0x80022794",
-      "name": "entry_80022794",
+      "name": "gt2_ovr5_music_player_start_sequence",
       "size": 464
     },
     {
       "address": "0x80022838",
-      "name": "entry_80022838",
+      "name": "gt2_ovr5_music_player_release_sequence",
       "size": 300
     },
     {
       "address": "0x80022874",
-      "name": "entry_80022874",
+      "name": "gt2_ovr5_menu_music_system_init",
       "size": 240
     },
     {
       "address": "0x800228D4",
-      "name": "entry_800228D4",
+      "name": "gt2_ovr5_menu_music_play_track",
       "size": 144
     },
     {
       "address": "0x80022934",
-      "name": "entry_80022934",
+      "name": "gt2_ovr5_menu_music_stop",
       "size": 48
     }
   ]

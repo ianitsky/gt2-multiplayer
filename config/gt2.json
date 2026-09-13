@@ -7557,7 +7557,7 @@
     },
     {
       "address": "0x80080A24",
-      "name": "entry_80080A24"
+      "name": "gt2_main_psxViewLoop_run_one_frame"
     },
     {
       "address": "0x80080AC4",
