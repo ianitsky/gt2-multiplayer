@@ -4827,7 +4827,7 @@
     },
     {
       "address": "0x8006CED8",
-      "name": "gt2_main_shared_racemenuarcade_func2",
+      "name": "gt2_main_list_widget_notify_unselected_items",
       "size": 140
     },
     {
@@ -5222,12 +5222,12 @@
     },
     {
       "address": "0x8007248C",
-      "name": "gt2_main_race_func16_20",
+      "name": "gt2_main_default_state_handler_returns_minus_one",
       "size": 8
     },
     {
       "address": "0x80072494",
-      "name": "gt2_main_race_func16_2",
+      "name": "gt2_main_state_machine_enter_state",
       "size": 100
     },
     {
@@ -5247,7 +5247,7 @@
     },
     {
       "address": "0x8007284C",
-      "name": "gt2_main_shared_racemenu_func6",
+      "name": "gt2_main_state_machine_install",
       "size": 164
     },
     {
@@ -5312,7 +5312,7 @@
     },
     {
       "address": "0x80073524",
-      "name": "gt2_main_shared_racemenu_func510",
+      "name": "gt2_main_string_delete_char_at",
       "size": 36
     },
     {
@@ -5322,7 +5322,7 @@
     },
     {
       "address": "0x8007364C",
-      "name": "gt2_main_func10",
+      "name": "gt2_main_text_entry_widget_reset",
       "size": 148
     },
     {
@@ -5352,12 +5352,12 @@
     },
     {
       "address": "0x80073D30",
-      "name": "gt2_main_race_func23",
+      "name": "gt2_main_start_fade_out_at_26",
       "size": 28
     },
     {
       "address": "0x80073D4C",
-      "name": "gt2_main_race_func24",
+      "name": "gt2_main_step_fade_counter_at_26",
       "size": 88
     },
     {
@@ -5447,57 +5447,57 @@
     },
     {
       "address": "0x8007598C",
-      "name": "gt2_main_race_func2A",
+      "name": "gt2_main_fixed_mul_16",
       "size": 32
     },
     {
       "address": "0x800759AC",
-      "name": "gt2_unknown_task7",
+      "name": "gt2_main_fixed_mul_8",
       "size": 32
     },
     {
       "address": "0x800759CC",
-      "name": "gt2_main_race_func2B",
+      "name": "gt2_main_fixed_mul_shift_plus_12",
       "size": 48
     },
     {
       "address": "0x800759FC",
-      "name": "gt2_unknown_task8",
+      "name": "gt2_main_fixed_mul_shift_plus_16",
       "size": 48
     },
     {
       "address": "0x80075A2C",
-      "name": "gt2_unknown_task9",
+      "name": "gt2_main_fixed_mul_shift_plus_8",
       "size": 48
     },
     {
       "address": "0x80075A5C",
-      "name": "gt2_main_switch_func003",
+      "name": "gt2_main_fixed_mul64_12",
       "size": 56
     },
     {
       "address": "0x80075A94",
-      "name": "gt2_main_race_func2C",
+      "name": "gt2_main_fixed_mul64_16",
       "size": 56
     },
     {
       "address": "0x80075ACC",
-      "name": "gt2_unknown_taskA",
+      "name": "gt2_main_fixed_mul64_8",
       "size": 56
     },
     {
       "address": "0x80075B04",
-      "name": "gt2_main_race_func2D",
+      "name": "gt2_main_fixed_mul64_shift_plus_12",
       "size": 80
     },
     {
       "address": "0x80075B54",
-      "name": "gt2_main_race_func2E",
+      "name": "gt2_main_fixed_mul64_shift_plus_16",
       "size": 80
     },
     {
       "address": "0x80075BA4",
-      "name": "gt2_unknown_taskB",
+      "name": "gt2_main_fixed_mul64_shift_plus_8",
       "size": 80
     },
     {
@@ -5517,17 +5517,17 @@
     },
     {
       "address": "0x80075C54",
-      "name": "gt2_main_race_func31",
+      "name": "gt2_main_fixed_mul64_shift_plus_12_wide",
       "size": 72
     },
     {
       "address": "0x80075C9C",
-      "name": "gt2_unknown_taskD",
+      "name": "gt2_main_fixed_mul64_shift_plus_16_wide",
       "size": 72
     },
     {
       "address": "0x80075CE4",
-      "name": "gt2_unknown_taskE",
+      "name": "gt2_main_fixed_mul64_shift_plus_8_wide",
       "size": 72
     },
     {
@@ -5842,7 +5842,7 @@
     },
     {
       "address": "0x80076A20",
-      "name": "gt2_main_shared_arcadegt_func10",
+      "name": "gt2_main_clear_car_parts_record",
       "size": 52
     },
     {
@@ -5867,7 +5867,7 @@
     },
     {
       "address": "0x80076BE4",
-      "name": "gt2_main_shared_arcaderace_func50",
+      "name": "gt2_main_nth_string_in_byte_length_list",
       "size": 48
     },
     {
@@ -5877,12 +5877,12 @@
     },
     {
       "address": "0x80076C40",
-      "name": "gt2_main_gtmode_task90",
+      "name": "gt2_main_nth_string_in_unicode_list",
       "size": 52
     },
     {
       "address": "0x80076C74",
-      "name": "gt2_main_shared_racemenuarcade_func000",
+      "name": "gt2_main_index_of_string_in_byte_length_list",
       "size": 132
     },
     {
@@ -6067,7 +6067,7 @@
     },
     {
       "address": "0x800779C4",
-      "name": "gt2_main_shared_gt_race_func00_transform",
+      "name": "gt2_main_lerp_across_n_steps",
       "size": 56
     },
     {
@@ -6157,7 +6157,7 @@
     },
     {
       "address": "0x80078038",
-      "name": "gt2_main_shared_arcaderace_func4",
+      "name": "gt2_main_array_element_pointer",
       "size": 28
     },
     {
@@ -6172,7 +6172,7 @@
     },
     {
       "address": "0x80078138",
-      "name": "gt2_main_arcade_func2",
+      "name": "gt2_main_count_filled_of_sixteen_slots",
       "size": 52
     },
     {
@@ -6192,7 +6192,7 @@
     },
     {
       "address": "0x80078370",
-      "name": "gt2_main_task200_spu_voice00_vol",
+      "name": "gt2_main_spu_wait_for_all_voices_silent",
       "size": 108
     },
     {
@@ -6227,7 +6227,7 @@
     },
     {
       "address": "0x80078790",
-      "name": "gt2_main_task0b20",
+      "name": "gt2_main_file_load_request_init",
       "size": 24
     },
     {
@@ -6237,7 +6237,7 @@
     },
     {
       "address": "0x800787CC",
-      "name": "gt2_main_task0b21",
+      "name": "gt2_main_file_load_request_run_and_advance_arena",
       "size": 116
     },
     {
@@ -6257,7 +6257,7 @@
     },
     {
       "address": "0x80078950",
-      "name": "gt2_unknown_taskF0",
+      "name": "gt2_main_arena_swap_top",
       "size": 16
     },
     {
@@ -6287,7 +6287,7 @@
     },
     {
       "address": "0x80078F10",
-      "name": "gt2_main_race_func38",
+      "name": "gt2_main_sound_channel_init",
       "size": 100
     },
     {
@@ -6377,7 +6377,7 @@
     },
     {
       "address": "0x80079E2C",
-      "name": "gt2_main_spu_mainvol_reset_task0",
+      "name": "gt2_main_sequencer_set_tempo_bpm",
       "size": 56
     },
     {
@@ -6412,12 +6412,12 @@
     },
     {
       "address": "0x8007A170",
-      "name": "gt2_main_task021034",
+      "name": "gt2_main_sound_volume_with_pan",
       "size": 84
     },
     {
       "address": "0x8007A1C4",
-      "name": "gt2_main_shared_arcade_func3",
+      "name": "gt2_main_relocate_seqg_block",
       "size": 156
     },
     {
@@ -6427,7 +6427,7 @@
     },
     {
       "address": "0x8007A2A8",
-      "name": "gt2_main_shared_arcadegt_func30",
+      "name": "gt2_main_unlink_from_list_801f0230",
       "size": 88
     },
     {
@@ -6437,7 +6437,7 @@
     },
     {
       "address": "0x8007A434",
-      "name": "gt2_main_shared_arcadegt_func50",
+      "name": "gt2_main_push_onto_list_801f0230",
       "size": 24
     },
     {
