@@ -37,7 +37,7 @@
     },
     {
       "address": "0x80010714",
-      "name": "gt2_ovr5_load_replay_mode_04_task0",
+      "name": "gt2_ovr5_pick_random_opponent_car",
       "size": 624
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "address": "0x80011000",
-      "name": "gt2_ovr5_load_event_task2",
+      "name": "gt2_ovr5_fill_entrant_car_spec_variant",
       "size": 352
     },
     {
@@ -77,7 +77,7 @@
     },
     {
       "address": "0x800129B8",
-      "name": "gt2_ovr5_load_event_task6",
+      "name": "gt2_ovr5_resolve_all_part_pointers",
       "size": 692
     },
     {
@@ -97,7 +97,7 @@
     },
     {
       "address": "0x80013628",
-      "name": "gt2_ovr5_entrypoint0",
+      "name": "gt2_ovr5_entrypoint_run_menus_then_load_chosen_overlay",
       "size": 3360
     },
     {
@@ -582,7 +582,7 @@
     },
     {
       "address": "0x80018004",
-      "name": "gt2_ovr5_load_event_task1",
+      "name": "gt2_ovr5_part_shop_item_status",
       "size": 460
     },
     {
@@ -692,7 +692,7 @@
     },
     {
       "address": "0x800189D0",
-      "name": "gt2_ovr5_sprintf_caller0",
+      "name": "gt2_ovr5_build_event_course_name",
       "size": 580
     },
     {
@@ -782,7 +782,7 @@
     },
     {
       "address": "0x80019538",
-      "name": "gt2_ovr5_load_event_task0",
+      "name": "gt2_ovr5_event_entry_status",
       "size": 1720
     },
     {
@@ -1662,7 +1662,7 @@
     },
     {
       "address": "0x8001DFEC",
-      "name": "gt2_ovr5_ui_can_buy_caller0",
+      "name": "gt2_ovr5_shop_run_transaction",
       "size": 4408
     },
     {
@@ -1832,7 +1832,7 @@
     },
     {
       "address": "0x8001F124",
-      "name": "gt2_ovr5_load_event_task3",
+      "name": "gt2_ovr5_build_car_name_list",
       "size": 2760
     },
     {

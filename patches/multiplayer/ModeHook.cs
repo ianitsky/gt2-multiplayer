@@ -14,7 +14,7 @@ namespace GT2Port.Multiplayer;
 public static class ModeHook
 {
     /// <summary>Verified by running the game, not assumed - see the plan's Task 5.</summary>
-    const uint SimulationEntryPoint = 0x80013628u;   // gt2_ovr5_entrypoint0
+    const uint SimulationEntryPoint = 0x80013628u;   // gt2_ovr5_entrypoint_run_menus_then_load_chosen_overlay
 
     /// <summary>gt2_03's entry point - the arcade, which is where a race starts from.</summary>
     const uint ArcadeEntryPoint = 0x80011750u;

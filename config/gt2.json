@@ -3709,6 +3709,10 @@
           "name": "entry_80011514"
         },
         {
+          "address": "0x80011954",
+          "name": "gt2_ovr3_unpack_region_data"
+        },
+        {
           "address": "0x80011A50",
           "name": "gt2_ovr3_ot_add_translucent_grey_gradient_rect"
         },
@@ -5417,6 +5421,18 @@
           "name": "gt2_ovr4_build_car_spec_from_parts"
         },
         {
+          "address": "0x80011858",
+          "name": "gt2_ovr4_resolve_all_part_pointers"
+        },
+        {
+          "address": "0x80011B0C",
+          "name": "gt2_ovr4_compute_car_display_stats"
+        },
+        {
+          "address": "0x80011BE8",
+          "name": "gt2_ovr4_build_car_spec_for_entry"
+        },
+        {
           "address": "0x80011CFC",
           "name": "gt2_ovr4_max_of_three"
         },
@@ -5429,12 +5445,36 @@
           "name": "gt2_ovr4_unpack_fifteen_bit_colour_and_say_how_saturated"
         },
         {
+          "address": "0x80011EC0",
+          "name": "gt2_ovr4_pick_random_opponent_car"
+        },
+        {
           "address": "0x80012130",
           "name": "gt2_ovr4_choose_entrant_paint"
         },
         {
           "address": "0x800121DC",
           "name": "gt2_ovr4_build_race_block_and_fill_all_six_entrants"
+        },
+        {
+          "address": "0x800126BC",
+          "name": "gt2_ovr4_fill_entrant_car_spec"
+        },
+        {
+          "address": "0x800127AC",
+          "name": "gt2_ovr4_fill_entrant_car_spec_variant"
+        },
+        {
+          "address": "0x8001290C",
+          "name": "gt2_ovr4_build_event_entrants"
+        },
+        {
+          "address": "0x80012B68",
+          "name": "gt2_ovr4_build_player_car_spec"
+        },
+        {
+          "address": "0x80012C00",
+          "name": "gt2_ovr4_entrypoint_build_race_then_load_overlay"
         }
       ]
     },
