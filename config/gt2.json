@@ -2429,6 +2429,10 @@
       "image": "ovl_patched/gt2_03.bin",
       "functions": [
         {
+          "address": "0x800100B0",
+          "name": "gt2_ovr3_min_of_three"
+        },
+        {
           "address": "0x80011514",
           "name": "entry_80011514"
         },

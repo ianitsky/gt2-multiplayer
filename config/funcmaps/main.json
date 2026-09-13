@@ -2487,7 +2487,7 @@
     },
     {
       "address": "0x800116AC",
-      "name": "gt2_main_task0b00_path_sanitizer",
+      "name": "gt2_ovr0_build_base36_digit_lookup_table",
       "size": 92
     },
     {
@@ -2527,7 +2527,7 @@
     },
     {
       "address": "0x80011708",
-      "name": "gt2_main_task0b01_noop_loader",
+      "name": "gt2_ovr0_car_loader_empty_step",
       "size": 8
     },
     {
@@ -3117,7 +3117,7 @@
     },
     {
       "address": "0x8005D9BC",
-      "name": "gt2_sysinit_task0",
+      "name": "gt2_main_zero_bss",
       "size": 52
     },
     {
