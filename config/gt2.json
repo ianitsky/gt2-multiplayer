@@ -2452,12 +2452,20 @@
       "linearSweep": true,
       "functions": [
         {
+          "address": "0x80010000",
+          "name": "gt2_ovr2_max_of_three"
+        },
+        {
           "address": "0x8001003C",
           "name": "gt2_ovr2_min_of_three"
         },
         {
           "address": "0x80010434",
           "name": "gt2_ovr2_choose_entrant_paint"
+        },
+        {
+          "address": "0x800104E0",
+          "name": "gt2_ovr2_build_race_block_and_fill_all_six_entrants"
         },
         {
           "address": "0x800110C4",
@@ -2769,12 +2777,120 @@
           "name": "gt2_ovr3_min_of_three"
         },
         {
+          "address": "0x80010238",
+          "name": "gt2_ovr3_pick_random_opponent_car"
+        },
+        {
+          "address": "0x800104A8",
+          "name": "gt2_ovr3_choose_entrant_paint"
+        },
+        {
+          "address": "0x80010A34",
+          "name": "gt2_ovr3_fill_entrant_car_spec"
+        },
+        {
+          "address": "0x80010B24",
+          "name": "gt2_ovr3_fill_entrant_car_spec_unused_variant"
+        },
+        {
           "address": "0x80011514",
           "name": "entry_80011514"
         },
         {
+          "address": "0x80011A50",
+          "name": "gt2_ovr3_ot_add_translucent_grey_gradient_rect"
+        },
+        {
+          "address": "0x80011B18",
+          "name": "gt2_ovr3_ot_add_translucent_gradient_rect"
+        },
+        {
+          "address": "0x80011BB0",
+          "name": "gt2_ovr3_format_unsigned_decimal"
+        },
+        {
+          "address": "0x80011EBC",
+          "name": "gt2_ovr3_fader_init"
+        },
+        {
+          "address": "0x80011F18",
+          "name": "gt2_ovr3_fader_start_in"
+        },
+        {
+          "address": "0x80011F20",
+          "name": "gt2_ovr3_fader_start_out"
+        },
+        {
+          "address": "0x80011F34",
+          "name": "gt2_ovr3_fader_step"
+        },
+        {
+          "address": "0x800121E0",
+          "name": "gt2_ovr3_blinker_init"
+        },
+        {
+          "address": "0x800122A4",
+          "name": "gt2_ovr3_blinker_restart"
+        },
+        {
+          "address": "0x800122E0",
+          "name": "gt2_ovr3_blinker_hide"
+        },
+        {
+          "address": "0x800122EC",
+          "name": "gt2_ovr3_blinker_start_fade_out"
+        },
+        {
+          "address": "0x80012308",
+          "name": "gt2_ovr3_blinker_step"
+        },
+        {
+          "address": "0x8001336C",
+          "name": "gt2_ovr3_save_buffer_address"
+        },
+        {
+          "address": "0x80013378",
+          "name": "gt2_ovr3_car_record_write"
+        },
+        {
+          "address": "0x800133C0",
+          "name": "gt2_ovr3_garage_append_car_record"
+        },
+        {
+          "address": "0x80013428",
+          "name": "gt2_ovr3_add_car_record_for_car_id"
+        },
+        {
+          "address": "0x8001363C",
+          "name": "gt2_ovr3_load_cached_file_return_length"
+        },
+        {
+          "address": "0x80013674",
+          "name": "gt2_ovr3_upload_tim_image_to_vram_slot"
+        },
+        {
+          "address": "0x80013AF8",
+          "name": "gt2_ovr3_background_movie_play"
+        },
+        {
+          "address": "0x80013B28",
+          "name": "gt2_ovr3_background_movie_stop"
+        },
+        {
+          "address": "0x80013B50",
+          "name": "gt2_ovr3_background_movie_draw"
+        },
+        {
+          "address": "0x80013B7C",
+          "name": "__10ArcadeMenu"
+        },
+        {
           "address": "0x80013BB0",
           "name": "gt2_ovr3_ArcadeMenu_destructor"
+        },
+        {
+          "address": "0x80013BD8",
+          "name": "gt2_ovr3_page_stack_reset"
         },
         {
           "address": "0x800141B8",
@@ -2791,6 +2907,10 @@
         {
           "address": "0x8001466C",
           "name": "gt2_ovr3_ArcadeMenu_end"
+        },
+        {
+          "address": "0x800146B0",
+          "name": "gt2_ovr3_does_nothing_at_800146B0"
         },
         {
           "address": "0x800146B8",
@@ -2819,6 +2939,38 @@
         {
           "address": "0x80015670",
           "name": "gt2_ovr3_ArcadeMenu_before_frame"
+        },
+        {
+          "address": "0x80015750",
+          "name": "gt2_ovr3_set_load_callback"
+        },
+        {
+          "address": "0x8001577C",
+          "name": "gt2_ovr3_fire_load_callback_cancelled"
+        },
+        {
+          "address": "0x800157C0",
+          "name": "gt2_ovr3_page_stack_push"
+        },
+        {
+          "address": "0x800157F4",
+          "name": "gt2_ovr3_page_stack_pop"
+        },
+        {
+          "address": "0x80015834",
+          "name": "gt2_ovr3_cd_reader_reset"
+        },
+        {
+          "address": "0x80015840",
+          "name": "gt2_ovr3_cd_reader_begin"
+        },
+        {
+          "address": "0x8001589C",
+          "name": "gt2_ovr3_cd_reader_stop"
+        },
+        {
+          "address": "0x80015960",
+          "name": "gt2_ovr3_cd_reader_poll"
         },
         {
           "address": "0x80015AB4",
@@ -2933,8 +3085,216 @@
           "name": "entry_80015DB8"
         },
         {
+          "address": "0x80015DD4",
+          "name": "gt2_ovr3_car_preview_upload_colour_palette"
+        },
+        {
           "address": "0x80015DF0",
           "name": "entry_80015DF0"
+        },
+        {
+          "address": "0x80015E5C",
+          "name": "gt2_ovr3_car_preview_refresh_colour"
+        },
+        {
+          "address": "0x80015E8C",
+          "name": "gt2_ovr3_car_preview_colour_count"
+        },
+        {
+          "address": "0x80015EB8",
+          "name": "gt2_ovr3_car_preview_step_colour"
+        },
+        {
+          "address": "0x8001654C",
+          "name": "gt2_ovr3_car_preview_show_car"
+        },
+        {
+          "address": "0x800169F4",
+          "name": "gt2_ovr3_car_preview_set_far_zoom_range"
+        },
+        {
+          "address": "0x80016A10",
+          "name": "gt2_ovr3_car_preview_set_near_zoom_range"
+        },
+        {
+          "address": "0x80016A98",
+          "name": "gt2_ovr3_car_spec_copy_display_stats"
+        },
+        {
+          "address": "0x80016AD4",
+          "name": "gt2_ovr3_build_circle_of_24_segments"
+        },
+        {
+          "address": "0x80016CC0",
+          "name": "gt2_ovr3_car_preview_upload_image"
+        },
+        {
+          "address": "0x80016DE4",
+          "name": "gt2_ovr3_car_previews_upload_pending_images"
+        },
+        {
+          "address": "0x80016E70",
+          "name": "gt2_ovr3_car_loader_init"
+        },
+        {
+          "address": "0x80016EA0",
+          "name": "gt2_ovr3_car_loader_reset"
+        },
+        {
+          "address": "0x80016FB4",
+          "name": "gt2_ovr3_car_loader_request_refresh"
+        },
+        {
+          "address": "0x800173D4",
+          "name": "gt2_ovr3_slide_panel_a_reset"
+        },
+        {
+          "address": "0x800173E0",
+          "name": "gt2_ovr3_slide_panel_a_open"
+        },
+        {
+          "address": "0x800173F8",
+          "name": "gt2_ovr3_slide_panel_a_close"
+        },
+        {
+          "address": "0x80017404",
+          "name": "gt2_ovr3_slide_panel_a_step"
+        },
+        {
+          "address": "0x80017460",
+          "name": "gt2_ovr3_slide_panel_a_offset"
+        },
+        {
+          "address": "0x80017608",
+          "name": "gt2_ovr3_slide_panel_b_reset"
+        },
+        {
+          "address": "0x80017614",
+          "name": "gt2_ovr3_slide_panel_b_open"
+        },
+        {
+          "address": "0x80017628",
+          "name": "gt2_ovr3_slide_panel_b_close"
+        },
+        {
+          "address": "0x80017634",
+          "name": "gt2_ovr3_slide_panel_b_step"
+        },
+        {
+          "address": "0x80017690",
+          "name": "gt2_ovr3_slide_panel_b_offset"
+        },
+        {
+          "address": "0x80017B7C",
+          "name": "gt2_ovr3_asset_list_init"
+        },
+        {
+          "address": "0x80017C1C",
+          "name": "gt2_ovr3_asset_loader_start"
+        },
+        {
+          "address": "0x80017C60",
+          "name": "gt2_ovr3_asset_loader_request"
+        },
+        {
+          "address": "0x80017C80",
+          "name": "gt2_ovr3_asset_loader_cancel"
+        },
+        {
+          "address": "0x80017CD4",
+          "name": "gt2_ovr3_asset_list_index_of_hash"
+        },
+        {
+          "address": "0x80017D18",
+          "name": "gt2_ovr3_asset_loader_advance"
+        },
+        {
+          "address": "0x80017FC4",
+          "name": "gt2_ovr3_asset_list_word_c_by_hash"
+        },
+        {
+          "address": "0x80017FF8",
+          "name": "gt2_ovr3_asset_list_word_8_by_hash"
+        },
+        {
+          "address": "0x8001802C",
+          "name": "gt2_ovr3_movie_player_init"
+        },
+        {
+          "address": "0x8001804C",
+          "name": "gt2_ovr3_movie_player_request"
+        },
+        {
+          "address": "0x8001805C",
+          "name": "gt2_ovr3_movie_player_request_stop"
+        },
+        {
+          "address": "0x80018078",
+          "name": "gt2_ovr3_movie_player_tick"
+        },
+        {
+          "address": "0x80018170",
+          "name": "gt2_ovr3_movie_player_draw"
+        },
+        {
+          "address": "0x800181B8",
+          "name": "gt2_ovr3_movie_player_draw_frame_sprite"
+        },
+        {
+          "address": "0x8001824C",
+          "name": "gt2_ovr3_spec_panel_values_clear"
+        },
+        {
+          "address": "0x8001825C",
+          "name": "gt2_ovr3_spec_panel_values_set"
+        },
+        {
+          "address": "0x800182A0",
+          "name": "gt2_ovr3_spec_panel_values_fade_out"
+        },
+        {
+          "address": "0x800182AC",
+          "name": "gt2_ovr3_spec_panel_values_fade_step"
+        },
+        {
+          "address": "0x800182F4",
+          "name": "gt2_ovr3_spec_panel_values_select"
+        },
+        {
+          "address": "0x80018548",
+          "name": "gt2_ovr3_spec_title_init"
+        },
+        {
+          "address": "0x800185A0",
+          "name": "gt2_ovr3_spec_title_show"
+        },
+        {
+          "address": "0x800185C8",
+          "name": "gt2_ovr3_spec_title_hide"
+        },
+        {
+          "address": "0x800185F0",
+          "name": "gt2_ovr3_spec_title_step"
+        },
+        {
+          "address": "0x80018DFC",
+          "name": "gt2_ovr3_spec_panel_hide_lines_now"
+        },
+        {
+          "address": "0x80018E20",
+          "name": "gt2_ovr3_spec_panel_fade_out_lines"
+        },
+        {
+          "address": "0x80018E88",
+          "name": "gt2_ovr3_spec_panel_step_lines"
+        },
+        {
+          "address": "0x8001930C",
+          "name": "gt2_ovr3_spec_panel_select_current_car"
+        },
+        {
+          "address": "0x800194C0",
+          "name": "gt2_ovr3_linear_interpolation"
         },
         {
           "address": "0x80019B80",
@@ -3062,11 +3422,167 @@
         },
         {
           "address": "0x80010074",
-          "name": "gt2_ovr3_clamp_signed_int_between_low_and_high"
+          "name": "gt2_ovr3_max_of_three"
         },
         {
           "address": "0x80010554",
           "name": "gt2_ovr3_build_race_block_and_fill_all_six_entrants"
+        },
+        {
+          "address": "0x80019E60",
+          "name": "gt2_ovr3_car_record_rating_value"
+        },
+        {
+          "address": "0x80019EA4",
+          "name": "gt2_ovr3_car_record_summarise"
+        },
+        {
+          "address": "0x80019F60",
+          "name": "gt2_ovr3_garage_summarise_all_cars"
+        },
+        {
+          "address": "0x8001A0F4",
+          "name": "gt2_ovr3_text_line_start_fade_in"
+        },
+        {
+          "address": "0x8001A158",
+          "name": "gt2_ovr3_text_line_show_immediately"
+        },
+        {
+          "address": "0x8001A18C",
+          "name": "gt2_ovr3_text_line_start_fade_out"
+        },
+        {
+          "address": "0x8001A1C4",
+          "name": "gt2_ovr3_text_line_step_fade"
+        },
+        {
+          "address": "0x8001A220",
+          "name": "gt2_ovr3_text_line_draw"
+        },
+        {
+          "address": "0x8001A9EC",
+          "name": "gt2_ovr3_text_line_measure"
+        },
+        {
+          "address": "0x8001ABF4",
+          "name": "gt2_ovr3_confirm_dialog_open"
+        },
+        {
+          "address": "0x8001AC40",
+          "name": "gt2_ovr3_confirm_dialog_reset"
+        },
+        {
+          "address": "0x8001AC5C",
+          "name": "gt2_ovr3_confirm_dialog_close"
+        },
+        {
+          "address": "0x8001AC84",
+          "name": "gt2_ovr3_confirm_dialog_tick"
+        },
+        {
+          "address": "0x8001ADC4",
+          "name": "gt2_ovr3_confirm_dialog_draw"
+        },
+        {
+          "address": "0x8001B37C",
+          "name": "gt2_ovr3_menu_item_init"
+        },
+        {
+          "address": "0x8001B400",
+          "name": "gt2_ovr3_menu_item_show"
+        },
+        {
+          "address": "0x8001B46C",
+          "name": "gt2_ovr3_menu_item_step"
+        },
+        {
+          "address": "0x8001B4C8",
+          "name": "gt2_ovr3_menu_item_hide"
+        },
+        {
+          "address": "0x8001B524",
+          "name": "gt2_ovr3_menu_item_draw"
+        },
+        {
+          "address": "0x8001B580",
+          "name": "gt2_ovr3_menu_item_set_position"
+        },
+        {
+          "address": "0x8001B5CC",
+          "name": "gt2_ovr3_menu_item_set_shade"
+        },
+        {
+          "address": "0x8001B608",
+          "name": "gt2_ovr3_menu_item_highlight"
+        },
+        {
+          "address": "0x8001B680",
+          "name": "gt2_ovr3_menu_item_unhighlight"
+        },
+        {
+          "address": "0x8001B6DC",
+          "name": "gt2_ovr3_menu_init"
+        },
+        {
+          "address": "0x8001B760",
+          "name": "gt2_ovr3_menu_show"
+        },
+        {
+          "address": "0x8001B7F0",
+          "name": "gt2_ovr3_menu_hide_unselected"
+        },
+        {
+          "address": "0x8001B868",
+          "name": "gt2_ovr3_menu_tick"
+        },
+        {
+          "address": "0x8001BB88",
+          "name": "gt2_ovr3_menu_draw"
+        },
+        {
+          "address": "0x8001C118",
+          "name": "gt2_ovr3_image_item_init"
+        },
+        {
+          "address": "0x8001C1B0",
+          "name": "gt2_ovr3_image_item_start_fade_in"
+        },
+        {
+          "address": "0x8001C1B8",
+          "name": "gt2_ovr3_image_item_show_immediately"
+        },
+        {
+          "address": "0x8001C1C4",
+          "name": "gt2_ovr3_image_item_start_fade_out"
+        },
+        {
+          "address": "0x8001C1D8",
+          "name": "gt2_ovr3_image_item_step_fade"
+        },
+        {
+          "address": "0x8001C234",
+          "name": "gt2_ovr3_image_item_draw"
+        },
+        {
+          "address": "0x8001D2FC",
+          "name": "gt2_ovr3_category_list_u16_at_52120"
+        },
+        {
+          "address": "0x8001D324",
+          "name": "gt2_ovr3_category_list_word_at_520E8"
+        },
+        {
+          "address": "0x8001D34C",
+          "name": "gt2_ovr3_category_list_u16_at_5213C"
+        },
+        {
+          "address": "0x8001D374",
+          "name": "gt2_ovr3_first_available_entry_in_category"
+        },
+        {
+          "address": "0x8001D558",
+          "name": "gt2_ovr3_selected_mode_value"
         },
         {
           "address": "0x8001D5F8",
@@ -3075,6 +3591,294 @@
         {
           "address": "0x8001D568",
           "name": "gt2_ovr3_arcade_page_enter_or_leave_starts_or_stops_the_music"
+        },
+        {
+          "address": "0x8001D654",
+          "name": "gt2_ovr3_arcade_page_00_draw_does_nothing"
+        },
+        {
+          "address": "0x8001D65C",
+          "name": "gt2_ovr3_arcade_page_01_enter"
+        },
+        {
+          "address": "0x8001D6E4",
+          "name": "gt2_ovr3_arcade_page_01_tick"
+        },
+        {
+          "address": "0x8001D858",
+          "name": "gt2_ovr3_arcade_page_01_draw"
+        },
+        {
+          "address": "0x8001D884",
+          "name": "gt2_ovr3_arcade_page_02_enter"
+        },
+        {
+          "address": "0x8001D90C",
+          "name": "gt2_ovr3_arcade_page_02_tick"
+        },
+        {
+          "address": "0x8001DB00",
+          "name": "gt2_ovr3_arcade_page_02_draw"
+        },
+        {
+          "address": "0x8001DB2C",
+          "name": "gt2_ovr3_arcade_page_03_enter"
+        },
+        {
+          "address": "0x8001DB90",
+          "name": "gt2_ovr3_arcade_page_03_tick"
+        },
+        {
+          "address": "0x8001DD18",
+          "name": "gt2_ovr3_arcade_page_03_draw"
+        },
+        {
+          "address": "0x8001DD44",
+          "name": "gt2_ovr3_arcade_page_04_enter"
+        },
+        {
+          "address": "0x8001DE30",
+          "name": "gt2_ovr3_arcade_page_04_tick"
+        },
+        {
+          "address": "0x8001DF78",
+          "name": "gt2_ovr3_arcade_page_04_draw"
+        },
+        {
+          "address": "0x8001DFA4",
+          "name": "gt2_ovr3_arcade_page_05_enter"
+        },
+        {
+          "address": "0x8001E0B0",
+          "name": "gt2_ovr3_arcade_page_05_tick"
+        },
+        {
+          "address": "0x8001E274",
+          "name": "gt2_ovr3_arcade_page_05_draw"
+        },
+        {
+          "address": "0x8001E2A0",
+          "name": "gt2_ovr3_arcade_page_06_enter"
+        },
+        {
+          "address": "0x8001E34C",
+          "name": "gt2_ovr3_arcade_page_06_tick"
+        },
+        {
+          "address": "0x8001E510",
+          "name": "gt2_ovr3_arcade_page_06_draw"
+        },
+        {
+          "address": "0x8001E53C",
+          "name": "gt2_ovr3_car_preview_camera_init_one_player"
+        },
+        {
+          "address": "0x8001E5D8",
+          "name": "gt2_ovr3_car_preview_rotate_turntable"
+        },
+        {
+          "address": "0x8001E8AC",
+          "name": "gt2_ovr3_arcade_page_07_car_select_enter"
+        },
+        {
+          "address": "0x8001EAC4",
+          "name": "gt2_ovr3_arcade_page_07_car_select_tick"
+        },
+        {
+          "address": "0x8001F140",
+          "name": "gt2_ovr3_arcade_page_07_car_select_draw"
+        },
+        {
+          "address": "0x8001F8E8",
+          "name": "gt2_ovr3_arcade_page_08_garage_car_select_enter"
+        },
+        {
+          "address": "0x8001FAA8",
+          "name": "gt2_ovr3_arcade_page_08_garage_car_select_tick"
+        },
+        {
+          "address": "0x80020098",
+          "name": "gt2_ovr3_arcade_page_08_garage_car_select_draw"
+        },
+        {
+          "address": "0x8002018C",
+          "name": "gt2_ovr3_car_preview_camera_init_two_player"
+        },
+        {
+          "address": "0x8002071C",
+          "name": "gt2_ovr3_arcade_page_09_enter"
+        },
+        {
+          "address": "0x800222B8",
+          "name": "gt2_ovr3_arcade_page_09_tick"
+        },
+        {
+          "address": "0x80022674",
+          "name": "gt2_ovr3_arcade_page_09_draw"
+        },
+        {
+          "address": "0x80022C50",
+          "name": "gt2_ovr3_arcade_page_10_enter"
+        },
+        {
+          "address": "0x80022DB4",
+          "name": "gt2_ovr3_arcade_page_10_tick"
+        },
+        {
+          "address": "0x800231C8",
+          "name": "gt2_ovr3_arcade_page_10_draw"
+        },
+        {
+          "address": "0x8002344C",
+          "name": "gt2_ovr3_arcade_page_11_enter"
+        },
+        {
+          "address": "0x8002345C",
+          "name": "gt2_ovr3_arcade_page_11_tick"
+        },
+        {
+          "address": "0x8002348C",
+          "name": "gt2_ovr3_arcade_page_11_draw"
+        },
+        {
+          "address": "0x80023494",
+          "name": "gt2_ovr3_arcade_page_12_card_garage_enter"
+        },
+        {
+          "address": "0x800234E4",
+          "name": "gt2_ovr3_arcade_page_12_card_garage_tick"
+        },
+        {
+          "address": "0x8002356C",
+          "name": "gt2_ovr3_arcade_page_12_card_garage_draw"
+        },
+        {
+          "address": "0x80023598",
+          "name": "gt2_ovr3_licence_group_all_cleared"
+        },
+        {
+          "address": "0x80023610",
+          "name": "gt2_ovr3_all_listed_events_unlocked"
+        },
+        {
+          "address": "0x80023680",
+          "name": "gt2_ovr3_save_flag_9af5_set"
+        },
+        {
+          "address": "0x80023CC4",
+          "name": "gt2_ovr3_arcade_side_page_a_enter"
+        },
+        {
+          "address": "0x80023D74",
+          "name": "gt2_ovr3_arcade_side_page_a_tick"
+        },
+        {
+          "address": "0x80023ED4",
+          "name": "gt2_ovr3_arcade_side_page_a_draw"
+        },
+        {
+          "address": "0x800240D8",
+          "name": "gt2_ovr3_arcade_side_page_b_enter"
+        },
+        {
+          "address": "0x80024188",
+          "name": "gt2_ovr3_arcade_side_page_b_tick"
+        },
+        {
+          "address": "0x80024318",
+          "name": "gt2_ovr3_arcade_side_page_b_draw"
+        },
+        {
+          "address": "0x80024400",
+          "name": "gt2_ovr3_arcade_side_page_c_enter"
+        },
+        {
+          "address": "0x80024410",
+          "name": "gt2_ovr3_arcade_side_page_c_tick"
+        },
+        {
+          "address": "0x80024454",
+          "name": "gt2_ovr3_arcade_side_page_c_draw"
+        },
+        {
+          "address": "0x8002445C",
+          "name": "gt2_ovr3_dialog_glyph_cache_reset_with_common_strings"
+        },
+        {
+          "address": "0x800244C4",
+          "name": "gt2_ovr3_dialog_glyph_cache_add_string"
+        },
+        {
+          "address": "0x80024504",
+          "name": "gt2_ovr3_dialog_draw_cached_glyph_string"
+        },
+        {
+          "address": "0x80024640",
+          "name": "gt2_ovr3_dialog_glyph_cache_add_message_strings"
+        },
+        {
+          "address": "0x80024690",
+          "name": "gt2_ovr3_dialog_glyph_cache_add_title_string"
+        },
+        {
+          "address": "0x80024A40",
+          "name": "gt2_ovr3_card_dialog_step_0_wait"
+        },
+        {
+          "address": "0x80024FE0",
+          "name": "gt2_ovr3_card_dialog_no_step"
+        },
+        {
+          "address": "0x80024FE8",
+          "name": "gt2_ovr3_card_dialog_enter_step"
+        },
+        {
+          "address": "0x8002504C",
+          "name": "gt2_ovr3_card_dialog_init"
+        },
+        {
+          "address": "0x80025194",
+          "name": "gt2_ovr3_card_dialog_setup"
+        },
+        {
+          "address": "0x80025238",
+          "name": "gt2_ovr3_card_dialog_begin"
+        },
+        {
+          "address": "0x80025274",
+          "name": "gt2_ovr3_card_dialog_tick"
+        },
+        {
+          "address": "0x800253AC",
+          "name": "gt2_ovr3_card_dialog_draw"
+        },
+        {
+          "address": "0x80025614",
+          "name": "gt2_ovr3_menu_music_request_init"
+        },
+        {
+          "address": "0x80025668",
+          "name": "gt2_ovr3_menu_music_stop_thunk"
+        },
+        {
+          "address": "0x80025688",
+          "name": "gt2_ovr3_menu_music_load_bank"
+        },
+        {
+          "address": "0x800256CC",
+          "name": "gt2_ovr3_menu_music_load_sequence"
+        },
+        {
+          "address": "0x80025708",
+          "name": "gt2_ovr3_menu_music_play"
+        },
+        {
+          "address": "0x800257AC",
+          "name": "gt2_ovr3_menu_music_stop"
+        },
+        {
+          "address": "0x800257E8",
+          "name": "gt2_ovr3_menu_music_load"
         },
         {
           "address": "0x80025878",
@@ -3087,6 +3891,146 @@
         {
           "address": "0x800100EC",
           "name": "gt2_ovr3_unpack_fifteen_bit_colour_and_say_how_saturated"
+        },
+        {
+          "address": "0x8002589C",
+          "name": "gt2_ovr3_movie_init"
+        },
+        {
+          "address": "0x80025904",
+          "name": "gt2_ovr3_movie_restore_cd_callback"
+        },
+        {
+          "address": "0x80025914",
+          "name": "gt2_ovr3_movie_set_frame_ring"
+        },
+        {
+          "address": "0x80025924",
+          "name": "gt2_ovr3_movie_set_decode_buffers"
+        },
+        {
+          "address": "0x80025930",
+          "name": "gt2_ovr3_movie_set_mdec_output_area"
+        },
+        {
+          "address": "0x80025940",
+          "name": "gt2_ovr3_start_movie_stream_by_index"
+        },
+        {
+          "address": "0x80025994",
+          "name": "gt2_ovr3_begin_streaming_sectors"
+        },
+        {
+          "address": "0x80025A10",
+          "name": "gt2_ovr3_movie_start_decoder"
+        },
+        {
+          "address": "0x80025A50",
+          "name": "gt2_ovr3_movie_status"
+        },
+        {
+          "address": "0x80025AEC",
+          "name": "gt2_ovr3_movie_stop_decoder"
+        },
+        {
+          "address": "0x80025B24",
+          "name": "gt2_ovr3_cd_request_mode_6_callback"
+        },
+        {
+          "address": "0x80025B44",
+          "name": "gt2_ovr3_movie_decode_pending_frame"
+        },
+        {
+          "address": "0x80025BB4",
+          "name": "gt2_ovr3_movie_prepare_next_frame"
+        },
+        {
+          "address": "0x80025C44",
+          "name": "gt2_ovr3_movie_decode_then_prepare_next"
+        },
+        {
+          "address": "0x80025C90",
+          "name": "gt2_ovr3_movie_prepare_then_decode_next"
+        },
+        {
+          "address": "0x80025CBC",
+          "name": "gt2_ovr3_stream_sector_callback"
+        },
+        {
+          "address": "0x80025CEC",
+          "name": "gt2_ovr3_stream_receive_sector"
+        },
+        {
+          "address": "0x80025D38",
+          "name": "gt2_ovr3_mdec_out_callback"
+        },
+        {
+          "address": "0x80025D60",
+          "name": "gt2_ovr3_decdctout_user0"
+        },
+        {
+          "address": "0x80025E48",
+          "name": "gt2_ovr3_stream_end_callback"
+        },
+        {
+          "address": "0x80025E70",
+          "name": "gt2_ovr3_stream_mark_finished"
+        },
+        {
+          "address": "0x80025EAC",
+          "name": "gt2_ovr3_frame_ring_clear"
+        },
+        {
+          "address": "0x80025ED0",
+          "name": "gt2_ovr3_movie_ring_reset"
+        },
+        {
+          "address": "0x80025F40",
+          "name": "gt2_ovr3_movie_ring_stop"
+        },
+        {
+          "address": "0x80025F88",
+          "name": "gt2_ovr3_stream_read_sector_into_frame"
+        },
+        {
+          "address": "0x80026130",
+          "name": "gt2_ovr3_frame_ring_peek_next"
+        },
+        {
+          "address": "0x800261A8",
+          "name": "gt2_ovr3_frame_ring_consume"
+        },
+        {
+          "address": "0x800261EC",
+          "name": "gt2_ovr3_mdec_output_init"
+        },
+        {
+          "address": "0x80026230",
+          "name": "gt2_ovr3_mdec_set_output_size"
+        },
+        {
+          "address": "0x80026280",
+          "name": "gt2_ovr3_DecDCT_inout"
+        },
+        {
+          "address": "0x8002632C",
+          "name": "gt2_ovr3_dct_reset_handler"
+        },
+        {
+          "address": "0x8002635C",
+          "name": "gt2_ovr3_decode_bitstream_to_mdec_words"
+        },
+        {
+          "address": "0x800265D4",
+          "name": "gt2_ovr3_movie_open"
+        },
+        {
+          "address": "0x8002667C",
+          "name": "gt2_ovr3_movie_service_frame"
+        },
+        {
+          "address": "0x80026760",
+          "name": "gt2_ovr3_movie_close"
         }
       ]
     },
@@ -3101,6 +4045,10 @@
       "image": "ovl_patched/gt2_04.bin",
       "functions": [
         {
+          "address": "0x80010000",
+          "name": "gt2_ovr4_fill_event_record_with_ff"
+        },
+        {
           "address": "0x80010024",
           "name": "gt2_ovr4_build_car_spec_from_parts"
         },
@@ -3113,8 +4061,16 @@
           "name": "gt2_ovr4_min_of_three"
         },
         {
+          "address": "0x80011D74",
+          "name": "gt2_ovr4_unpack_fifteen_bit_colour_and_say_how_saturated"
+        },
+        {
           "address": "0x80012130",
           "name": "gt2_ovr4_choose_entrant_paint"
+        },
+        {
+          "address": "0x800121DC",
+          "name": "gt2_ovr4_build_race_block_and_fill_all_six_entrants"
         }
       ]
     },

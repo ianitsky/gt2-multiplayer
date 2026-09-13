@@ -9,7 +9,7 @@ public static partial class OverlayHook
     {
         [0x80010024u] = "gt2_04", // gt2_ovr4_large_task0
         [0x8001003Cu] = "gt2_02", // gt2_ovr2_min3
-        [0x80010068u] = "gt2_06", // gt2_ovr6_task00
+        [0x80010068u] = "gt2_06", // gt2_ovr6_movie_restore_cd_callback
         [0x80010074u] = "gt2_03", // gt2_ovr3_max3
         [0x80010088u] = "gt2_06", // gt2_ovr6_movie_set_decode_buffers
         [0x80010094u] = "gt2_06", // gt2_ovr6_movie_set_mdec_output_area
@@ -19,7 +19,7 @@ public static partial class OverlayHook
         [0x80010174u] = "gt2_06", // gt2_ovr6_movie_start_decoder
         [0x800101B4u] = "gt2_06", // gt2_ovr6_movie_status
         [0x80010250u] = "gt2_06", // gt2_ovr6_movie_stop_decoder
-        [0x80010288u] = "gt2_06", // gt2_ovr6_task2001110_caller0
+        [0x80010288u] = "gt2_06", // gt2_ovr6_cd_request_mode_6_callback
         [0x800102A8u] = "gt2_06", // gt2_ovr6_movie_decode_pending_frame
         [0x80010318u] = "gt2_06", // gt2_ovr6_movie_prepare_next_frame
         [0x800103A8u] = "gt2_06", // gt2_ovr6_movie_decode_then_prepare_next
@@ -30,10 +30,10 @@ public static partial class OverlayHook
         [0x800104C4u] = "gt2_06", // gt2_ovr6_decdctout_user0
         [0x80010550u] = "gt2_05", // gt2_ovr5_max3
         [0x8001058Cu] = "gt2_05", // gt2_ovr5_min3
-        [0x800105ACu] = "gt2_06", // gt2_ovr6_fill_memory_task0
-        [0x800105C8u] = "gt2_05", // gt2_ovr5_load_replay_mode_04_task00
-        [0x800105D4u] = "gt2_06", // gt2_ovr6_fill_memory_task00
-        [0x80010610u] = "gt2_06", // gt2_ovr6_memset_caller0
+        [0x800105ACu] = "gt2_06", // gt2_ovr6_stream_end_callback
+        [0x800105C8u] = "gt2_05", // gt2_ovr5_unpack_fifteen_bit_colour_and_say_how_saturated
+        [0x800105D4u] = "gt2_06", // gt2_ovr6_stream_mark_finished
+        [0x80010610u] = "gt2_06", // gt2_ovr6_frame_ring_clear
         [0x80010634u] = "gt2_06", // gt2_ovr6_movie_ring_reset
         [0x800106A4u] = "gt2_06", // gt2_ovr6_movie_ring_stop
         [0x800106ECu] = "gt2_06", // gt2_ovr6_stream_read_sector_into_frame

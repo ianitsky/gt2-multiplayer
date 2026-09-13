@@ -2,12 +2,12 @@
   "functions": [
     {
       "address": "0x80010000",
-      "name": "gt2_ovr6_fill_memory",
+      "name": "gt2_ovr6_movie_init",
       "size": 104
     },
     {
       "address": "0x80010068",
-      "name": "gt2_ovr6_task00",
+      "name": "gt2_ovr6_movie_restore_cd_callback",
       "size": 16
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "address": "0x80010288",
-      "name": "gt2_ovr6_task2001110_caller0",
+      "name": "gt2_ovr6_cd_request_mode_6_callback",
       "size": 32
     },
     {
@@ -97,17 +97,17 @@
     },
     {
       "address": "0x800105AC",
-      "name": "gt2_ovr6_fill_memory_task0",
+      "name": "gt2_ovr6_stream_end_callback",
       "size": 40
     },
     {
       "address": "0x800105D4",
-      "name": "gt2_ovr6_fill_memory_task00",
+      "name": "gt2_ovr6_stream_mark_finished",
       "size": 60
     },
     {
       "address": "0x80010610",
-      "name": "gt2_ovr6_memset_caller0",
+      "name": "gt2_ovr6_frame_ring_clear",
       "size": 36
     },
     {

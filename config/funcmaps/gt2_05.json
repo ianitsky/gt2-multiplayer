@@ -32,7 +32,7 @@
     },
     {
       "address": "0x800105C8",
-      "name": "gt2_ovr5_load_replay_mode_04_task00",
+      "name": "gt2_ovr5_unpack_fifteen_bit_colour_and_say_how_saturated",
       "size": 332
     },
     {
@@ -322,7 +322,7 @@
     },
     {
       "address": "0x80015428",
-      "name": "entry_80015428",
+      "name": "gt2_ovr5_build_car_spec_from_parts_copy_80015428",
       "size": 6196
     },
     {
