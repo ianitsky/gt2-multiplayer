@@ -1485,7 +1485,7 @@
         },
         {
           "address": "0x80027FC4",
-          "name": "gt2_ovr1_course_wall_distance"
+          "name": "gt2_ovr1_course_block_sweep_corners_against_walls"
         },
         {
           "address": "0x80028288",
@@ -2213,19 +2213,19 @@
         },
         {
           "address": "0x80033D34",
-          "name": "gt2_ovr1_wheel_ground_normal"
+          "name": "gt2_ovr1_car_wall_scrape_kick"
         },
         {
           "address": "0x80033E6C",
-          "name": "gt2_ovr1_wheel_ground_probe"
+          "name": "gt2_ovr1_car_move_and_sweep_walls"
         },
         {
           "address": "0x800340A4",
-          "name": "gt2_ovr1_wheel_ground_update"
+          "name": "gt2_ovr1_car_wall_hit_response"
         },
         {
           "address": "0x80034320",
-          "name": "gt2_ovr1_car_wheels_ground_update"
+          "name": "gt2_ovr1_race_cars_move_with_wall_collision"
         },
         {
           "address": "0x80034480",
@@ -2405,19 +2405,19 @@
         },
         {
           "address": "0x800386F4",
-          "name": "gt2_ovr1_car_follow_course_surface"
+          "name": "gt2_ovr1_ai_line_resolve_point_blocks"
         },
         {
           "address": "0x800389E0",
-          "name": "gt2_ovr1_car_align_to_course"
+          "name": "gt2_ovr1_course_sample_slopes_at_point"
         },
         {
           "address": "0x80038C88",
-          "name": "gt2_ovr1_car_reset_to_line"
+          "name": "gt2_ovr1_ai_line_find_block_from_fallback_line"
         },
         {
           "address": "0x80038DA0",
-          "name": "gt2_ovr1_car_recover_to_track"
+          "name": "gt2_ovr1_course_prepare_ai_lines"
         },
         {
           "address": "0x80039040",
@@ -2745,7 +2745,7 @@
         },
         {
           "address": "0x80040F30",
-          "name": "gt2_ovr1_car_to_wall_collision_step"
+          "name": "gt2_ovr1_car_to_car_corner_overlap_test"
         },
         {
           "address": "0x800412D4",
