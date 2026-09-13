@@ -16,7 +16,7 @@ namespace GT2Port.Multiplayer;
 /// writing a car's place works.
 ///
 /// Where to write was deduced rather than recognised. A read watch on the
-/// entrant at 0x801D58B8 named entry_80028DDC, which builds the cars; the
+/// entrant at 0x801D58B8 named gt2_ovr1_load_car_models_and_paints_for_race, which builds the cars; the
 /// motion lives in the array at 0x800A9B04 every 0xB40, and six cars racing
 /// gave the position offsets - X, Z and Y, with a second copy 0x24 on that is
 /// written too, since the game keeps both.
