@@ -187,47 +187,47 @@
     },
     {
       "address": "0x80010F2C",
-      "name": "gt2_ovr6_sharedovr_funcE_caller0",
+      "name": "gt2_ovr6_psxMovieLoop_destructor",
       "size": 76
     },
     {
       "address": "0x80010F78",
-      "name": "gt2_ovr6_large_task0",
+      "name": "gt2_ovr6_psxMovieLoop_begin",
       "size": 180
     },
     {
       "address": "0x8001102C",
-      "name": "gt2_ovr6_task7",
+      "name": "gt2_ovr6_psxMovieLoop_tick",
       "size": 416
     },
     {
       "address": "0x800111CC",
-      "name": "gt2_ovr6_nop4",
+      "name": "gt2_ovr6_psxMovieLoop_update_does_nothing",
       "size": 8
     },
     {
       "address": "0x800111D4",
-      "name": "gt2_ovr6_task5",
+      "name": "gt2_ovr6_psxMovieLoop_apply_pending_display_changes",
       "size": 188
     },
     {
       "address": "0x80011290",
-      "name": "gt2_ovr6_task0",
+      "name": "gt2_ovr6_psxMovieLoop_end",
       "size": 68
     },
     {
       "address": "0x800112D4",
-      "name": "gt2_ovr6_nop0",
+      "name": "gt2_ovr6_psxMovieLoop_begin_drawing_does_nothing",
       "size": 8
     },
     {
       "address": "0x800112DC",
-      "name": "gt2_ovr6_nop1",
+      "name": "gt2_ovr6_psxMovieLoop_draw_does_nothing",
       "size": 8
     },
     {
       "address": "0x800112E4",
-      "name": "gt2_ovr6_nop2",
+      "name": "gt2_ovr6_psxMovieLoop_finish_drawing_does_nothing",
       "size": 8
     },
     {
@@ -277,7 +277,7 @@
     },
     {
       "address": "0x8001151C",
-      "name": "gt2_ovr6_task4",
+      "name": "__tf12psxMovieLoop",
       "size": 80
     }
   ]

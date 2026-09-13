@@ -2380,8 +2380,64 @@
           "name": "entry_80046824"
         },
         {
+          "address": "0x800472AC",
+          "name": "gt2_ovr1_QuickMenu_destructor"
+        },
+        {
+          "address": "0x800472E0",
+          "name": "gt2_ovr1_QuickMenu_begin"
+        },
+        {
+          "address": "0x800474F4",
+          "name": "gt2_ovr1_QuickMenu_tick"
+        },
+        {
+          "address": "0x800479AC",
+          "name": "gt2_ovr1_QuickMenu_draw"
+        },
+        {
+          "address": "0x80047AB0",
+          "name": "gt2_ovr1_QuickMenu_end"
+        },
+        {
+          "address": "0x80047B18",
+          "name": "gt2_ovr1_PreQuickMenuIO_destructor"
+        },
+        {
+          "address": "0x80047B40",
+          "name": "gt2_ovr1_PreQuickMenuIO_begin"
+        },
+        {
           "address": "0x80047C44",
           "name": "gt2_ovr1_race_mode_is_one_or_six_to_ten"
+        },
+        {
+          "address": "0x80047CAC",
+          "name": "gt2_ovr1_PreQuickMenuIO_before_frame"
+        },
+        {
+          "address": "0x80047EA0",
+          "name": "gt2_ovr1_PreQuickMenuIO_tick"
+        },
+        {
+          "address": "0x80048140",
+          "name": "gt2_ovr1_PreQuickMenuIO_draw"
+        },
+        {
+          "address": "0x800481A8",
+          "name": "gt2_ovr1_PreQuickMenuIO_end"
+        },
+        {
+          "address": "0x80048208",
+          "name": "__tf14PreQuickMenuIO"
+        },
+        {
+          "address": "0x80048258",
+          "name": "__tf9QuickMenu"
+        },
+        {
+          "address": "0x800482A8",
+          "name": "gt2_ovr1_QuickMenu_before_frame"
         }
       ],
       "image": "ovl_patched/gt2_01.bin"
@@ -2395,6 +2451,34 @@
       "base": "0x80010000",
       "linearSweep": true,
       "functions": [
+        {
+          "address": "0x80011B90",
+          "name": "gt2_ovr2_BaseMenu_destructor"
+        },
+        {
+          "address": "0x80011BC4",
+          "name": "gt2_ovr2_BaseMenu_begin"
+        },
+        {
+          "address": "0x80011EC4",
+          "name": "gt2_ovr2_BaseMenu_tick"
+        },
+        {
+          "address": "0x800121A8",
+          "name": "gt2_ovr2_BaseMenu_draw"
+        },
+        {
+          "address": "0x80012314",
+          "name": "gt2_ovr2_BaseMenu_end"
+        },
+        {
+          "address": "0x80012348",
+          "name": "gt2_ovr2_BaseMenu_before_frame"
+        },
+        {
+          "address": "0x80012454",
+          "name": "__tf8BaseMenu"
+        },
         {
           "address": "0x80015B6C",
           "name": "entry_80015B6C"
@@ -2437,12 +2521,52 @@
           "name": "entry_80011514"
         },
         {
+          "address": "0x80013BB0",
+          "name": "gt2_ovr3_ArcadeMenu_destructor"
+        },
+        {
           "address": "0x800141B8",
           "name": "gt2_ovr3_arcade_screen_tick_car_requests_and_say_whether_to_continue"
         },
         {
           "address": "0x8001424C",
           "name": "entry_8001424C"
+        },
+        {
+          "address": "0x80014560",
+          "name": "gt2_ovr3_ArcadeMenu_draw"
+        },
+        {
+          "address": "0x8001466C",
+          "name": "gt2_ovr3_ArcadeMenu_end"
+        },
+        {
+          "address": "0x800146B8",
+          "name": "__tf10ArcadeMenu"
+        },
+        {
+          "address": "0x800148CC",
+          "name": "gt2_ovr3_ArcadeRacingMenu_destructor"
+        },
+        {
+          "address": "0x800148F4",
+          "name": "gt2_ovr3_ArcadeRacingMenu_begin"
+        },
+        {
+          "address": "0x80014B68",
+          "name": "gt2_ovr3_ArcadeRacingMenu_end"
+        },
+        {
+          "address": "0x80014EFC",
+          "name": "gt2_ovr3_ArcadeRacingMenu_draw"
+        },
+        {
+          "address": "0x80015620",
+          "name": "__tf16ArcadeRacingMenu"
+        },
+        {
+          "address": "0x80015670",
+          "name": "gt2_ovr3_ArcadeMenu_before_frame"
         },
         {
           "address": "0x80015AB4",

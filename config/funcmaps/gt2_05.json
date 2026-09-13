@@ -122,27 +122,27 @@
     },
     {
       "address": "0x80013CD0",
-      "name": "entry_80013CD0",
+      "name": "gt2_ovr5_GTMenu_destructor",
       "size": 1656
     },
     {
       "address": "0x80013CF8",
-      "name": "entry_80013CF8",
+      "name": "gt2_ovr5_GTMenu_begin",
       "size": 1616
     },
     {
       "address": "0x80013EEC",
-      "name": "entry_80013EEC",
+      "name": "gt2_ovr5_GTMenu_tick",
       "size": 1116
     },
     {
       "address": "0x800141FC",
-      "name": "entry_800141FC",
+      "name": "gt2_ovr5_GTMenu_draw",
       "size": 332
     },
     {
       "address": "0x80014290",
-      "name": "entry_80014290",
+      "name": "gt2_ovr5_GTMenu_end",
       "size": 184
     },
     {
@@ -272,7 +272,7 @@
     },
     {
       "address": "0x8001503C",
-      "name": "entry_8001503C",
+      "name": "__tf6GTMenu",
       "size": 968
     },
     {
@@ -292,27 +292,27 @@
     },
     {
       "address": "0x80015144",
-      "name": "entry_80015144",
+      "name": "gt2_ovr5_GTBattleMenu_destructor",
       "size": 704
     },
     {
       "address": "0x8001516C",
-      "name": "entry_8001516C",
+      "name": "gt2_ovr5_GTBattleMenu_begin",
       "size": 664
     },
     {
       "address": "0x80015228",
-      "name": "entry_80015228",
+      "name": "gt2_ovr5_GTBattleMenu_tick",
       "size": 476
     },
     {
       "address": "0x80015358",
-      "name": "entry_80015358",
+      "name": "gt2_ovr5_GTBattleMenu_draw",
       "size": 172
     },
     {
       "address": "0x800153B4",
-      "name": "entry_800153B4",
+      "name": "__tf12GTBattleMenu",
       "size": 80
     },
     {
@@ -1117,7 +1117,7 @@
     },
     {
       "address": "0x8001B3AC",
-      "name": "entry_8001B3AC",
+      "name": "gt2_ovr5_GTMenu_before_frame",
       "size": 1132
     },
     {
