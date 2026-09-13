@@ -232,7 +232,7 @@
     },
     {
       "address": "0x800101FC",
-      "name": "gt2_unknown_task0",
+      "name": "gt2_ovr0_vol_count_entries_before_end_marker",
       "size": 44
     },
     {
@@ -3102,7 +3102,7 @@
     },
     {
       "address": "0x8005D908",
-      "name": "gt2_main_task0b110",
+      "name": "gt2_main_read_archive_chunk",
       "size": 36
     },
     {
@@ -3667,7 +3667,7 @@
     },
     {
       "address": "0x8005F788",
-      "name": "gt2_unknown_nop0",
+      "name": "gt2_main_does_nothing_at_8005F788",
       "size": 8
     },
     {
@@ -4102,7 +4102,7 @@
     },
     {
       "address": "0x80061010",
-      "name": "gt2_main_shared_race_func2_nop",
+      "name": "gt2_main_does_nothing_at_80061010",
       "size": 12
     },
     {
@@ -6387,7 +6387,7 @@
     },
     {
       "address": "0x80079EEC",
-      "name": "gt2_main_task01_setter",
+      "name": "gt2_main_sound_set_ticks_per_second",
       "size": 12
     },
     {
@@ -6527,12 +6527,12 @@
     },
     {
       "address": "0x8007AB74",
-      "name": "gt2_main_task2001",
+      "name": "gt2_main_read_disc_sectors",
       "size": 4
     },
     {
       "address": "0x8007AB78",
-      "name": "gt2_main_task0900",
+      "name": "gt2_main_read_disc_bytes_at_offset",
       "size": 64
     },
     {
@@ -6732,17 +6732,17 @@
     },
     {
       "address": "0x8007C300",
-      "name": "gt2_unknown_task2B",
+      "name": "gt2_main_wait_for_mdec_in_dma_idle",
       "size": 16
     },
     {
       "address": "0x8007C310",
-      "name": "gt2_main_task07021",
+      "name": "gt2_main_wait_for_gpu_dma_idle",
       "size": 16
     },
     {
       "address": "0x8007C320",
-      "name": "gt2_main_task0b210203",
+      "name": "gt2_main_wait_for_spu_dma_idle",
       "size": 8
     },
     {
@@ -6752,7 +6752,7 @@
     },
     {
       "address": "0x8007C32C",
-      "name": "entry_8007C32C",
+      "name": "gt2_main_wait_for_dma_channel_idle",
       "size": 64
     },
     {
@@ -6767,12 +6767,12 @@
     },
     {
       "address": "0x8007C42C",
-      "name": "gt2_main_task031_nop_zero",
+      "name": "gt2_main_cd_default_callback_returns_zero",
       "size": 8
     },
     {
       "address": "0x8007C434",
-      "name": "gt2_main_task032_nop",
+      "name": "gt2_main_cd_default_callback_does_nothing",
       "size": 8
     },
     {
@@ -7537,7 +7537,7 @@
     },
     {
       "address": "0x80080088",
-      "name": "gt2_main_task074",
+      "name": "gt2_main_ot_root_init",
       "size": 44
     },
     {
@@ -7782,7 +7782,7 @@
     },
     {
       "address": "0x8008107C",
-      "name": "gt2_main_race_func41_0",
+      "name": "gt2_main_does_nothing_at_8008107C",
       "size": 8
     },
     {
@@ -8087,7 +8087,7 @@
     },
     {
       "address": "0x80082AE4",
-      "name": "gt2_unknown_task1F",
+      "name": "gt2_main_does_nothing_at_80082AE4",
       "size": 8
     },
     {
