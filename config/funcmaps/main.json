@@ -4522,32 +4522,32 @@
     },
     {
       "address": "0x8006A2E4",
-      "name": "gt2_main_shared_menuarcade_func3",
+      "name": "gt2_main_gt1_save_offset_3e74",
       "size": 8
     },
     {
       "address": "0x8006A2EC",
-      "name": "gt2_main_menu_func3",
+      "name": "gt2_main_gt1_save_offset_418",
       "size": 8
     },
     {
       "address": "0x8006A2F4",
-      "name": "gt2_main_menu_func4",
+      "name": "gt2_main_gt1_save_offset_1618",
       "size": 8
     },
     {
       "address": "0x8006A2FC",
-      "name": "gt2_main_menu_func5",
+      "name": "gt2_main_gt1_save_offset_3c88",
       "size": 8
     },
     {
       "address": "0x8006A304",
-      "name": "gt2_main_menu_func6",
+      "name": "gt2_main_gt1_save_offset_3d2c",
       "size": 8
     },
     {
       "address": "0x8006A30C",
-      "name": "gt2_main_menu_func7",
+      "name": "gt2_main_gt1_save_offset_3dd0",
       "size": 8
     },
     {
