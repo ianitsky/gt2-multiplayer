@@ -29,7 +29,7 @@
         },
         {
           "address": "0x80010074",
-          "name": "func_80010070_entry_80010074"
+          "name": "gt2_ovr1_camera_init_entry_80010074"
         },
         {
           "address": "0x80010088",
@@ -45,7 +45,7 @@
         },
         {
           "address": "0x80010164",
-          "name": "func_80010158_entry_80010164"
+          "name": "gt2_ovr1_camera_update_entry_80010164"
         },
         {
           "address": "0x800101FC",
@@ -65,19 +65,19 @@
         },
         {
           "address": "0x80010340",
-          "name": "func_80010314_entry_80010340"
+          "name": "gt2_ovr1_camera_update_player_view_entry_80010340"
         },
         {
           "address": "0x80010344",
-          "name": "func_80010340_entry_80010344"
+          "name": "gt2_ovr1_camera_update_player_view_entry_80010344"
         },
         {
           "address": "0x80010364",
-          "name": "func_80010340_entry_80010364"
+          "name": "gt2_ovr1_camera_update_player_view_entry_80010364"
         },
         {
           "address": "0x80010378",
-          "name": "func_80010364_entry_80010378"
+          "name": "gt2_ovr1_camera_update_player_view_entry_80010378"
         },
         {
           "address": "0x80010388",
@@ -93,31 +93,31 @@
         },
         {
           "address": "0x8001046C",
-          "name": "func_80010460_entry_8001046C"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_8001046C"
         },
         {
           "address": "0x80010478",
-          "name": "func_80010460_entry_80010478"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_80010478"
         },
         {
           "address": "0x800104B0",
-          "name": "func_80010460_entry_800104B0"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_800104B0"
         },
         {
           "address": "0x800104C4",
-          "name": "func_800104B0_entry_800104C4"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_800104C4"
         },
         {
           "address": "0x8001052C",
-          "name": "func_800104C4_entry_8001052C"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_8001052C"
         },
         {
           "address": "0x8001054C",
-          "name": "func_8001052C_entry_8001054C"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_8001054C"
         },
         {
           "address": "0x8001056C",
-          "name": "func_8001052C_entry_8001056C"
+          "name": "gt2_ovr1_camera_view_relative_to_car_entry_8001056C"
         },
         {
           "address": "0x80010598",
@@ -137,39 +137,39 @@
         },
         {
           "address": "0x800106BC",
-          "name": "func_800106A0_entry_800106BC"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_800106BC"
         },
         {
           "address": "0x800107D0",
-          "name": "func_800106A0_entry_800107D0"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_800107D0"
         },
         {
           "address": "0x800107E0",
-          "name": "func_800106A0_entry_800107E0"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_800107E0"
         },
         {
           "address": "0x800108E0",
-          "name": "func_800106A0_entry_800108E0"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_800108E0"
         },
         {
           "address": "0x800108E4",
-          "name": "func_800106A0_entry_800108E4"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_800108E4"
         },
         {
           "address": "0x80010934",
-          "name": "func_800106A0_entry_80010934"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_80010934"
         },
         {
           "address": "0x80010938",
-          "name": "func_800106A0_entry_80010938"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_80010938"
         },
         {
           "address": "0x80010944",
-          "name": "func_800106A0_entry_80010944"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_80010944"
         },
         {
           "address": "0x8001094C",
-          "name": "func_800106A0_entry_8001094C"
+          "name": "gt2_ovr1_camera_update_replay_view_entry_8001094C"
         },
         {
           "address": "0x8001097C",
@@ -181,19 +181,19 @@
         },
         {
           "address": "0x800109A8",
-          "name": "func_800109A0_entry_800109A8"
+          "name": "gt2_ovr1_find_car_slot_by_id_entry_800109A8"
         },
         {
           "address": "0x800109C4",
-          "name": "func_800109A0_entry_800109C4"
+          "name": "gt2_ovr1_find_car_slot_by_id_entry_800109C4"
         },
         {
           "address": "0x800109E8",
-          "name": "func_800109A0_entry_800109E8"
+          "name": "gt2_ovr1_find_car_slot_by_id_entry_800109E8"
         },
         {
           "address": "0x800109EC",
-          "name": "func_800109E8_entry_800109EC"
+          "name": "gt2_ovr1_find_car_slot_by_id_entry_800109EC"
         },
         {
           "address": "0x800109FC",
@@ -213,119 +213,119 @@
         },
         {
           "address": "0x80010AD0",
-          "name": "func_80010A84_entry_80010AD0"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010AD0"
         },
         {
           "address": "0x80010AFC",
-          "name": "func_80010AD0_entry_80010AFC"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010AFC"
         },
         {
           "address": "0x80010B28",
-          "name": "func_80010AFC_entry_80010B28"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010B28"
         },
         {
           "address": "0x80010B48",
-          "name": "func_80010B28_entry_80010B48"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010B48"
         },
         {
           "address": "0x80010B8C",
-          "name": "func_80010B48_entry_80010B8C"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010B8C"
         },
         {
           "address": "0x80010BA0",
-          "name": "func_80010B8C_entry_80010BA0"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010BA0"
         },
         {
           "address": "0x80010BB4",
-          "name": "func_80010BA0_entry_80010BB4"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010BB4"
         },
         {
           "address": "0x80010BC0",
-          "name": "func_80010BB4_entry_80010BC0"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010BC0"
         },
         {
           "address": "0x80010BC4",
-          "name": "func_80010BC0_entry_80010BC4"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010BC4"
         },
         {
           "address": "0x80010BEC",
-          "name": "func_80010BC0_entry_80010BEC"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010BEC"
         },
         {
           "address": "0x80010BF0",
-          "name": "func_80010BEC_entry_80010BF0"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010BF0"
         },
         {
           "address": "0x80010C18",
-          "name": "func_80010BEC_entry_80010C18"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010C18"
         },
         {
           "address": "0x80010C40",
-          "name": "func_80010C18_entry_80010C40"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010C40"
         },
         {
           "address": "0x80010C5C",
-          "name": "func_80010C40_entry_80010C5C"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010C5C"
         },
         {
           "address": "0x80010C90",
-          "name": "func_80010C5C_entry_80010C90"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010C90"
         },
         {
           "address": "0x80010C94",
-          "name": "func_80010C90_entry_80010C94"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010C94"
         },
         {
           "address": "0x80010C98",
-          "name": "func_80010C90_entry_80010C98"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010C98"
         },
         {
           "address": "0x80010CF4",
-          "name": "func_80010C90_entry_80010CF4"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010CF4"
         },
         {
           "address": "0x80010D18",
-          "name": "func_80010CF4_entry_80010D18"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010D18"
         },
         {
           "address": "0x80010D24",
-          "name": "func_80010CF4_entry_80010D24"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010D24"
         },
         {
           "address": "0x80010D60",
-          "name": "func_80010D24_entry_80010D60"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010D60"
         },
         {
           "address": "0x80010D64",
-          "name": "func_80010D24_entry_80010D64"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010D64"
         },
         {
           "address": "0x80010D98",
-          "name": "func_80010D24_entry_80010D98"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010D98"
         },
         {
           "address": "0x80010DB4",
-          "name": "func_80010D98_entry_80010DB4"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010DB4"
         },
         {
           "address": "0x80010DC4",
-          "name": "func_80010DB4_entry_80010DC4"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010DC4"
         },
         {
           "address": "0x80010DD8",
-          "name": "func_80010DC4_entry_80010DD8"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010DD8"
         },
         {
           "address": "0x80010DEC",
-          "name": "func_80010DD8_entry_80010DEC"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010DEC"
         },
         {
           "address": "0x80010DFC",
-          "name": "func_80010DEC_entry_80010DFC"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010DFC"
         },
         {
           "address": "0x80010E04",
-          "name": "func_80010DFC_entry_80010E04"
+          "name": "gt2_ovr1_camera_update_trackside_view_entry_80010E04"
         },
         {
           "address": "0x80010E20",
@@ -337,35 +337,35 @@
         },
         {
           "address": "0x80010E7C",
-          "name": "func_80010E70_entry_80010E7C"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010E7C"
         },
         {
           "address": "0x80010E88",
-          "name": "func_80010E70_entry_80010E88"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010E88"
         },
         {
           "address": "0x80010EC8",
-          "name": "func_80010E70_entry_80010EC8"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010EC8"
         },
         {
           "address": "0x80010ED8",
-          "name": "func_80010EC8_entry_80010ED8"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010ED8"
         },
         {
           "address": "0x80010F48",
-          "name": "func_80010EC8_entry_80010F48"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010F48"
         },
         {
           "address": "0x80010F80",
-          "name": "func_80010F48_entry_80010F80"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010F80"
         },
         {
           "address": "0x80010F8C",
-          "name": "func_80010F80_entry_80010F8C"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010F8C"
         },
         {
           "address": "0x80010FDC",
-          "name": "func_80010F80_entry_80010FDC"
+          "name": "gt2_ovr1_camera_look_along_vector_entry_80010FDC"
         },
         {
           "address": "0x80011088",
@@ -397,11 +397,11 @@
         },
         {
           "address": "0x8001145C",
-          "name": "func_8001144C_entry_8001145C"
+          "name": "gt2_ovr1_camera_view_from_car_mount_entry_8001145C"
         },
         {
           "address": "0x800114B8",
-          "name": "func_8001144C_entry_800114B8"
+          "name": "gt2_ovr1_camera_view_from_car_mount_entry_800114B8"
         },
         {
           "address": "0x80011568",
@@ -413,15 +413,15 @@
         },
         {
           "address": "0x80011684",
-          "name": "func_8001167C_entry_80011684"
+          "name": "gt2_ovr1_trackside_camera_follow_zoom_entry_80011684"
         },
         {
           "address": "0x800116C4",
-          "name": "func_8001167C_entry_800116C4"
+          "name": "gt2_ovr1_trackside_camera_follow_zoom_entry_800116C4"
         },
         {
           "address": "0x800116D0",
-          "name": "func_800116C4_entry_800116D0"
+          "name": "gt2_ovr1_trackside_camera_follow_zoom_entry_800116D0"
         },
         {
           "address": "0x80011704",
@@ -433,47 +433,47 @@
         },
         {
           "address": "0x80011758",
-          "name": "func_80011750_entry_80011758"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011758"
         },
         {
           "address": "0x8001175C",
-          "name": "func_80011750_entry_8001175C"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_8001175C"
         },
         {
           "address": "0x80011770",
-          "name": "func_80011750_entry_80011770"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011770"
         },
         {
           "address": "0x80011778",
-          "name": "func_80011770_entry_80011778"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011778"
         },
         {
           "address": "0x80011780",
-          "name": "func_80011770_entry_80011780"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011780"
         },
         {
           "address": "0x80011788",
-          "name": "func_80011770_entry_80011788"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011788"
         },
         {
           "address": "0x80011790",
-          "name": "func_80011770_entry_80011790"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011790"
         },
         {
           "address": "0x80011798",
-          "name": "func_80011770_entry_80011798"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_80011798"
         },
         {
           "address": "0x800117A0",
-          "name": "func_80011770_entry_800117A0"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_800117A0"
         },
         {
           "address": "0x800117A4",
-          "name": "func_80011770_entry_800117A4"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_800117A4"
         },
         {
           "address": "0x800117B0",
-          "name": "func_80011770_entry_800117B0"
+          "name": "gt2_ovr1_camera_apply_view_mode_entry_800117B0"
         },
         {
           "address": "0x800117C4",
@@ -493,19 +493,19 @@
         },
         {
           "address": "0x80011864",
-          "name": "func_80011850_entry_80011864"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_80011864"
         },
         {
           "address": "0x8001187C",
-          "name": "func_80011850_entry_8001187C"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_8001187C"
         },
         {
           "address": "0x80011880",
-          "name": "func_80011850_entry_80011880"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_80011880"
         },
         {
           "address": "0x80011888",
-          "name": "func_80011850_entry_80011888"
+          "name": "gt2_ovr1_find_trackside_camera_zone_entry_80011888"
         },
         {
           "address": "0x80011890",
@@ -517,11 +517,11 @@
         },
         {
           "address": "0x800118D0",
-          "name": "func_800118C0_entry_800118D0"
+          "name": "gt2_ovr1_camera_path_evaluate_entry_800118D0"
         },
         {
           "address": "0x800118D8",
-          "name": "func_800118D0_entry_800118D8"
+          "name": "gt2_ovr1_camera_path_evaluate_entry_800118D8"
         },
         {
           "address": "0x800118F8",
@@ -533,47 +533,47 @@
         },
         {
           "address": "0x80011944",
-          "name": "func_8001192C_entry_80011944"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011944"
         },
         {
           "address": "0x80011954",
-          "name": "func_8001192C_entry_80011954"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011954"
         },
         {
           "address": "0x80011970",
-          "name": "func_8001192C_entry_80011970"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011970"
         },
         {
           "address": "0x800119A4",
-          "name": "func_8001192C_entry_800119A4"
+          "name": "gt2_ovr1_camera_path_linear_entry_800119A4"
         },
         {
           "address": "0x800119D0",
-          "name": "func_800119A4_entry_800119D0"
+          "name": "gt2_ovr1_camera_path_linear_entry_800119D0"
         },
         {
           "address": "0x80011A00",
-          "name": "func_800119D0_entry_80011A00"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011A00"
         },
         {
           "address": "0x80011A04",
-          "name": "func_800119D0_entry_80011A04"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011A04"
         },
         {
           "address": "0x80011A14",
-          "name": "func_800119D0_entry_80011A14"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011A14"
         },
         {
           "address": "0x80011A20",
-          "name": "func_800119D0_entry_80011A20"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011A20"
         },
         {
           "address": "0x80011A24",
-          "name": "func_800119D0_entry_80011A24"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011A24"
         },
         {
           "address": "0x80011A40",
-          "name": "func_800119D0_entry_80011A40"
+          "name": "gt2_ovr1_camera_path_linear_entry_80011A40"
         },
         {
           "address": "0x80011A58",
@@ -585,43 +585,43 @@
         },
         {
           "address": "0x80011AAC",
-          "name": "func_80011A94_entry_80011AAC"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011AAC"
         },
         {
           "address": "0x80011ABC",
-          "name": "func_80011A94_entry_80011ABC"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011ABC"
         },
         {
           "address": "0x80011AD8",
-          "name": "func_80011A94_entry_80011AD8"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011AD8"
         },
         {
           "address": "0x80011B0C",
-          "name": "func_80011A94_entry_80011B0C"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B0C"
         },
         {
           "address": "0x80011B34",
-          "name": "func_80011B0C_entry_80011B34"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B34"
         },
         {
           "address": "0x80011B64",
-          "name": "func_80011B34_entry_80011B64"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B64"
         },
         {
           "address": "0x80011B68",
-          "name": "func_80011B34_entry_80011B68"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B68"
         },
         {
           "address": "0x80011B78",
-          "name": "func_80011B34_entry_80011B78"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B78"
         },
         {
           "address": "0x80011B84",
-          "name": "func_80011B34_entry_80011B84"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B84"
         },
         {
           "address": "0x80011B88",
-          "name": "func_80011B34_entry_80011B88"
+          "name": "gt2_ovr1_camera_path_spline_entry_80011B88"
         },
         {
           "address": "0x80011EA8",
@@ -633,7 +633,7 @@
         },
         {
           "address": "0x80011EFC",
-          "name": "gt2_ovr1_main_task0780_caller0"
+          "name": "gt2_ovr1_race_screen_destructor"
         },
         {
           "address": "0x80011F24",
@@ -853,7 +853,7 @@
         },
         {
           "address": "0x800157FC",
-          "name": "gt2_ovr1_main_task0780_caller00"
+          "name": "gt2_ovr1_race_view_base_destructor"
         },
         {
           "address": "0x80015824",
@@ -2461,7 +2461,7 @@
         },
         {
           "address": "0x80039994",
-          "name": "gt2_ovr1_fxpoint_multi12_caller0"
+          "name": "gt2_ovr1_engine_rpm_from_wheel_speed_unclamped"
         },
         {
           "address": "0x800399C4",

@@ -85,7 +85,7 @@ public static partial class OverlayHook
         [0x80011CFCu] = "gt2_04", // gt2_ovr4_max3
         [0x80011D38u] = "gt2_04", // gt2_ovr4_min3
         [0x80011EC0u] = "gt2_04", // gt2_ovr4_large_task20
-        [0x80011EFCu] = "gt2_01", // gt2_ovr1_main_task0780_caller0
+        [0x80011EFCu] = "gt2_01", // gt2_ovr1_race_screen_destructor
         [0x80011F64u] = "gt2_01", // gt2_ovr1_entrypoint
         [0x80012130u] = "gt2_04", // gt2_ovr4_large_task21
         [0x800121DCu] = "gt2_04", // gt2_ovr4_large_task2
@@ -101,7 +101,7 @@ public static partial class OverlayHook
         [0x80013628u] = "gt2_05", // gt2_ovr5_entrypoint_run_menus_then_load_chosen_overlay
         [0x80014348u] = "gt2_05", // gt2_ovr5_load_car_model_display_info
         [0x80015404u] = "gt2_05", // gt2_ovr5_clear_and_build_car_spec_from_parts
-        [0x800157FCu] = "gt2_01", // gt2_ovr1_main_task0780_caller00
+        [0x800157FCu] = "gt2_01", // gt2_ovr1_race_view_base_destructor
         [0x80015824u] = "gt2_01", // gt2_ovr1_main_task077_caller
         [0x80016C5Cu] = "gt2_05", // gt2_ovr5_get_part_upgrade_stages
         [0x80017318u] = "gt2_05", // gt2_ovr5_display_equipped_parts
@@ -160,7 +160,7 @@ public static partial class OverlayHook
         [0x80025EACu] = "gt2_03", // gt2_ovr3_memset_caller0
         [0x800261ECu] = "gt2_03", // gt2_ovr3_memset_caller1
         [0x8002632Cu] = "gt2_03", // gt2_ovr3_DecDCTReset_caller0
-        [0x80039994u] = "gt2_01", // gt2_ovr1_fxpoint_multi12_caller0
+        [0x80039994u] = "gt2_01", // gt2_ovr1_engine_rpm_from_wheel_speed_unclamped
         [0x8003FDE0u] = "gt2_01", // gt2_ovr1_memset_u8
         [0x8003FE14u] = "gt2_01", // gt2_ovr1_memset_u32
         [0x8003FE4Cu] = "gt2_01", // gt2_ovr1_memset_u16
