@@ -6457,7 +6457,7 @@
     },
     {
       "address": "0x8007A52C",
-      "name": "gt2_main_task021032",
+      "name": "gt2_main_note_to_spu_pitch",
       "size": 112
     },
     {
@@ -6492,12 +6492,12 @@
     },
     {
       "address": "0x8007A7CC",
-      "name": "gt2_unknown_task100",
+      "name": "gt2_main_ramp_init",
       "size": 156
     },
     {
       "address": "0x8007A868",
-      "name": "gt2_main_task02101",
+      "name": "gt2_main_ramp_step",
       "size": 100
     },
     {
@@ -6647,7 +6647,7 @@
     },
     {
       "address": "0x8007B2CC",
-      "name": "gt2_main_shared_racegtarcade_func730",
+      "name": "gt2_main_bit_length_of_abs_vector_components",
       "size": 84
     },
     {
@@ -6727,7 +6727,7 @@
     },
     {
       "address": "0x8007C268",
-      "name": "gt2_main_task0b210202",
+      "name": "gt2_main_spu_start_dma_transfer",
       "size": 152
     },
     {
@@ -6747,7 +6747,7 @@
     },
     {
       "address": "0x8007C328",
-      "name": "gt2_main_dma_mdec_func0",
+      "name": "gt2_main_wait_for_otc_dma_idle",
       "size": 68
     },
     {
@@ -6757,7 +6757,7 @@
     },
     {
       "address": "0x8007C36C",
-      "name": "gt2_main_task0340",
+      "name": "CdPosToInt",
       "size": 88
     },
     {
@@ -6792,7 +6792,7 @@
     },
     {
       "address": "0x8007C550",
-      "name": "gt2_main_task200112",
+      "name": "gt2_main_cd_wait_until_idle",
       "size": 32
     },
     {
@@ -6817,7 +6817,7 @@
     },
     {
       "address": "0x8007C68C",
-      "name": "gt2_main_task03_cdvol_setter",
+      "name": "gt2_main_spu_set_cd_audio_volume",
       "size": 136
     },
     {
@@ -6907,7 +6907,7 @@
     },
     {
       "address": "0x8007CA58",
-      "name": "gt2_main_task033_setter",
+      "name": "gt2_main_cd_state_reset",
       "size": 76
     },
     {
@@ -6982,12 +6982,12 @@
     },
     {
       "address": "0x8007CFDC",
-      "name": "gt2_main_task20010",
+      "name": "gt2_main_cd_prepare_read",
       "size": 72
     },
     {
       "address": "0x8007D024",
-      "name": "gt2_main_race_func16_14181",
+      "name": "gt2_main_ot_add_flat_rectangle",
       "size": 60
     },
     {
@@ -6997,37 +6997,37 @@
     },
     {
       "address": "0x8007D09C",
-      "name": "gt2_sysinit_task00_dma_vsync",
+      "name": "gt2_main_install_vsync_and_gpu_dma_callbacks",
       "size": 84
     },
     {
       "address": "0x8007D0F0",
-      "name": "gt2_main_task07201",
+      "name": "gt2_main_gpu_set_display_mode",
       "size": 40
     },
     {
       "address": "0x8007D118",
-      "name": "gt2_main_sharedovr_funcB0",
+      "name": "gt2_main_gpu_set_horizontal_display_range",
       "size": 140
     },
     {
       "address": "0x8007D1A4",
-      "name": "gt2_main_sharedovr_funcB1",
+      "name": "gt2_main_gpu_set_vertical_display_range",
       "size": 92
     },
     {
       "address": "0x8007D200",
-      "name": "gt2_main_sharedovr_funcC2",
+      "name": "gt2_main_gpu_wait_for_field_change",
       "size": 60
     },
     {
       "address": "0x8007D23C",
-      "name": "gt2_main_task07200",
+      "name": "gt2_main_wait_for_vsyncs",
       "size": 88
     },
     {
       "address": "0x8007D294",
-      "name": "gt2_sysinit_task00_dma_vsync0",
+      "name": "gt2_main_vsync_handler_count_and_run_callbacks",
       "size": 64
     },
     {
@@ -7037,7 +7037,7 @@
     },
     {
       "address": "0x8007D32C",
-      "name": "gt2_main_func001",
+      "name": "gt2_main_init_memory_card_save_header",
       "size": 68
     },
     {
@@ -7087,12 +7087,12 @@
     },
     {
       "address": "0x8007DA44",
-      "name": "gt2_main_race_func16_1414",
+      "name": "gt2_main_ot_add_texpage_setting",
       "size": 60
     },
     {
       "address": "0x8007DA80",
-      "name": "gt2_main_race_func16_1411",
+      "name": "gt2_main_copy_vector3",
       "size": 28
     },
     {
@@ -7157,17 +7157,17 @@
     },
     {
       "address": "0x8007E0B0",
-      "name": "gt2_main_menu_func80",
+      "name": "gt2_main_ot_alloc_prim_8_words",
       "size": 48
     },
     {
       "address": "0x8007E0E0",
-      "name": "gt2_main_shared_racemenu_func431",
+      "name": "gt2_main_ot_add_flat_triangle",
       "size": 60
     },
     {
       "address": "0x8007E11C",
-      "name": "gt2_main_gte_func0",
+      "name": "gt2_main_gte_set_rotation_and_lights_zero_translation",
       "size": 140
     },
     {
@@ -7182,12 +7182,12 @@
     },
     {
       "address": "0x8007E708",
-      "name": "gt2_main_shared_gt_race_func91",
+      "name": "gt2_main_ot_alloc_prim_6_words",
       "size": 48
     },
     {
       "address": "0x8007E738",
-      "name": "gt2_main_shared_arcaderace_func12_00",
+      "name": "gt2_main_ot_add_flat_polyline_5_points",
       "size": 72
     },
     {
@@ -7197,7 +7197,7 @@
     },
     {
       "address": "0x8007E864",
-      "name": "gt2_main_arcaderace_func16",
+      "name": "gt2_main_ot_add_textured_quad",
       "size": 60
     },
     {
@@ -7217,7 +7217,7 @@
     },
     {
       "address": "0x8007EA68",
-      "name": "gt2_main_task05_sdkevent_f1",
+      "name": "gt2_main_set_event_flag_bit",
       "size": 100
     },
     {
@@ -7347,7 +7347,7 @@
     },
     {
       "address": "0x8007F01C",
-      "name": "gt2_main_func320",
+      "name": "gt2_main_ot_add_textured_quad_from_cell",
       "size": 136
     },
     {
@@ -7412,7 +7412,7 @@
     },
     {
       "address": "0x8007F7F4",
-      "name": "gt2_main_race_func28_0",
+      "name": "gt2_main_ot_add_flat_line",
       "size": 60
     },
     {
@@ -7447,7 +7447,7 @@
     },
     {
       "address": "0x8007FA90",
-      "name": "gt2_main_sharedovr_funcD1",
+      "name": "gt2_main_set_pad_reader_for_port",
       "size": 40
     },
     {
@@ -7462,7 +7462,7 @@
     },
     {
       "address": "0x8007FBC4",
-      "name": "gt2_main_task04_pad_config_task011",
+      "name": "gt2_main_find_pad_handler_for_pad_type",
       "size": 108
     },
     {
@@ -7497,7 +7497,7 @@
     },
     {
       "address": "0x8007FE8C",
-      "name": "gt2_main_task0710",
+      "name": "__23psxViewLoopDoubleBuffer",
       "size": 60
     },
     {
@@ -7542,17 +7542,17 @@
     },
     {
       "address": "0x800800B4",
-      "name": "gt2_main_task0750",
+      "name": "gt2_main_ot_layer_list_insert_sorted",
       "size": 76
     },
     {
       "address": "0x80080100",
-      "name": "gt2_main_task0740",
+      "name": "gt2_main_ot_layer_list_reset",
       "size": 16
     },
     {
       "address": "0x80080110",
-      "name": "gt2_unknown_task1C",
+      "name": "gt2_main_ot_layer_list_assign_tables",
       "size": 52
     },
     {
@@ -7562,7 +7562,7 @@
     },
     {
       "address": "0x800801FC",
-      "name": "gt2_main_sharedovr_func10",
+      "name": "gt2_main_ot_layer_list_link_into_parent",
       "size": 156
     },
     {
@@ -7572,7 +7572,7 @@
     },
     {
       "address": "0x800802C8",
-      "name": "gt2_main_sharedovr_func501",
+      "name": "gt2_main_ot_swap_half_for_double_buffer",
       "size": 56
     },
     {
@@ -7587,7 +7587,7 @@
     },
     {
       "address": "0x80080450",
-      "name": "gt2_main_shared_racemenuarcade_func1",
+      "name": "gt2_main_ot_add_sprite_with_texpage",
       "size": 68
     },
     {
